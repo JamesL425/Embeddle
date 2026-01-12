@@ -1,3 +1,0 @@
-# Nixpacks needs this in root to detect Python
--r backend/requirements.txt
-

@@ -55,7 +55,7 @@ async function apiCall(endpoint, method = 'GET', body = null) {
 // Screen: Home
 document.getElementById('create-game-btn').addEventListener('click', async () => {
     try {
-        const data = await apiCall('/games', 'POST');
+        const data = await apiCall('/api/games', 'POST');
         gameState.code = data.code;
         
         // Pre-fill game code and show join screen
@@ -92,7 +92,7 @@ document.getElementById('join-form').addEventListener('submit', async (e) => {
     }
     
     try {
-        const data = await apiCall(`/games/${code}/join`, 'POST', {
+        const data = await apiCall(`/api/games/${code}/join`, 'POST', {
             name,
             secret_word: secretWord,
         });
@@ -129,7 +129,7 @@ document.getElementById('copy-code-btn').addEventListener('click', () => {
 
 document.getElementById('start-game-btn').addEventListener('click', async () => {
     try {
-        await apiCall(`/games/${gameState.code}/start`, 'POST', {
+        await apiCall(`/api/games/${gameState.code}/start`, 'POST', {
             player_id: gameState.playerId,
         });
     } catch (error) {
@@ -318,7 +318,7 @@ document.getElementById('guess-form').addEventListener('submit', async (e) => {
     if (!word) return;
     
     try {
-        await apiCall(`/games/${gameState.code}/guess`, 'POST', {
+        await apiCall(`/api/games/${gameState.code}/guess`, 'POST', {
             player_id: gameState.playerId,
             word,
         });
@@ -338,7 +338,7 @@ document.getElementById('change-word-btn').addEventListener('click', async () =>
     }
     
     try {
-        await apiCall(`/games/${gameState.code}/change-word`, 'POST', {
+        await apiCall(`/api/games/${gameState.code}/change-word`, 'POST', {
             player_id: gameState.playerId,
             new_word: newWord,
         });
@@ -399,7 +399,7 @@ async function pollGameState() {
     if (!gameState.code || !gameState.playerId) return;
     
     try {
-        const game = await apiCall(`/games/${gameState.code}?player_id=${gameState.playerId}`);
+        const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
         
         if (game.status === 'waiting') {
             updateLobby(game);
