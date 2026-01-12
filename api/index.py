@@ -1778,10 +1778,9 @@ class handler(BaseHTTPRequestHandler):
             # Make sure code is unique
             while load_game(code):
                 code = generate_game_code()
-            
-            # Pick a random theme category directly (no voting in singleplayer)
-            theme_category = random.choice(THEME_CATEGORIES)
-            theme = get_theme_words(theme_category)
+
+            # Offer 3 theme options to choose from (host picks via "vote" UI)
+            theme_options = random.sample(THEME_CATEGORIES, min(3, len(THEME_CATEGORIES)))
             
             # Create singleplayer lobby
             game = {
@@ -1792,19 +1791,16 @@ class handler(BaseHTTPRequestHandler):
                 "status": "waiting",
                 "winner": None,
                 "history": [],
-                "theme": {
-                    "name": theme.get("name", theme_category),
-                    "words": theme.get("words", []),
-                },
-                "theme_options": [],  # No voting in singleplayer
-                "theme_votes": {},
+                "theme": None,  # Set on start based on selection
+                "theme_options": theme_options,
+                "theme_votes": {opt: [] for opt in theme_options},
                 "created_at": time.time(),
                 "is_singleplayer": True,  # Mark as singleplayer game
             }
             save_game(code, game)
             return self._send_json({
                 "code": code,
-                "theme": game["theme"]["name"],
+                "theme_options": theme_options,
                 "is_singleplayer": True,
             })
 
@@ -2167,35 +2163,28 @@ class handler(BaseHTTPRequestHandler):
             
             import random
             
-            # For multiplayer, determine the theme from votes.
-            # For singleplayer, the theme is already set at creation time.
-            if not is_singleplayer:
-                votes = game.get('theme_votes', {})
-                theme_options = game.get('theme_options', ['Animals'])
-                
-                if votes:
-                    # Build weighted list: each theme appears once per vote
-                    weighted_themes = []
-                    for theme_name in theme_options:
-                        vote_count = len(votes.get(theme_name, []))
-                        weight = max(vote_count, 0)
-                        weighted_themes.extend([theme_name] * weight)
-                    
-                    if not weighted_themes:
-                        weighted_themes = theme_options.copy()
-                    
-                    winning_theme = random.choice(weighted_themes)
-                else:
-                    winning_theme = random.choice(theme_options)
-                
+            # Determine theme from votes/options if available (singleplayer now also uses this).
+            votes = game.get('theme_votes', {}) or {}
+            theme_options = game.get('theme_options', []) or []
+
+            if theme_options:
+                # Build weighted list: each theme appears once per vote
+                weighted_themes = []
+                for theme_name in theme_options:
+                    vote_count = len(votes.get(theme_name, []))
+                    weighted_themes.extend([theme_name] * max(vote_count, 0))
+
+                if not weighted_themes:
+                    weighted_themes = theme_options.copy()
+
+                winning_theme = random.choice(weighted_themes)
                 theme = get_theme_words(winning_theme)
-                all_words = theme.get("words", [])
                 game['theme'] = {
                     "name": theme.get("name", winning_theme),
-                    "words": all_words,
+                    "words": theme.get("words", []),
                 }
             else:
-                # Safety fallback: singleplayer games should already have a theme
+                # Backwards-compatible fallback: singleplayer games created before theme options existed already have a theme.
                 if not game.get('theme') or not game['theme'].get('words'):
                     winning_theme = random.choice(THEME_CATEGORIES) if THEME_CATEGORIES else 'Animals'
                     theme = get_theme_words(winning_theme)

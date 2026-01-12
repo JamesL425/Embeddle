@@ -569,12 +569,66 @@ function startSingleplayerLobbyPolling() {
     gameState.pollingInterval = setInterval(updateSingleplayerLobby, 2000);
 }
 
+let spThemeAutoVoted = false;
+let spStartInProgress = false;
+
+function updateSingleplayerThemeVoting(options, votes) {
+    const container = document.getElementById('sp-theme-vote-options');
+    if (!container) return;
+    if (!options || options.length === 0) {
+        container.innerHTML = '<p class="no-lobbies">Loading databases...</p>';
+        return;
+    }
+
+    container.innerHTML = options.map(theme => {
+        const voters = (votes && votes[theme]) ? votes[theme] : [];
+        const voteCount = voters.length;
+        const isMyVote = voters.some(v => v.id === gameState.playerId);
+        const voterNames = voters.map(v => escapeHtml(v.name)).join(', ');
+        return `
+            <button class="btn theme-vote-btn ${isMyVote ? 'voted' : ''}" data-theme="${escapeHtml(theme)}">
+                <span class="theme-name">${escapeHtml(theme)}</span>
+                <span class="vote-count">${escapeHtml(voteCount)} vote${voteCount !== 1 ? 's' : ''}</span>
+                ${voterNames ? `<span class="voter-names">${voterNames}</span>` : ''}
+            </button>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.theme-vote-btn').forEach(btn => {
+        btn.addEventListener('click', () => voteForTheme(btn.dataset.theme));
+    });
+}
+
 async function updateSingleplayerLobby() {
     try {
         const data = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
         
-        // Update theme display
-        document.getElementById('sp-theme-name').textContent = data.theme?.name || 'Loading...';
+        // Update theme voting UI (singleplayer uses the same vote endpoint, but only the host typically votes)
+        updateSingleplayerThemeVoting(data.theme_options || [], data.theme_votes || {});
+
+        // Auto-vote a default theme once so the player sees a selection immediately
+        if (!spThemeAutoVoted && data.status === 'waiting' && (data.theme_options || []).length > 0) {
+            const alreadyVoted = (data.theme_options || []).some(t => (data.theme_votes?.[t] || []).some(v => v.id === gameState.playerId));
+            if (!alreadyVoted) {
+                spThemeAutoVoted = true;
+                voteForTheme(data.theme_options[0]).catch(() => {
+                    // If vote fails (rare), allow retry next poll
+                    spThemeAutoVoted = false;
+                });
+            } else {
+                spThemeAutoVoted = true;
+            }
+        }
+
+        // Update theme display (show voted theme while in lobby)
+        let chosenTheme = data.theme?.name;
+        if (!chosenTheme) {
+            const opts = data.theme_options || [];
+            const votes = data.theme_votes || {};
+            const myVote = opts.find(t => (votes[t] || []).some(v => v.id === gameState.playerId));
+            chosenTheme = myVote || opts[0] || '';
+        }
+        document.getElementById('sp-theme-name').textContent = chosenTheme || 'Loading...';
         
         // Update players list
         const playersList = document.getElementById('sp-players-list');
@@ -613,7 +667,24 @@ async function updateSingleplayerLobby() {
         
         // Enable start button if we have at least 2 players (1 human + 1 AI)
         const aiCount = data.players.filter(p => p.is_ai).length;
-        document.getElementById('sp-start-game-btn').disabled = aiCount < 1;
+        const startBtn = document.getElementById('sp-start-game-btn');
+        const minPlayersNote = document.getElementById('sp-min-players');
+
+        if (minPlayersNote) {
+            if (aiCount < 1) {
+                minPlayersNote.textContent = 'Add at least 1 AI opponent';
+                minPlayersNote.style.display = '';
+            } else {
+                minPlayersNote.textContent = 'Ready to start';
+                minPlayersNote.style.display = 'none';
+            }
+        }
+
+        if (startBtn && !spStartInProgress) {
+            startBtn.disabled = aiCount < 1;
+            // Ensure the label is correct when not actively starting
+            startBtn.textContent = '> START_MISSION';
+        }
         
         // Check if game moved to word selection
         if (data.status === 'word_selection') {
@@ -662,6 +733,7 @@ document.getElementById('sp-start-game-btn')?.addEventListener('click', async ()
     
     try {
         // Show loading state on button for immediate feedback
+        spStartInProgress = true;
         startBtn.disabled = true;
         startBtn.textContent = 'STARTING...';
         
@@ -679,6 +751,7 @@ document.getElementById('sp-start-game-btn')?.addEventListener('click', async ()
         showError(error.message);
         startBtn.disabled = false;
         startBtn.textContent = originalText;
+        spStartInProgress = false;
     }
 });
 
