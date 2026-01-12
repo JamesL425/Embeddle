@@ -36,8 +36,16 @@ GAME_EXPIRY_SECONDS = CONFIG.get("game", {}).get("game_expiry_seconds", 7200)
 EMBEDDING_MODEL = CONFIG.get("embedding", {}).get("model", "text-embedding-3-small")
 EMBEDDING_CACHE_SECONDS = CONFIG.get("embedding", {}).get("cache_expiry_seconds", 86400)
 
-# Theme categories for LLM generation
-THEME_CATEGORIES = CONFIG.get("theme_categories", ["Animals", "Food", "Sports", "Nature", "Technology"])
+# Load pre-generated themes from JSON file
+def load_themes():
+    themes_path = Path(__file__).parent / "themes.json"
+    if themes_path.exists():
+        with open(themes_path) as f:
+            return json.load(f)
+    return {}
+
+PREGENERATED_THEMES = load_themes()
+THEME_CATEGORIES = list(PREGENERATED_THEMES.keys()) if PREGENERATED_THEMES else CONFIG.get("theme_categories", [])
 
 # Initialize clients lazily
 _openai_client = None
@@ -61,65 +69,10 @@ def get_redis():
     return _redis_client
 
 
-def generate_theme_words(category: str, num_words: int = 60) -> dict:
-    """Use LLM to generate theme words for a category."""
-    import random
-    
-    # Check cache first
-    redis = get_redis()
-    cache_key = f"theme:{category.lower().replace(' ', '_')}:{num_words}"
-    cached = redis.get(cache_key)
-    if cached:
-        return json.loads(cached)
-    
-    # Generate with LLM - use nano for speed
-    client = get_openai_client()
-    
-    prompt = f"""Generate {num_words} common single English words for the theme "{category}".
-Rules: single words only, common words, no proper nouns, 3-12 letters, all unique.
-Return ONLY a JSON array: ["word1", "word2", ...]"""
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-5-nano",  # Faster for simple word lists
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.9,
-            max_tokens=2000,
-        )
-        
-        content = response.choices[0].message.content.strip()
-        # Parse the JSON array
-        words = json.loads(content)
-        
-        # Clean and validate words, remove duplicates
-        clean_words = []
-        seen = set()
-        for word in words:
-            word = word.lower().strip()
-            if word.isalpha() and 2 <= len(word) <= 15 and word not in seen:
-                clean_words.append(word)
-                seen.add(word)
-        
-        result = {"name": category, "words": clean_words}
-        
-        # Cache for 24 hours (themes don't change)
-        if clean_words:
-            redis.setex(cache_key, 86400, json.dumps(result))
-        
-        return result
-    
-    except Exception as e:
-        print(f"Error generating theme: {e}")
-        return {"name": category, "words": []}
-
-
-def get_random_theme(num_players: int = 4) -> dict:
-    """Get a random theme with LLM-generated words for the expected number of players."""
-    import random
-    category = random.choice(THEME_CATEGORIES)
-    # Generate 25 words per potential player slot (max 6 players = 150 words)
-    num_words = MAX_PLAYERS * 25  # 150 words for 6 players
-    return generate_theme_words(category, num_words)
+def get_theme_words(category: str) -> dict:
+    """Get pre-generated theme words for a category."""
+    words = PREGENERATED_THEMES.get(category, [])
+    return {"name": category, "words": words}
 
 
 # ============== HELPERS ==============
@@ -470,8 +423,8 @@ class handler(BaseHTTPRequestHandler):
             if chosen_theme not in game.get('theme_options', []):
                 return self._send_error("Invalid theme choice", 400)
             
-            # Generate words for the chosen theme
-            theme = generate_theme_words(chosen_theme, MAX_PLAYERS * 25)
+            # Get pre-generated words for the chosen theme
+            theme = get_theme_words(chosen_theme)
             
             game['theme'] = {
                 "name": theme.get("name", chosen_theme),
