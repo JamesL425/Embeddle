@@ -12,6 +12,8 @@ let gameState = {
     isHost: false,
     pollingInterval: null,
     theme: null,
+    wordPool: null,  // This player's assigned words
+    allThemeWords: null,  // Full theme word list
 };
 
 // DOM Elements
@@ -61,6 +63,11 @@ document.getElementById('create-game-btn').addEventListener('click', async () =>
         gameState.code = data.code;
         gameState.theme = data.theme;
         
+        // For creator, fetch their word pool
+        const themeData = await apiCall(`/api/games/${data.code}/theme`);
+        gameState.wordPool = themeData.word_pool;
+        gameState.allThemeWords = themeData.theme.words;
+        
         // Update UI for create mode
         document.getElementById('join-screen-title').textContent = 'Create Game';
         document.getElementById('join-submit-btn').textContent = 'Create & Join';
@@ -68,8 +75,8 @@ document.getElementById('create-game-btn').addEventListener('click', async () =>
         document.getElementById('game-code').readOnly = true;
         document.getElementById('game-code-group').style.display = 'none';
         
-        // Show theme
-        displayTheme(data.theme);
+        // Show word pool (not full theme)
+        displayWordPool(themeData.theme.name, themeData.word_pool);
         
         showScreen('join');
     } catch (error) {
@@ -88,6 +95,7 @@ document.getElementById('join-game-btn').addEventListener('click', () => {
     // Hide theme until code is entered
     document.getElementById('theme-display').classList.add('hidden');
     gameState.theme = null;
+    gameState.wordPool = null;
     
     showScreen('join');
 });
@@ -99,27 +107,29 @@ document.getElementById('game-code').addEventListener('blur', async () => {
         try {
             const data = await apiCall(`/api/games/${code}/theme`);
             gameState.theme = data.theme;
+            gameState.wordPool = data.word_pool;
+            gameState.allThemeWords = data.theme.words;
             gameState.code = code;
-            displayTheme(data.theme);
+            displayWordPool(data.theme.name, data.word_pool);
         } catch (error) {
             document.getElementById('theme-display').classList.add('hidden');
         }
     }
 });
 
-function displayTheme(theme) {
-    if (!theme || !theme.words || theme.words.length === 0) {
+function displayWordPool(themeName, wordPool) {
+    if (!wordPool || wordPool.length === 0) {
         document.getElementById('theme-display').classList.add('hidden');
         return;
     }
     
-    document.getElementById('theme-name').textContent = theme.name;
+    document.getElementById('theme-name').textContent = themeName;
     
     const wordsContainer = document.getElementById('theme-words');
     wordsContainer.innerHTML = '';
     
     // Sort words alphabetically
-    const sortedWords = [...theme.words].sort();
+    const sortedWords = [...wordPool].sort();
     
     sortedWords.forEach(word => {
         const wordEl = document.createElement('span');
@@ -132,6 +142,13 @@ function displayTheme(theme) {
     });
     
     document.getElementById('theme-display').classList.remove('hidden');
+}
+
+function displayTheme(theme) {
+    // Legacy function - now redirects to displayWordPool
+    if (theme && theme.words) {
+        displayWordPool(theme.name, theme.words);
+    }
 }
 
 // Leaderboard
@@ -294,6 +311,17 @@ function updateGame(game) {
         } else {
             changeWordContainer.classList.add('hidden');
         }
+        
+        // Store word pool for change word feature
+        if (myPlayer.word_pool) {
+            gameState.wordPool = myPlayer.word_pool;
+        }
+    }
+    
+    // Update theme info in game screen
+    if (game.theme) {
+        document.getElementById('game-theme-name').textContent = game.theme.name || '-';
+        gameState.allThemeWords = game.theme.words || [];
     }
     
     updatePlayersGrid(game);
@@ -311,6 +339,31 @@ function updateGame(game) {
     
     updateHistory(game);
 }
+
+// Toggle wordlist visibility
+document.getElementById('toggle-wordlist-btn').addEventListener('click', () => {
+    const wordlist = document.getElementById('game-wordlist');
+    const btn = document.getElementById('toggle-wordlist-btn');
+    
+    if (wordlist.classList.contains('hidden')) {
+        // Populate and show
+        wordlist.innerHTML = '';
+        if (gameState.allThemeWords && gameState.allThemeWords.length > 0) {
+            const sortedWords = [...gameState.allThemeWords].sort();
+            sortedWords.forEach(word => {
+                const wordEl = document.createElement('span');
+                wordEl.className = 'theme-word';
+                wordEl.textContent = word;
+                wordlist.appendChild(wordEl);
+            });
+        }
+        wordlist.classList.remove('hidden');
+        btn.textContent = 'Hide Words';
+    } else {
+        wordlist.classList.add('hidden');
+        btn.textContent = 'Show All Words';
+    }
+});
 
 function updatePlayersGrid(game) {
     const grid = document.getElementById('players-grid');
@@ -536,6 +589,8 @@ document.getElementById('play-again-btn').addEventListener('click', () => {
         isHost: false,
         pollingInterval: null,
         theme: null,
+        wordPool: null,
+        allThemeWords: null,
     };
     showScreen('home');
 });

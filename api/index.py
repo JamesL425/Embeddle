@@ -61,26 +61,21 @@ def get_redis():
     return _redis_client
 
 
-def generate_theme_words(category: str) -> dict:
+def generate_theme_words(category: str, num_words: int = 60) -> dict:
     """Use LLM to generate theme words for a category."""
     import random
     
-    # Check cache first
+    # Check cache first - but only if we need 60 or fewer words
     redis = get_redis()
-    cache_key = f"theme:{category.lower().replace(' ', '_')}"
+    cache_key = f"theme:{category.lower().replace(' ', '_')}:{num_words}"
     cached = redis.get(cache_key)
     if cached:
-        cached_data = json.loads(cached)
-        # Return a random subset of cached words for variety
-        words = cached_data.get('words', [])
-        if len(words) > 50:
-            words = random.sample(words, 50)
-        return {"name": category, "words": words}
+        return json.loads(cached)
     
     # Generate with LLM
     client = get_openai_client()
     
-    prompt = f"""Generate exactly 60 common, single English words related to the theme "{category}".
+    prompt = f"""Generate exactly {num_words} common, single English words related to the theme "{category}".
 
 Rules:
 - Only single words (no phrases, no spaces, no hyphens)
@@ -88,6 +83,7 @@ Rules:
 - Mix of easy and slightly harder words
 - No proper nouns (no brand names, no specific places)
 - Words should be 3-12 letters long
+- All words must be unique
 
 Return ONLY a JSON array of lowercase words, nothing else. Example format:
 ["word1", "word2", "word3"]"""
@@ -96,38 +92,43 @@ Return ONLY a JSON array of lowercase words, nothing else. Example format:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.8,
-            max_tokens=500,
+            temperature=0.9,
+            max_tokens=1500,
         )
         
         content = response.choices[0].message.content.strip()
         # Parse the JSON array
         words = json.loads(content)
         
-        # Clean and validate words
+        # Clean and validate words, remove duplicates
         clean_words = []
+        seen = set()
         for word in words:
             word = word.lower().strip()
-            if word.isalpha() and 2 <= len(word) <= 15:
+            if word.isalpha() and 2 <= len(word) <= 15 and word not in seen:
                 clean_words.append(word)
+                seen.add(word)
         
-        # Cache for 1 hour (themes can be reused)
+        result = {"name": category, "words": clean_words}
+        
+        # Cache for 1 hour
         if clean_words:
-            redis.setex(cache_key, 3600, json.dumps({"words": clean_words}))
+            redis.setex(cache_key, 3600, json.dumps(result))
         
-        return {"name": category, "words": clean_words[:50]}
+        return result
     
     except Exception as e:
         print(f"Error generating theme: {e}")
-        # Fallback to a simple default
         return {"name": category, "words": []}
 
 
-def get_random_theme() -> dict:
-    """Get a random theme with LLM-generated words."""
+def get_random_theme(num_players: int = 4) -> dict:
+    """Get a random theme with LLM-generated words for the expected number of players."""
     import random
     category = random.choice(THEME_CATEGORIES)
-    return generate_theme_words(category)
+    # Generate 30 words per potential player slot (max 6 players)
+    num_words = MAX_PLAYERS * 30  # 180 words for 6 players
+    return generate_theme_words(category, num_words)
 
 
 # ============== HELPERS ==============
@@ -345,7 +346,24 @@ class handler(BaseHTTPRequestHandler):
             game = load_game(code)
             if not game:
                 return self._send_error("Game not found", 404)
-            return self._send_json({"theme": game.get('theme', {})})
+            
+            # Calculate which words are still available for new players
+            all_theme_words = game.get('theme', {}).get('words', [])
+            used_words = set()
+            for p in game['players']:
+                used_words.update(p.get('word_pool', []))
+            
+            available_words = [w for w in all_theme_words if w not in used_words]
+            # Give the next player their pool (first 30 available)
+            next_player_pool = available_words[:30] if len(available_words) >= 30 else available_words
+            
+            return self._send_json({
+                "theme": {
+                    "name": game.get('theme', {}).get('name', ''),
+                    "words": all_theme_words,  # Full list for reference
+                },
+                "word_pool": next_player_pool,  # This player's available words
+            })
 
         # GET /api/games/{code}
         if path.startswith('/api/games/') and path.count('/') == 3:
@@ -376,17 +394,24 @@ class handler(BaseHTTPRequestHandler):
                 "status": game['status'],
                 "winner": game.get('winner'),
                 "history": game.get('history', []),
-                "theme": game.get('theme', {}),
+                "theme": {
+                    "name": game.get('theme', {}).get('name', ''),
+                    "words": game.get('theme', {}).get('words', []),  # Full word list for guessing reference
+                },
             }
             
             for p in game['players']:
-                response['players'].append({
+                player_data = {
                     "id": p['id'],
                     "name": p['name'],
                     "secret_word": p['secret_word'] if p['id'] == player_id else None,
                     "is_alive": p['is_alive'],
                     "can_change_word": p.get('can_change_word', False) if p['id'] == player_id else None,
-                })
+                }
+                # Include this player's word pool if it's them
+                if p['id'] == player_id:
+                    player_data['word_pool'] = p.get('word_pool', [])
+                response['players'].append(player_data)
             
             return self._send_json(response)
 
@@ -448,15 +473,23 @@ class handler(BaseHTTPRequestHandler):
             if any(p['name'].lower() == name.lower() for p in game['players']):
                 return self._send_error("Name already taken", 400)
             
-            # Check if word is in the theme
-            theme_words = game.get('theme', {}).get('words', [])
-            if theme_words and not is_word_in_theme(secret_word, theme_words):
-                theme_name = game.get('theme', {}).get('name', 'the theme')
-                return self._send_error(f"Word must be from the {theme_name} theme. Check the word list!", 400)
+            # Assign a word pool to this player (30 words from the theme)
+            all_theme_words = game.get('theme', {}).get('words', [])
+            used_words = set()
+            for p in game['players']:
+                used_words.update(p.get('word_pool', []))
             
-            # Check if word is already taken by another player
-            if any(p['secret_word'].lower() == secret_word.lower() for p in game['players']):
-                return self._send_error("That word is already taken by another player", 400)
+            # Get available words not assigned to other players
+            available_words = [w for w in all_theme_words if w not in used_words]
+            
+            # Assign 30 words to this player
+            import random
+            player_word_pool = available_words[:30] if len(available_words) >= 30 else available_words
+            random.shuffle(player_word_pool)
+            
+            # Check if the chosen word is in this player's pool
+            if player_word_pool and secret_word.lower() not in [w.lower() for w in player_word_pool]:
+                return self._send_error(f"Please choose a word from your assigned word pool", 400)
             
             try:
                 embedding = get_embedding(secret_word)
@@ -471,6 +504,7 @@ class handler(BaseHTTPRequestHandler):
                 "secret_embedding": embedding,
                 "is_alive": True,
                 "can_change_word": False,
+                "word_pool": player_word_pool,
             }
             game['players'].append(player)
             
@@ -478,7 +512,11 @@ class handler(BaseHTTPRequestHandler):
                 game['host_id'] = player_id
             
             save_game(code, game)
-            return self._send_json({"player_id": player_id, "theme": game.get('theme', {})})
+            return self._send_json({
+                "player_id": player_id, 
+                "theme": {"name": game.get('theme', {}).get('name', ''), "words": all_theme_words},
+                "word_pool": player_word_pool,
+            })
 
         # POST /api/games/{code}/start
         if '/start' in path:
@@ -614,15 +652,10 @@ class handler(BaseHTTPRequestHandler):
             if not player.get('can_change_word', False):
                 return self._send_error("You don't have a word change", 400)
             
-            # Check if word is in the theme
-            theme_words = game.get('theme', {}).get('words', [])
-            if theme_words and not is_word_in_theme(new_word, theme_words):
-                theme_name = game.get('theme', {}).get('name', 'the theme')
-                return self._send_error(f"Word must be from the {theme_name} theme", 400)
-            
-            # Check if word is already taken by another player
-            if any(p['secret_word'].lower() == new_word.lower() and p['id'] != player_id for p in game['players']):
-                return self._send_error("That word is already taken by another player", 400)
+            # Check if word is in this player's word pool
+            player_pool = player.get('word_pool', [])
+            if player_pool and new_word.lower() not in [w.lower() for w in player_pool]:
+                return self._send_error("Please choose a word from your word pool", 400)
             
             try:
                 embedding = get_embedding(new_word)

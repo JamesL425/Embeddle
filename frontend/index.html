@@ -77,7 +77,7 @@
                         <span id="theme-name" class="theme-name">Loading...</span>
                     </div>
                     <div class="theme-words-container">
-                        <p class="theme-words-label">Pick your secret word from:</p>
+                        <p class="theme-words-label">Your word pool (pick one):</p>
                         <div id="theme-words" class="theme-words">
                             <!-- Words will be added here -->
                         </div>
@@ -94,8 +94,8 @@
                     </div>
                     <div class="form-group">
                         <label for="secret-word">Your Secret Word</label>
-                        <input type="text" id="secret-word" maxlength="30" placeholder="Choose from the theme..." required>
-                        <small>Pick a word from the theme above!</small>
+                        <input type="text" id="secret-word" maxlength="30" placeholder="Click a word above or type it..." required>
+                        <small>Pick a word from your pool above!</small>
                     </div>
                     <div class="button-group">
                         <button type="submit" id="join-submit-btn" class="btn btn-primary">Join</button>
@@ -139,6 +139,16 @@
                 <div id="change-word-container" class="change-word-container hidden">
                     <input type="text" id="new-word-input" placeholder="New word...">
                     <button id="change-word-btn" class="btn btn-small btn-accent">Change Word</button>
+                </div>
+            </div>
+
+            <div class="game-theme-info">
+                <div class="game-theme-header">
+                    <span>Theme: <strong id="game-theme-name">-</strong></span>
+                    <button id="toggle-wordlist-btn" class="btn btn-small btn-ghost">Show All Words</button>
+                </div>
+                <div id="game-wordlist" class="game-wordlist hidden">
+                    <!-- All theme words for reference -->
                 </div>
             </div>
 
