@@ -696,13 +696,28 @@ class handler(BaseHTTPRequestHandler):
             if len(game['players']) < MIN_PLAYERS:
                 return self._send_error(f"Need at least {MIN_PLAYERS} players", 400)
             
-            # Determine winning theme from votes
+            # Determine winning theme from votes (weighted random)
+            import random
             votes = game.get('theme_votes', {})
+            theme_options = game.get('theme_options', ['Animals'])
+            
             if votes:
-                winning_theme = max(votes.keys(), key=lambda k: len(votes[k]))
+                # Build weighted list: each theme appears once per vote
+                weighted_themes = []
+                for theme_name in theme_options:
+                    vote_count = len(votes.get(theme_name, []))
+                    # Give at least 1 weight to each theme so unvoted themes have a chance
+                    weight = max(vote_count, 0)
+                    weighted_themes.extend([theme_name] * weight)
+                
+                # If no votes at all, equal weight
+                if not weighted_themes:
+                    weighted_themes = theme_options.copy()
+                
+                winning_theme = random.choice(weighted_themes)
             else:
-                # Fallback to first option if no votes
-                winning_theme = game.get('theme_options', ['Animals'])[0]
+                # Fallback to random choice if no votes
+                winning_theme = random.choice(theme_options)
             
             # Set the theme
             theme = get_theme_words(winning_theme)
@@ -713,7 +728,6 @@ class handler(BaseHTTPRequestHandler):
             }
             
             # Assign distinct word pools to each player (20 words each, no overlap)
-            import random
             shuffled_words = all_words.copy()
             random.shuffle(shuffled_words)
             
