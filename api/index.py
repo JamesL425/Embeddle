@@ -1,131 +1,42 @@
-"""Vercel serverless function for Bagofwordsdle API."""
+"""Vercel serverless function for Bagofwordsdle API with Upstash Redis storage."""
 
 import json
 import os
 import secrets
 import string
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from enum import Enum
 from typing import Optional
 from http.server import BaseHTTPRequestHandler
 
 import numpy as np
-from openai import OpenAI, RateLimitError, APIError
+from openai import OpenAI
 from wordfreq import word_frequency
+from upstash_redis import Redis
 
-# Initialize OpenAI client lazily
-_client = None
+# Initialize clients lazily
+_openai_client = None
+_redis_client = None
+
 
 def get_openai_client():
-    global _client
-    if _client is None:
-        _client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    return _client
+    global _openai_client
+    if _openai_client is None:
+        _openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    return _openai_client
 
 
-# ============== MODELS ==============
-
-class GameStatus(str, Enum):
-    WAITING = "waiting"
-    PLAYING = "playing"
-    FINISHED = "finished"
-
-
-@dataclass
-class Player:
-    id: str
-    name: str
-    secret_word: str
-    secret_embedding: list[float] = field(default_factory=list)
-    is_alive: bool = True
-    can_change_word: bool = False
-
-    def to_dict(self, viewer_id: str) -> dict:
-        return {
-            "id": self.id,
-            "name": self.name,
-            "secret_word": self.secret_word if self.id == viewer_id else None,
-            "is_alive": self.is_alive,
-            "can_change_word": self.can_change_word if self.id == viewer_id else None,
-        }
+def get_redis():
+    global _redis_client
+    if _redis_client is None:
+        _redis_client = Redis(
+            url=os.getenv("UPSTASH_REDIS_REST_URL"),
+            token=os.getenv("UPSTASH_REDIS_REST_TOKEN"),
+        )
+    return _redis_client
 
 
-@dataclass
-class GuessResult:
-    guesser_id: str
-    guesser_name: str
-    word: str
-    similarities: dict
-    eliminations: list
-
-    def to_dict(self) -> dict:
-        return {
-            "guesser_id": self.guesser_id,
-            "guesser_name": self.guesser_name,
-            "word": self.word,
-            "similarities": self.similarities,
-            "eliminations": self.eliminations,
-        }
-
-
-@dataclass 
-class Game:
-    code: str
-    host_id: str
-    players: list = field(default_factory=list)
-    current_turn: int = 0
-    status: GameStatus = GameStatus.WAITING
-    winner: Optional[str] = None
-    history: list = field(default_factory=list)
-
-    def get_player(self, player_id: str):
-        for player in self.players:
-            if player.id == player_id:
-                return player
-        return None
-
-    def get_current_player(self):
-        if not self.players or self.status != GameStatus.PLAYING:
-            return None
-        return self.players[self.current_turn]
-
-    def get_alive_players(self):
-        return [p for p in self.players if p.is_alive]
-
-    def advance_turn(self):
-        if self.status != GameStatus.PLAYING:
-            return
-        alive_players = self.get_alive_players()
-        if len(alive_players) <= 1:
-            self.status = GameStatus.FINISHED
-            if alive_players:
-                self.winner = alive_players[0].id
-            return
-        num_players = len(self.players)
-        next_turn = (self.current_turn + 1) % num_players
-        while not self.players[next_turn].is_alive:
-            next_turn = (next_turn + 1) % num_players
-        self.current_turn = next_turn
-
-    def to_dict(self, viewer_id: str) -> dict:
-        current_player = self.get_current_player()
-        return {
-            "code": self.code,
-            "host_id": self.host_id,
-            "players": [p.to_dict(viewer_id) for p in self.players],
-            "current_turn": self.current_turn,
-            "current_player_id": current_player.id if current_player else None,
-            "status": self.status.value,
-            "winner": self.winner,
-            "history": [h.to_dict() for h in self.history],
-        }
-
-
-# ============== STORAGE ==============
-# WARNING: This resets on each serverless invocation!
-# For production, use Vercel KV or Upstash Redis
-games: dict = {}
-
+# ============== HELPERS ==============
 
 def generate_game_code() -> str:
     chars = string.ascii_uppercase + string.digits
@@ -134,11 +45,6 @@ def generate_game_code() -> str:
 
 def generate_player_id() -> str:
     return secrets.token_hex(8)
-
-
-# ============== EMBEDDINGS ==============
-
-embedding_cache: dict = {}
 
 
 def is_valid_word(word: str) -> bool:
@@ -153,8 +59,13 @@ def is_valid_word(word: str) -> bool:
 
 def get_embedding(word: str) -> list:
     word_lower = word.lower().strip()
-    if word_lower in embedding_cache:
-        return embedding_cache[word_lower]
+    
+    # Check Redis cache first
+    redis = get_redis()
+    cache_key = f"emb:{word_lower}"
+    cached = redis.get(cache_key)
+    if cached:
+        return json.loads(cached)
     
     client = get_openai_client()
     response = client.embeddings.create(
@@ -162,7 +73,9 @@ def get_embedding(word: str) -> list:
         input=word_lower,
     )
     embedding = response.data[0].embedding
-    embedding_cache[word_lower] = embedding
+    
+    # Cache for 24 hours
+    redis.setex(cache_key, 86400, json.dumps(embedding))
     return embedding
 
 
@@ -175,6 +88,27 @@ def cosine_similarity(embedding1, embedding2) -> float:
     if norm1 == 0 or norm2 == 0:
         return 0.0
     return float(dot_product / (norm1 * norm2))
+
+
+# ============== GAME STORAGE ==============
+
+def save_game(code: str, game_data: dict):
+    redis = get_redis()
+    # Games expire after 2 hours
+    redis.setex(f"game:{code}", 7200, json.dumps(game_data))
+
+
+def load_game(code: str) -> Optional[dict]:
+    redis = get_redis()
+    data = redis.get(f"game:{code}")
+    if data:
+        return json.loads(data)
+    return None
+
+
+def delete_game(code: str):
+    redis = get_redis()
+    redis.delete(f"game:{code}")
 
 
 # ============== CONSTANTS ==============
@@ -227,15 +161,42 @@ class handler(BaseHTTPRequestHandler):
             code = path.split('/')[3].upper()
             player_id = query.get('player_id', '')
             
-            game = games.get(code)
+            game = load_game(code)
             if not game:
                 return self._send_error("Game not found", 404)
             
-            player = game.get_player(player_id)
+            # Check player exists
+            player = None
+            for p in game['players']:
+                if p['id'] == player_id:
+                    player = p
+                    break
+            
             if not player:
                 return self._send_error("You are not in this game", 403)
             
-            return self._send_json(game.to_dict(player_id))
+            # Build response with hidden words
+            response = {
+                "code": game['code'],
+                "host_id": game['host_id'],
+                "players": [],
+                "current_turn": game['current_turn'],
+                "current_player_id": game['players'][game['current_turn']]['id'] if game['status'] == 'playing' and game['players'] else None,
+                "status": game['status'],
+                "winner": game.get('winner'),
+                "history": game.get('history', []),
+            }
+            
+            for p in game['players']:
+                response['players'].append({
+                    "id": p['id'],
+                    "name": p['name'],
+                    "secret_word": p['secret_word'] if p['id'] == player_id else None,
+                    "is_alive": p['is_alive'],
+                    "can_change_word": p.get('can_change_word', False) if p['id'] == player_id else None,
+                })
+            
+            return self._send_json(response)
 
         self._send_error("Not found", 404)
 
@@ -246,22 +207,33 @@ class handler(BaseHTTPRequestHandler):
         # POST /api/games - Create game
         if path == '/api/games':
             code = generate_game_code()
-            while code in games:
+            
+            # Make sure code is unique
+            while load_game(code):
                 code = generate_game_code()
-            game = Game(code=code, host_id="")
-            games[code] = game
+            
+            game = {
+                "code": code,
+                "host_id": "",
+                "players": [],
+                "current_turn": 0,
+                "status": "waiting",
+                "winner": None,
+                "history": [],
+            }
+            save_game(code, game)
             return self._send_json({"code": code, "player_id": ""})
 
         # POST /api/games/{code}/join
         if '/join' in path:
             code = path.split('/')[3].upper()
-            game = games.get(code)
+            game = load_game(code)
             
             if not game:
                 return self._send_error("Game not found", 404)
-            if game.status != GameStatus.WAITING:
+            if game['status'] != 'waiting':
                 return self._send_error("Game has already started", 400)
-            if len(game.players) >= MAX_PLAYERS:
+            if len(game['players']) >= MAX_PLAYERS:
                 return self._send_error("Game is full", 400)
             
             name = body.get('name', '').strip()
@@ -270,7 +242,7 @@ class handler(BaseHTTPRequestHandler):
             if not name or not secret_word:
                 return self._send_error("Name and secret word required", 400)
             
-            if any(p.name.lower() == name.lower() for p in game.players):
+            if any(p['name'].lower() == name.lower() for p in game['players']):
                 return self._send_error("Name already taken", 400)
             
             if not is_valid_word(secret_word):
@@ -282,60 +254,71 @@ class handler(BaseHTTPRequestHandler):
                 return self._send_error(f"API error: {str(e)}", 503)
             
             player_id = generate_player_id()
-            player = Player(
-                id=player_id,
-                name=name,
-                secret_word=secret_word.lower(),
-                secret_embedding=embedding,
-            )
-            game.players.append(player)
+            player = {
+                "id": player_id,
+                "name": name,
+                "secret_word": secret_word.lower(),
+                "secret_embedding": embedding,
+                "is_alive": True,
+                "can_change_word": False,
+            }
+            game['players'].append(player)
             
-            if len(game.players) == 1:
-                game.host_id = player_id
+            if len(game['players']) == 1:
+                game['host_id'] = player_id
             
+            save_game(code, game)
             return self._send_json({"player_id": player_id})
 
         # POST /api/games/{code}/start
         if '/start' in path:
             code = path.split('/')[3].upper()
-            game = games.get(code)
+            game = load_game(code)
             
             if not game:
                 return self._send_error("Game not found", 404)
             
             player_id = body.get('player_id', '')
-            if game.host_id != player_id:
+            if game['host_id'] != player_id:
                 return self._send_error("Only the host can start", 403)
-            if game.status != GameStatus.WAITING:
+            if game['status'] != 'waiting':
                 return self._send_error("Game already started", 400)
-            if len(game.players) < MIN_PLAYERS:
+            if len(game['players']) < MIN_PLAYERS:
                 return self._send_error(f"Need at least {MIN_PLAYERS} players", 400)
             
-            game.status = GameStatus.PLAYING
-            game.current_turn = 0
+            game['status'] = 'playing'
+            game['current_turn'] = 0
+            save_game(code, game)
             return self._send_json({"status": "started"})
 
         # POST /api/games/{code}/guess
         if '/guess' in path:
             code = path.split('/')[3].upper()
-            game = games.get(code)
+            game = load_game(code)
             
             if not game:
                 return self._send_error("Game not found", 404)
-            if game.status != GameStatus.PLAYING:
+            if game['status'] != 'playing':
                 return self._send_error("Game not in progress", 400)
             
             player_id = body.get('player_id', '')
             word = body.get('word', '').strip()
             
-            player = game.get_player(player_id)
+            player = None
+            player_idx = -1
+            for i, p in enumerate(game['players']):
+                if p['id'] == player_id:
+                    player = p
+                    player_idx = i
+                    break
+            
             if not player:
                 return self._send_error("You are not in this game", 403)
-            if not player.is_alive:
+            if not player['is_alive']:
                 return self._send_error("You have been eliminated", 400)
             
-            current = game.get_current_player()
-            if not current or current.id != player_id:
+            current_player = game['players'][game['current_turn']]
+            if current_player['id'] != player_id:
                 return self._send_error("It's not your turn", 400)
             
             if not is_valid_word(word):
@@ -347,54 +330,74 @@ class handler(BaseHTTPRequestHandler):
                 return self._send_error(f"API error: {str(e)}", 503)
             
             similarities = {}
-            for p in game.players:
-                sim = cosine_similarity(guess_embedding, p.secret_embedding)
-                similarities[p.id] = round(sim, 2)
+            for p in game['players']:
+                sim = cosine_similarity(guess_embedding, p['secret_embedding'])
+                similarities[p['id']] = round(sim, 2)
             
             eliminations = []
-            for p in game.players:
-                if p.id != player_id and p.is_alive:
-                    if similarities.get(p.id, 0) >= ELIMINATION_THRESHOLD:
-                        p.is_alive = False
-                        eliminations.append(p.id)
+            for p in game['players']:
+                if p['id'] != player_id and p['is_alive']:
+                    if similarities.get(p['id'], 0) >= ELIMINATION_THRESHOLD:
+                        p['is_alive'] = False
+                        eliminations.append(p['id'])
             
             if eliminations:
-                player.can_change_word = True
+                player['can_change_word'] = True
             
-            result = GuessResult(
-                guesser_id=player.id,
-                guesser_name=player.name,
-                word=word.lower(),
-                similarities=similarities,
-                eliminations=eliminations,
-            )
-            game.history.append(result)
-            game.advance_turn()
+            # Record history
+            history_entry = {
+                "guesser_id": player['id'],
+                "guesser_name": player['name'],
+                "word": word.lower(),
+                "similarities": similarities,
+                "eliminations": eliminations,
+            }
+            game['history'].append(history_entry)
+            
+            # Advance turn
+            alive_players = [p for p in game['players'] if p['is_alive']]
+            if len(alive_players) <= 1:
+                game['status'] = 'finished'
+                if alive_players:
+                    game['winner'] = alive_players[0]['id']
+            else:
+                num_players = len(game['players'])
+                next_turn = (game['current_turn'] + 1) % num_players
+                while not game['players'][next_turn]['is_alive']:
+                    next_turn = (next_turn + 1) % num_players
+                game['current_turn'] = next_turn
+            
+            save_game(code, game)
             
             return self._send_json({
                 "similarities": similarities,
                 "eliminations": eliminations,
-                "game_over": game.status == GameStatus.FINISHED,
-                "winner": game.winner,
+                "game_over": game['status'] == 'finished',
+                "winner": game.get('winner'),
             })
 
         # POST /api/games/{code}/change-word
         if '/change-word' in path:
             code = path.split('/')[3].upper()
-            game = games.get(code)
+            game = load_game(code)
             
             if not game:
                 return self._send_error("Game not found", 404)
-            if game.status != GameStatus.PLAYING:
+            if game['status'] != 'playing':
                 return self._send_error("Game not in progress", 400)
             
             player_id = body.get('player_id', '')
             new_word = body.get('new_word', '').strip()
             
-            player = game.get_player(player_id)
+            player = None
+            for p in game['players']:
+                if p['id'] == player_id:
+                    player = p
+                    break
+            
             if not player:
                 return self._send_error("You are not in this game", 403)
-            if not player.can_change_word:
+            if not player.get('can_change_word', False):
                 return self._send_error("You don't have a word change", 400)
             if not is_valid_word(new_word):
                 return self._send_error("Please enter a valid English word", 400)
@@ -404,10 +407,11 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 return self._send_error(f"API error: {str(e)}", 503)
             
-            player.secret_word = new_word.lower()
-            player.secret_embedding = embedding
-            player.can_change_word = False
+            player['secret_word'] = new_word.lower()
+            player['secret_embedding'] = embedding
+            player['can_change_word'] = False
             
+            save_game(code, game)
             return self._send_json({"status": "word_changed"})
 
         self._send_error("Not found", 404)
