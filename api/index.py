@@ -8,11 +8,33 @@ from dataclasses import dataclass, field, asdict
 from enum import Enum
 from typing import Optional
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 
 import numpy as np
 from openai import OpenAI
 from wordfreq import word_frequency
 from upstash_redis import Redis
+
+# ============== CONFIG ==============
+
+def load_config():
+    config_path = Path(__file__).parent / "config.json"
+    if config_path.exists():
+        with open(config_path) as f:
+            return json.load(f)
+    return {}
+
+CONFIG = load_config()
+
+# Game settings
+MIN_PLAYERS = CONFIG.get("game", {}).get("min_players", 3)
+MAX_PLAYERS = CONFIG.get("game", {}).get("max_players", 4)
+ELIMINATION_THRESHOLD = CONFIG.get("game", {}).get("elimination_threshold", 0.95)
+GAME_EXPIRY_SECONDS = CONFIG.get("game", {}).get("game_expiry_seconds", 7200)
+
+# Embedding settings
+EMBEDDING_MODEL = CONFIG.get("embedding", {}).get("model", "text-embedding-3-small")
+EMBEDDING_CACHE_SECONDS = CONFIG.get("embedding", {}).get("cache_expiry_seconds", 86400)
 
 # Initialize clients lazily
 _openai_client = None
@@ -69,13 +91,13 @@ def get_embedding(word: str) -> list:
     
     client = get_openai_client()
     response = client.embeddings.create(
-        model="text-embedding-3-small",
+        model=EMBEDDING_MODEL,
         input=word_lower,
     )
     embedding = response.data[0].embedding
     
-    # Cache for 24 hours
-    redis.setex(cache_key, 86400, json.dumps(embedding))
+    # Cache embedding
+    redis.setex(cache_key, EMBEDDING_CACHE_SECONDS, json.dumps(embedding))
     return embedding
 
 
@@ -94,8 +116,7 @@ def cosine_similarity(embedding1, embedding2) -> float:
 
 def save_game(code: str, game_data: dict):
     redis = get_redis()
-    # Games expire after 2 hours
-    redis.setex(f"game:{code}", 7200, json.dumps(game_data))
+    redis.setex(f"game:{code}", GAME_EXPIRY_SECONDS, json.dumps(game_data))
 
 
 def load_game(code: str) -> Optional[dict]:
@@ -109,13 +130,6 @@ def load_game(code: str) -> Optional[dict]:
 def delete_game(code: str):
     redis = get_redis()
     redis.delete(f"game:{code}")
-
-
-# ============== CONSTANTS ==============
-
-ELIMINATION_THRESHOLD = 0.95
-MIN_PLAYERS = 3
-MAX_PLAYERS = 4
 
 
 # ============== HANDLER ==============
