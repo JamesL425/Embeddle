@@ -245,6 +245,7 @@ def get_theme_words(category: str) -> dict:
 
 # OAuth Configuration
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', '')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
 JWT_SECRET = os.getenv('JWT_SECRET', secrets.token_hex(32))
 JWT_ALGORITHM = 'HS256'
@@ -785,6 +786,36 @@ class handler(BaseHTTPRequestHandler):
                 'site_url': os.getenv('SITE_URL', ''),
                 'vercel_url': os.getenv('VERCEL_URL', ''),
             })
+
+        # GET /api/auth/admin?password=XXX - Admin login with password
+        if path == '/api/auth/admin':
+            password = query.get('password', '')
+            
+            if not ADMIN_PASSWORD:
+                return self._send_error("Admin login not configured", 500)
+            
+            if not password or password != ADMIN_PASSWORD:
+                return self._send_error("Invalid password", 401)
+            
+            # Create admin user data
+            admin_user = {
+                'id': 'admin_local',
+                'email': 'admin@embeddle.io',
+                'name': 'Admin',
+                'avatar': '',
+                'is_admin': True,
+                'is_donor': True,
+                'cosmetics': DEFAULT_COSMETICS.copy(),
+            }
+            
+            # Create JWT token
+            jwt_token = create_jwt_token(admin_user)
+            
+            # Redirect to frontend with token
+            self.send_response(302)
+            self.send_header('Location', f'/?auth_token={jwt_token}')
+            self.end_headers()
+            return
 
         # GET /api/auth/callback - Handle OAuth callback
         if path == '/api/auth/callback':
