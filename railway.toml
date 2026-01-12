@@ -1,0 +1,13 @@
+[project]
+name = "bagofwordsdle"
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "cd backend && pip install -r requirements.txt && python main.py"
+healthcheckPath = "/games"
+healthcheckTimeout = 100
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
