@@ -69,6 +69,13 @@ function showScreen(screenName) {
         if (screen) screen.classList.remove('active');
     });
     if (screens[screenName]) screens[screenName].classList.add('active');
+    
+    // Start/stop lobby refresh based on screen
+    if (screenName === 'home') {
+        startLobbyRefresh();
+    } else {
+        stopLobbyRefresh();
+    }
 }
 
 function showError(message) {
@@ -103,6 +110,8 @@ async function apiCall(endpoint, method = 'GET', body = null) {
 
 // ============ HOME SCREEN ============
 
+let lobbyRefreshInterval = null;
+
 // Load open lobbies on page load and refresh
 async function loadLobbies() {
     const container = document.getElementById('open-lobbies');
@@ -116,9 +125,9 @@ async function loadLobbies() {
                 <div class="lobby-item" data-code="${lobby.code}">
                     <div class="lobby-info-row">
                         <span class="lobby-code">${lobby.code}</span>
-                        <span class="lobby-players">${lobby.player_count}/${lobby.max_players} players</span>
+                        <span class="lobby-players">${lobby.player_count}/${lobby.max_players} operatives</span>
                     </div>
-                    <button class="btn btn-small btn-secondary join-lobby-btn" data-code="${lobby.code}">Join</button>
+                    <button class="btn btn-small btn-secondary join-lobby-btn" data-code="${lobby.code}">JOIN</button>
                 </div>
             `).join('');
             
@@ -129,6 +138,19 @@ async function loadLobbies() {
         }
     } catch (error) {
         container.innerHTML = '<p class="error">Failed to load lobbies</p>';
+    }
+}
+
+function startLobbyRefresh() {
+    stopLobbyRefresh();
+    loadLobbies();
+    lobbyRefreshInterval = setInterval(loadLobbies, 3000);  // Refresh every 3 seconds
+}
+
+function stopLobbyRefresh() {
+    if (lobbyRefreshInterval) {
+        clearInterval(lobbyRefreshInterval);
+        lobbyRefreshInterval = null;
     }
 }
 
@@ -160,9 +182,6 @@ document.getElementById('create-game-btn').addEventListener('click', async () =>
 });
 
 document.getElementById('refresh-lobbies-btn')?.addEventListener('click', loadLobbies);
-
-// Load lobbies on page load
-loadLobbies();
 
 // ============ JOIN LOBBY ============
 
@@ -299,7 +318,6 @@ function showWordSelection(data) {
 document.getElementById('back-home-btn').addEventListener('click', () => {
     gameState.code = null;
     showScreen('home');
-    loadLobbies();
 });
 
 document.getElementById('join-form').addEventListener('submit', async (e) => {
@@ -930,7 +948,6 @@ document.getElementById('play-again-btn').addEventListener('click', () => {
         myVote: null,
     };
     showScreen('home');
-    loadLobbies();
 });
 
 // Cleanup old polling functions
@@ -987,4 +1004,3 @@ function initMatrixRain() {
 initLogin();
 initMatrixRain();
 showScreen('home');
-loadLobbies();
