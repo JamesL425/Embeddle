@@ -104,7 +104,7 @@ def load_themes():
 PREGENERATED_THEMES = load_themes()
 THEME_CATEGORIES = list(PREGENERATED_THEMES.keys()) if PREGENERATED_THEMES else CONFIG.get("theme_categories", [])
 
-# Initialize clients lazily
+# Initialise clients lazily
 _openai_client = None
 _redis_client = None
 

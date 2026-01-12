@@ -1245,7 +1245,7 @@ function initMatrixRain() {
     setInterval(draw, 50);
 }
 
-// Initialize
+// Initialise
 initLogin();
 initMatrixRain();
 showScreen('home');
