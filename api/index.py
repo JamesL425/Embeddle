@@ -922,10 +922,15 @@ class handler(BaseHTTPRequestHandler):
             
             # Handle admin user specially (not stored in Redis)
             if payload['sub'] == 'admin_local':
+                # Get admin cosmetics from Redis if they exist
+                redis = get_redis()
+                existing = redis.get('admin_cosmetics')
+                admin_cosmetics = json.loads(existing) if existing else DEFAULT_COSMETICS.copy()
+                
                 return self._send_json({
                     'is_donor': True,
                     'is_admin': True,
-                    'cosmetics': DEFAULT_COSMETICS.copy(),
+                    'cosmetics': admin_cosmetics,
                 })
             
             user = get_user_by_id(payload['sub'])
@@ -1765,18 +1770,29 @@ class handler(BaseHTTPRequestHandler):
             if not payload:
                 return self._send_error("Invalid or expired token", 401)
             
-            # Handle admin user specially - cosmetics are session-only (not persisted)
+            category = body.get('category', '')
+            cosmetic_id = body.get('cosmetic_id', '')
+            
+            if not category or not cosmetic_id:
+                return self._send_error("Category and cosmetic_id required", 400)
+            
+            # Handle admin user specially - store cosmetics in Redis with short expiry
             if payload['sub'] == 'admin_local':
-                category = body.get('category', '')
-                cosmetic_id = body.get('cosmetic_id', '')
+                redis = get_redis()
+                admin_cosmetics_key = 'admin_cosmetics'
                 
-                if not category or not cosmetic_id:
-                    return self._send_error("Category and cosmetic_id required", 400)
+                # Get existing admin cosmetics or start fresh
+                existing = redis.get(admin_cosmetics_key)
+                if existing:
+                    admin_cosmetics = json.loads(existing)
+                else:
+                    admin_cosmetics = DEFAULT_COSMETICS.copy()
                 
-                # Admin can equip any cosmetic, but it's not persisted
-                # Just return success with the requested cosmetic
-                admin_cosmetics = DEFAULT_COSMETICS.copy()
+                # Update the selected category
                 admin_cosmetics[category] = cosmetic_id
+                
+                # Save with 1 hour expiry
+                redis.set(admin_cosmetics_key, json.dumps(admin_cosmetics), ex=3600)
                 
                 return self._send_json({
                     "status": "equipped",
@@ -1786,9 +1802,6 @@ class handler(BaseHTTPRequestHandler):
             user = get_user_by_id(payload['sub'])
             if not user:
                 return self._send_error("User not found", 404)
-            
-            category = body.get('category', '')
-            cosmetic_id = body.get('cosmetic_id', '')
             
             if not category or not cosmetic_id:
                 return self._send_error("Category and cosmetic_id required", 400)
