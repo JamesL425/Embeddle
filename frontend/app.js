@@ -413,7 +413,9 @@ async function updateLobby() {
         const hostControls = document.getElementById('host-controls');
         if (gameState.isHost) {
             hostControls.classList.remove('hidden');
-            document.getElementById('start-game-btn').disabled = data.players.length < 2;
+            // Admin can start with 1 player, others need at least 2
+            const minPlayers = gameState.isAdminSession ? 1 : 2;
+            document.getElementById('start-game-btn').disabled = data.players.length < minPlayers;
         } else {
             hostControls.classList.add('hidden');
         }
