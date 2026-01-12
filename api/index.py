@@ -65,35 +65,26 @@ def generate_theme_words(category: str, num_words: int = 60) -> dict:
     """Use LLM to generate theme words for a category."""
     import random
     
-    # Check cache first - but only if we need 60 or fewer words
+    # Check cache first
     redis = get_redis()
     cache_key = f"theme:{category.lower().replace(' ', '_')}:{num_words}"
     cached = redis.get(cache_key)
     if cached:
         return json.loads(cached)
     
-    # Generate with LLM
+    # Generate with LLM - use nano for speed
     client = get_openai_client()
     
-    prompt = f"""Generate exactly {num_words} common, single English words related to the theme "{category}".
-
-Rules:
-- Only single words (no phrases, no spaces, no hyphens)
-- Common words that most people would know
-- Mix of easy and slightly harder words
-- No proper nouns (no brand names, no specific places)
-- Words should be 3-12 letters long
-- All words must be unique
-
-Return ONLY a JSON array of lowercase words, nothing else. Example format:
-["word1", "word2", "word3"]"""
+    prompt = f"""Generate {num_words} common single English words for the theme "{category}".
+Rules: single words only, common words, no proper nouns, 3-12 letters, all unique.
+Return ONLY a JSON array: ["word1", "word2", ...]"""
 
     try:
         response = client.chat.completions.create(
-            model="gpt-5-mini",
+            model="gpt-5-nano",  # Faster for simple word lists
             messages=[{"role": "user", "content": prompt}],
             temperature=0.9,
-            max_tokens=1500,
+            max_tokens=2000,
         )
         
         content = response.choices[0].message.content.strip()
@@ -111,9 +102,9 @@ Return ONLY a JSON array of lowercase words, nothing else. Example format:
         
         result = {"name": category, "words": clean_words}
         
-        # Cache for 1 hour
+        # Cache for 24 hours (themes don't change)
         if clean_words:
-            redis.setex(cache_key, 3600, json.dumps(result))
+            redis.setex(cache_key, 86400, json.dumps(result))
         
         return result
     
@@ -126,8 +117,8 @@ def get_random_theme(num_players: int = 4) -> dict:
     """Get a random theme with LLM-generated words for the expected number of players."""
     import random
     category = random.choice(THEME_CATEGORIES)
-    # Generate 30 words per potential player slot (max 6 players)
-    num_words = MAX_PLAYERS * 30  # 180 words for 6 players
+    # Generate 25 words per potential player slot (max 6 players = 150 words)
+    num_words = MAX_PLAYERS * 25  # 150 words for 6 players
     return generate_theme_words(category, num_words)
 
 
@@ -359,8 +350,8 @@ class handler(BaseHTTPRequestHandler):
             available_words = [w for w in all_theme_words if w.lower() not in {x.lower() for x in assigned_words}]
             
             # Give the next player a random 30 from available (unassigned) words
-            if len(available_words) > 30:
-                next_player_pool = random.sample(available_words, 30)
+            if len(available_words) > 25:
+                next_player_pool = random.sample(available_words, 25)
             else:
                 next_player_pool = available_words
             
@@ -496,8 +487,8 @@ class handler(BaseHTTPRequestHandler):
             available_words = [w for w in all_theme_words if w.lower() not in assigned_words]
             
             # Give this player a random 30 from unassigned words
-            if len(available_words) > 30:
-                player_word_pool = random.sample(available_words, 30)
+            if len(available_words) > 25:
+                player_word_pool = random.sample(available_words, 25)
             else:
                 player_word_pool = available_words
             
