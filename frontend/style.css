@@ -488,7 +488,7 @@ header h1 {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Courier Prime', monospace;
     font-size: 0.8rem;
     color: var(--text-primary);
     cursor: pointer;
@@ -496,8 +496,13 @@ header h1 {
 }
 
 .word-pool-option:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.word-pool-option.selected {
     background: var(--accent-primary);
-    color: white;
+    color: var(--bg-primary);
     border-color: var(--accent-primary);
 }
 
@@ -507,8 +512,10 @@ header h1 {
     align-items: center;
 }
 
-.change-word-input-row input {
+.change-word-input-row .selected-word-display {
     flex: 1;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
 }
 
 /* Waiting Notice */

@@ -603,12 +603,20 @@ function updateGame(game) {
             
             if (wordPoolOptions) {
                 wordPoolOptions.innerHTML = '';
+                const newWordDisplay = document.getElementById('new-word-display');
+                newWordDisplay.textContent = 'Click a word above';
+                newWordDisplay.dataset.word = '';
+                
                 availableWords.sort().forEach(word => {
                     const wordEl = document.createElement('span');
                     wordEl.className = 'word-pool-option';
                     wordEl.textContent = word;
                     wordEl.addEventListener('click', () => {
-                        document.getElementById('new-word-input').value = word;
+                        // Deselect others
+                        wordPoolOptions.querySelectorAll('.word-pool-option').forEach(w => w.classList.remove('selected'));
+                        wordEl.classList.add('selected');
+                        newWordDisplay.textContent = word.toUpperCase();
+                        newWordDisplay.dataset.word = word;
                     });
                     wordPoolOptions.appendChild(wordEl);
                 });
@@ -964,13 +972,6 @@ document.getElementById('change-word-btn').addEventListener('click', async () =>
     await submitWordChange();
 });
 
-document.getElementById('new-word-input').addEventListener('keydown', async (e) => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        await submitWordChange();
-    }
-});
-
 // Skip word change button
 document.getElementById('skip-word-change-btn').addEventListener('click', async () => {
     try {
@@ -983,10 +984,11 @@ document.getElementById('skip-word-change-btn').addEventListener('click', async 
 });
 
 async function submitWordChange() {
-    const newWord = document.getElementById('new-word-input').value.trim();
+    const newWordDisplay = document.getElementById('new-word-display');
+    const newWord = newWordDisplay.dataset.word;
     
     if (!newWord) {
-        showError('Please enter a new word');
+        showError('Please select a word');
         return;
     }
     
@@ -995,7 +997,8 @@ async function submitWordChange() {
             player_id: gameState.playerId,
             new_word: newWord,
         });
-        document.getElementById('new-word-input').value = '';
+        newWordDisplay.textContent = 'Click a word above';
+        newWordDisplay.dataset.word = '';
     } catch (error) {
         showError(error.message);
     }
