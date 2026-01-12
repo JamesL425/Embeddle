@@ -1351,13 +1351,33 @@ async function submitGuess() {
             playGuessEffect(guessEffect);
         }
         
-        await apiCall(`/api/games/${gameState.code}/guess`, 'POST', {
+        const response = await apiCall(`/api/games/${gameState.code}/guess`, 'POST', {
             player_id: gameState.playerId,
             word,
         });
         guessInput.value = '';
+        
+        // Process AI turns with delay if in singleplayer
+        if (response.ai_turns && response.ai_turns.length > 0) {
+            await processAiTurnsWithDelay(response.ai_turns);
+        }
     } catch (error) {
         showError(error.message);
+    }
+}
+
+// Process AI turns with a delay between each for smooth visual feedback
+async function processAiTurnsWithDelay(aiTurns) {
+    for (const turn of aiTurns) {
+        // Wait 100ms between each AI turn
+        await new Promise(resolve => setTimeout(resolve, 100));
+        // Fetch updated game state to show the AI's turn
+        try {
+            const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+            updateGame(game);
+        } catch (e) {
+            console.error('Error fetching game after AI turn:', e);
+        }
     }
 }
 
@@ -1369,9 +1389,14 @@ document.getElementById('change-word-btn').addEventListener('click', async () =>
 // Skip word change button
 document.getElementById('skip-word-change-btn').addEventListener('click', async () => {
     try {
-        await apiCall(`/api/games/${gameState.code}/skip-word-change`, 'POST', {
+        const response = await apiCall(`/api/games/${gameState.code}/skip-word-change`, 'POST', {
             player_id: gameState.playerId,
         });
+        
+        // Process AI turns with delay if in singleplayer
+        if (response.ai_turns && response.ai_turns.length > 0) {
+            await processAiTurnsWithDelay(response.ai_turns);
+        }
     } catch (error) {
         showError(error.message);
     }
@@ -1387,12 +1412,17 @@ async function submitWordChange() {
     }
     
     try {
-        await apiCall(`/api/games/${gameState.code}/change-word`, 'POST', {
+        const response = await apiCall(`/api/games/${gameState.code}/change-word`, 'POST', {
             player_id: gameState.playerId,
             new_word: newWord,
         });
         newWordDisplay.textContent = 'Click a word above';
         newWordDisplay.dataset.word = '';
+        
+        // Process AI turns with delay if in singleplayer
+        if (response.ai_turns && response.ai_turns.length > 0) {
+            await processAiTurnsWithDelay(response.ai_turns);
+        }
     } catch (error) {
         showError(error.message);
     }
