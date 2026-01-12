@@ -48,7 +48,7 @@ def get_embedding(word: str) -> list[float]:
     
     try:
         response = client.embeddings.create(
-            model="text-embedding-3-small",
+            model="text-embedding-3-large",
             input=word_lower,
         )
         

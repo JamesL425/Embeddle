@@ -917,10 +917,11 @@ document.getElementById('back-to-lobby-btn')?.addEventListener('click', () => {
 
 document.getElementById('play-again-btn').addEventListener('click', () => {
     stopPolling();
+    const savedName = gameState.playerName;
     gameState = {
         code: null,
         playerId: null,
-        playerName: null,
+        playerName: savedName,  // Preserve the name
         isHost: false,
         pollingInterval: null,
         theme: null,
@@ -986,3 +987,4 @@ function initMatrixRain() {
 initLogin();
 initMatrixRain();
 showScreen('home');
+loadLobbies();
