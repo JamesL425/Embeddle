@@ -187,7 +187,9 @@ document.getElementById('refresh-lobbies-btn')?.addEventListener('click', loadLo
 
 async function joinLobby(code, name) {
     try {
+        console.log('Joining lobby:', code, 'as', name);
         const data = await apiCall(`/api/games/${code}/join`, 'POST', { name });
+        console.log('Join response:', data);
         
         gameState.code = code;
         gameState.playerId = data.player_id;
@@ -201,11 +203,13 @@ async function joinLobby(code, name) {
         // Start polling for lobby updates
         startLobbyPolling();
     } catch (error) {
+        console.error('Join error:', error);
         showError(error.message);
     }
 }
 
 function startLobbyPolling() {
+    console.log('Starting lobby polling for game:', gameState.code);
     if (gameState.pollingInterval) {
         clearInterval(gameState.pollingInterval);
     }
@@ -218,12 +222,14 @@ async function updateLobby() {
     try {
         const data = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
         
+        console.log('Lobby update:', data.players.length, 'players', data.players.map(p => p.name));
+        
         // Update players list
         const playersList = document.getElementById('lobby-players');
         playersList.innerHTML = data.players.map(p => `
             <div class="lobby-player ${p.id === data.host_id ? 'host' : ''}">
                 <span class="player-name">${p.name}${p.id === gameState.playerId ? ' (you)' : ''}</span>
-                ${p.id === data.host_id ? '<span class="host-badge">Host</span>' : ''}
+                ${p.id === data.host_id ? '<span class="host-badge">HOST</span>' : ''}
             </div>
         `).join('');
         
