@@ -90,7 +90,7 @@ Return ONLY a JSON array of lowercase words, nothing else. Example format:
 
     try:
         response = client.chat.completions.create(
-            model="gpt-5-nano",
+            model="gpt-5-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.9,
             max_tokens=1500,
