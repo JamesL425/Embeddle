@@ -116,12 +116,58 @@ function setLoggedInWithAuth(user) {
 }
 
 function setLoggedIn(name) {
-    gameState.playerName = name;
-    localStorage.setItem('embeddle_name', name);
+    // Sanitize name - remove any HTML/script tags and limit length
+    const sanitizedName = name.replace(/<[^>]*>/g, '').substring(0, 20).trim();
+    
+    if (!sanitizedName) {
+        showError('Please enter a valid callsign');
+        return;
+    }
+    
+    // Check for admin callsign (case-insensitive)
+    if (sanitizedName.toLowerCase() === 'admin') {
+        promptAdminPassword();
+        return;
+    }
+    
+    gameState.playerName = sanitizedName;
+    localStorage.setItem('embeddle_name', sanitizedName);
     
     document.getElementById('login-box').classList.add('hidden');
     document.getElementById('logged-in-box').classList.remove('hidden');
-    document.getElementById('logged-in-name').textContent = name.toUpperCase();
+    document.getElementById('logged-in-name').textContent = sanitizedName.toUpperCase();
+}
+
+async function promptAdminPassword() {
+    const password = prompt('Enter admin password:');
+    if (!password) {
+        document.getElementById('login-name').value = '';
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/auth/admin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: password })
+        });
+        
+        if (!response.ok) {
+            const err = await response.json();
+            showError(err.detail || 'Invalid admin password');
+            document.getElementById('login-name').value = '';
+            return;
+        }
+        
+        const data = await response.json();
+        // Store token and load user
+        localStorage.setItem('embeddle_auth_token', data.token);
+        gameState.authToken = data.token;
+        loadAuthenticatedUser(data.token);
+    } catch (error) {
+        showError('Admin login failed');
+        document.getElementById('login-name').value = '';
+    }
 }
 
 function logout() {

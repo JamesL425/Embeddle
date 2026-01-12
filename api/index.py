@@ -52,12 +52,15 @@ def sanitize_player_id(player_id: str) -> Optional[str]:
     return player_id
 
 
-def sanitize_player_name(name: str) -> Optional[str]:
+def sanitize_player_name(name: str, allow_admin: bool = False) -> Optional[str]:
     """Sanitize player name. Returns None if invalid."""
     if not name:
         return None
     name = name.strip()
     if not PLAYER_NAME_PATTERN.match(name):
+        return None
+    # Prevent non-admin users from using reserved names
+    if not allow_admin and name.lower() == 'admin':
         return None
     # HTML escape to prevent XSS when displayed
     return html.escape(name)
@@ -787,36 +790,6 @@ class handler(BaseHTTPRequestHandler):
                 'vercel_url': os.getenv('VERCEL_URL', ''),
             })
 
-        # GET /api/auth/admin?password=XXX - Admin login with password
-        if path == '/api/auth/admin':
-            password = query.get('password', '')
-            
-            if not ADMIN_PASSWORD:
-                return self._send_error("Admin login not configured", 500)
-            
-            if not password or password != ADMIN_PASSWORD:
-                return self._send_error("Invalid password", 401)
-            
-            # Create admin user data
-            admin_user = {
-                'id': 'admin_local',
-                'email': 'admin@embeddle.io',
-                'name': 'Admin',
-                'avatar': '',
-                'is_admin': True,
-                'is_donor': True,
-                'cosmetics': DEFAULT_COSMETICS.copy(),
-            }
-            
-            # Create JWT token
-            jwt_token = create_jwt_token(admin_user)
-            
-            # Redirect to frontend with token
-            self.send_response(302)
-            self.send_header('Location', f'/?auth_token={jwt_token}')
-            self.end_headers()
-            return
-
         # GET /api/auth/callback - Handle OAuth callback
         if path == '/api/auth/callback':
             code = query.get('code', '')
@@ -1140,6 +1113,47 @@ class handler(BaseHTTPRequestHandler):
 
         # Get client IP for rate limiting
         client_ip = get_client_ip(self.headers)
+
+        # POST /api/auth/admin - Admin login with password
+        if path == '/api/auth/admin':
+            if not ADMIN_PASSWORD:
+                return self._send_error("Admin login not configured", 500)
+            
+            # Sanitize and validate password
+            password = body.get('password', '')
+            if not isinstance(password, str):
+                return self._send_error("Invalid password format", 400)
+            
+            # Limit password length to prevent DoS
+            password = password[:100]
+            
+            # Rate limit admin login attempts: 5/min per IP
+            if not check_rate_limit(get_ratelimit_game_create(), client_ip):
+                return self._send_error("Too many login attempts. Please wait.", 429)
+            
+            # Use constant-time comparison to prevent timing attacks
+            import hmac
+            if not hmac.compare_digest(password, ADMIN_PASSWORD):
+                return self._send_error("Invalid password", 401)
+            
+            # Create admin user data
+            admin_user = {
+                'id': 'admin_local',
+                'email': 'admin@embeddle.io',
+                'name': 'Admin',
+                'avatar': '',
+                'is_admin': True,
+                'is_donor': True,
+                'cosmetics': DEFAULT_COSMETICS.copy(),
+            }
+            
+            # Create JWT token
+            jwt_token = create_jwt_token(admin_user)
+            
+            return self._send_json({
+                'token': jwt_token,
+                'user': admin_user,
+            })
 
         # POST /api/games - Create lobby with theme voting
         if path == '/api/games':
