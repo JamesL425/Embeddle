@@ -239,10 +239,10 @@ def ai_select_secret_word(ai_player: dict, word_pool: list) -> str:
             return random.choice(less_common)[0]
         
         elif selection_mode == "obscure":
-            # Pick from the least common 25% of words
+            # Pick from the least common 10% of words (harder to guess)
             words_with_freq = [(w, word_frequency(w.lower(), 'en')) for w in word_pool]
             words_with_freq.sort(key=lambda x: x[1])
-            obscure_count = max(1, len(words_with_freq)//4)
+            obscure_count = max(1, len(words_with_freq)//10)
             obscure_words = words_with_freq[:obscure_count]
             return random.choice(obscure_words)[0]
         

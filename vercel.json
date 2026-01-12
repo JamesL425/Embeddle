@@ -12,6 +12,7 @@
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.py" },
+    { "source": "/game/:code", "destination": "/frontend/index.html" },
     { "source": "/", "destination": "/frontend/index.html" },
     { "source": "/(.*)", "destination": "/frontend/$1" }
   ],

@@ -33,6 +33,66 @@ let gameState = {
     authUser: null,   // Authenticated user data
 };
 
+// ============ SESSION PERSISTENCE ============
+
+function saveGameSession() {
+    if (gameState.code && gameState.playerId) {
+        const session = {
+            code: gameState.code,
+            playerId: gameState.playerId,
+            playerName: gameState.playerName,
+            isSingleplayer: gameState.isSingleplayer || false,
+        };
+        localStorage.setItem('embeddle_session', JSON.stringify(session));
+        // Update URL to include game code
+        if (window.location.pathname !== `/game/${gameState.code}`) {
+            history.pushState({ gameCode: gameState.code }, '', `/game/${gameState.code}`);
+        }
+    }
+}
+
+function clearGameSession() {
+    localStorage.removeItem('embeddle_session');
+    // Reset URL to home
+    if (window.location.pathname !== '/') {
+        history.pushState({}, '', '/');
+    }
+}
+
+function getSavedSession() {
+    try {
+        const saved = localStorage.getItem('embeddle_session');
+        return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+        localStorage.removeItem('embeddle_session');
+        return null;
+    }
+}
+
+function getGameCodeFromURL() {
+    const match = window.location.pathname.match(/^\/game\/([A-Z0-9]+)$/i);
+    return match ? match[1].toUpperCase() : null;
+}
+
+// Handle browser back/forward buttons
+window.addEventListener('popstate', async (event) => {
+    const urlCode = getGameCodeFromURL();
+    
+    if (urlCode) {
+        // Navigated to a game URL
+        const rejoined = await attemptRejoin();
+        if (!rejoined) {
+            showScreen('home');
+        }
+    } else {
+        // Navigated away from game
+        stopPolling();
+        gameState.code = null;
+        gameState.playerId = null;
+        showScreen('home');
+    }
+});
+
 // ============ LOGIN SYSTEM ============
 
 function initLogin() {
@@ -397,6 +457,9 @@ async function joinSingleplayerLobby(code, name) {
         gameState.isHost = data.is_host;
         gameState.isSingleplayer = true;
         
+        // Save session for persistence
+        saveGameSession();
+        
         showScreen('singleplayerLobby');
         startSingleplayerLobbyPolling();
     } catch (error) {
@@ -502,12 +565,20 @@ async function removeAI(aiId) {
 // Start singleplayer game
 document.getElementById('sp-start-game-btn')?.addEventListener('click', async () => {
     try {
+        // Immediately transition to word selection screen for responsive feel
+        showScreen('wordSelection');
+        startGamePolling();
+        
+        // Then call the API (AI word selection happens server-side)
         await apiCall(`/api/games/${gameState.code}/start`, 'POST', {
             player_id: gameState.playerId,
         });
-        // Polling will detect status change
+        // Polling will update the word pool when ready
     } catch (error) {
         showError(error.message);
+        // If start failed, go back to lobby
+        showScreen('singleplayerLobby');
+        startSingleplayerLobbyPolling();
     }
 });
 
@@ -519,6 +590,7 @@ document.getElementById('sp-leave-lobby-btn')?.addEventListener('click', () => {
     gameState.code = null;
     gameState.playerId = null;
     gameState.isSingleplayer = false;
+    clearGameSession();
     showScreen('home');
     loadLobbies();
 });
@@ -539,6 +611,9 @@ async function joinLobby(code, name) {
         gameState.playerId = data.player_id;
         gameState.playerName = name;
         gameState.isHost = data.is_host;
+        
+        // Save session for persistence
+        saveGameSession();
         
         // Go to lobby screen
         document.getElementById('lobby-code').textContent = code;
@@ -849,11 +924,20 @@ document.getElementById('copy-code-btn').addEventListener('click', () => {
 
 document.getElementById('start-game-btn').addEventListener('click', async () => {
     try {
+        // Immediately transition to word selection screen for responsive feel
+        showScreen('wordSelection');
+        startGamePolling();
+        
+        // Then call the API
         await apiCall(`/api/games/${gameState.code}/start`, 'POST', {
             player_id: gameState.playerId,
         });
+        // Polling will update the word pool when ready
     } catch (error) {
         showError(error.message);
+        // If start failed, go back to lobby
+        showScreen('lobby');
+        startLobbyPolling();
     }
 });
 
@@ -863,6 +947,7 @@ document.getElementById('leave-lobby-btn')?.addEventListener('click', () => {
     }
     gameState.code = null;
     gameState.playerId = null;
+    clearGameSession();
     showScreen('home');
     loadLobbies();
 });
@@ -1344,6 +1429,11 @@ async function submitGuess() {
     if (!word) return;
     if (guessInput.disabled) return;
     
+    // Immediately clear input and disable for responsive feel
+    guessInput.value = '';
+    guessInput.disabled = true;
+    guessInput.placeholder = 'Processing...';
+    
     try {
         // Play guess effect
         const guessEffect = cosmeticsState?.userCosmetics?.guess_effect || 'classic';
@@ -1355,7 +1445,6 @@ async function submitGuess() {
             player_id: gameState.playerId,
             word,
         });
-        guessInput.value = '';
         
         // Process AI turns with delay if in singleplayer
         if (response.ai_turns && response.ai_turns.length > 0) {
@@ -1363,6 +1452,10 @@ async function submitGuess() {
         }
     } catch (error) {
         showError(error.message);
+    } finally {
+        // Re-enable input
+        guessInput.disabled = false;
+        guessInput.placeholder = 'Enter your guess...';
     }
 }
 
@@ -1525,6 +1618,7 @@ function createConfetti() {
 document.getElementById('back-to-lobby-btn')?.addEventListener('click', () => {
     // TODO: Implement returning to same lobby for rematch
     stopPolling();
+    clearGameSession();
     gameState.code = null;
     gameState.playerId = null;
     showScreen('home');
@@ -1533,6 +1627,7 @@ document.getElementById('back-to-lobby-btn')?.addEventListener('click', () => {
 
 document.getElementById('play-again-btn').addEventListener('click', () => {
     stopPolling();
+    clearGameSession();
     const savedName = gameState.playerName;
     const savedAuthToken = gameState.authToken;
     const savedAuthUser = gameState.authUser;
@@ -1605,7 +1700,114 @@ function initMatrixRain() {
     setInterval(draw, 50);
 }
 
+// Attempt to rejoin a game from URL or saved session
+async function attemptRejoin() {
+    // Check URL first
+    const urlCode = getGameCodeFromURL();
+    const savedSession = getSavedSession();
+    
+    // Determine which code and session to use
+    let code = urlCode;
+    let playerId = null;
+    let playerName = gameState.playerName;
+    let isSingleplayer = false;
+    
+    if (savedSession) {
+        // If URL has a code, use it but check if saved session matches
+        if (urlCode && savedSession.code === urlCode) {
+            playerId = savedSession.playerId;
+            playerName = savedSession.playerName || playerName;
+            isSingleplayer = savedSession.isSingleplayer || false;
+        } else if (!urlCode) {
+            // No URL code, use saved session
+            code = savedSession.code;
+            playerId = savedSession.playerId;
+            playerName = savedSession.playerName || playerName;
+            isSingleplayer = savedSession.isSingleplayer || false;
+        }
+    }
+    
+    if (!code) {
+        return false; // No game to rejoin
+    }
+    
+    try {
+        // Try to fetch the game state
+        const url = playerId 
+            ? `/api/games/${code}?player_id=${playerId}`
+            : `/api/games/${code}`;
+        const game = await apiCall(url);
+        
+        if (!game || game.status === 'finished') {
+            // Game is over or doesn't exist
+            clearGameSession();
+            return false;
+        }
+        
+        // Check if our player is still in the game
+        const player = playerId 
+            ? game.players.find(p => p.id === playerId)
+            : game.players.find(p => p.name.toLowerCase() === playerName?.toLowerCase());
+        
+        if (!player) {
+            // Player not in game - try to rejoin by name if we have one
+            if (playerName && game.status === 'waiting') {
+                // Can rejoin lobby
+                if (isSingleplayer || game.is_singleplayer) {
+                    await joinSingleplayerLobby(code, playerName);
+                } else {
+                    await joinLobby(code, playerName);
+                }
+                return true;
+            }
+            clearGameSession();
+            return false;
+        }
+        
+        // Restore game state
+        gameState.code = code;
+        gameState.playerId = player.id;
+        gameState.playerName = player.name;
+        gameState.isHost = game.host_id === player.id;
+        gameState.isSingleplayer = game.is_singleplayer || false;
+        
+        // Save/update the session
+        saveGameSession();
+        
+        // Navigate to appropriate screen based on game status
+        if (game.status === 'waiting') {
+            if (gameState.isSingleplayer) {
+                showScreen('singleplayerLobby');
+                startSingleplayerLobbyPolling();
+            } else {
+                document.getElementById('lobby-code').textContent = code;
+                showScreen('lobby');
+                startLobbyPolling();
+            }
+        } else if (game.status === 'word_selection') {
+            showScreen('wordSelection');
+            startGamePolling();
+            updateWordSelection(game);
+        } else if (game.status === 'playing') {
+            showScreen('game');
+            startGamePolling();
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Failed to rejoin game:', error);
+        clearGameSession();
+        return false;
+    }
+}
+
 // Initialise
 initLogin();
 initMatrixRain();
-showScreen('home');
+
+// Try to rejoin existing game, otherwise show home
+attemptRejoin().then(rejoined => {
+    if (!rejoined) {
+        showScreen('home');
+    }
+});
