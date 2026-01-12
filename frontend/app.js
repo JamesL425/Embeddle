@@ -978,7 +978,7 @@ function initMatrixRain() {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         ctx.fillStyle = '#00ff41';
-        ctx.font = fontSize + 'px JetBrains Mono';
+        ctx.font = fontSize + 'px Courier Prime';
         
         for (let i = 0; i < drops.length; i++) {
             const char = chars[Math.floor(Math.random() * chars.length)];

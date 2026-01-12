@@ -28,7 +28,7 @@
 }
 
 body {
-    font-family: 'JetBrains Mono', 'Share Tech Mono', monospace;
+    font-family: 'Courier Prime', 'Courier New', monospace;
     background: var(--bg-primary);
     color: var(--text-primary);
     min-height: 100vh;
@@ -134,9 +134,9 @@ header h1 {
 
 /* Buttons */
 .btn {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Courier Prime', 'Courier New', monospace;
     font-size: 0.85rem;
-    font-weight: 600;
+    font-weight: 700;
     padding: 0.75rem 1.5rem;
     border: 1px solid var(--accent-primary);
     border-radius: var(--radius-sm);
@@ -224,7 +224,7 @@ header h1 {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     color: var(--accent-primary);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Courier Prime', 'Courier New', monospace;
     font-size: 0.9rem;
     transition: border-color var(--transition), box-shadow var(--transition);
 }
@@ -1463,7 +1463,7 @@ header h1 {
 .confetti {
     position: absolute;
     top: -20px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Courier Prime', 'Courier New', monospace;
     font-size: 16px;
     animation: confetti-fall linear forwards;
 }
