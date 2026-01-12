@@ -2,7 +2,6 @@
   "game": {
     "min_players": 2,
     "max_players": 6,
-    "elimination_threshold": 0.95,
     "game_expiry_seconds": 7200
   },
   "embedding": {

@@ -29,7 +29,6 @@ CONFIG = load_config()
 # Game settings
 MIN_PLAYERS = CONFIG.get("game", {}).get("min_players", 3)
 MAX_PLAYERS = CONFIG.get("game", {}).get("max_players", 4)
-ELIMINATION_THRESHOLD = CONFIG.get("game", {}).get("elimination_threshold", 0.95)
 GAME_EXPIRY_SECONDS = CONFIG.get("game", {}).get("game_expiry_seconds", 7200)
 
 # Embedding settings
@@ -601,10 +600,11 @@ class handler(BaseHTTPRequestHandler):
                 sim = cosine_similarity(guess_embedding, p['secret_embedding'])
                 similarities[p['id']] = round(sim, 2)
             
+            # Eliminate players whose exact word was guessed
             eliminations = []
             for p in game['players']:
                 if p['id'] != player_id and p['is_alive']:
-                    if similarities.get(p['id'], 0) >= ELIMINATION_THRESHOLD:
+                    if word.lower() == p['secret_word'].lower():
                         p['is_alive'] = False
                         eliminations.append(p['id'])
             
