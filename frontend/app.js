@@ -768,6 +768,9 @@ function startWordSelectPolling() {
 async function updateWordSelectScreen() {
     try {
         const data = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+
+        // In singleplayer, trigger AI word selection in the background while you choose yours
+        maybeTriggerSingleplayerAiWordPick(data);
         
         // Update player status
         const lockedCount = data.players.filter(p => p.has_word).length;
@@ -994,6 +997,7 @@ async function pollGame() {
         }
         
         updateGame(game);
+        maybeRunSingleplayerAiTurns(game);
     } catch (error) {
         console.error('Game poll error:', error);
     }
@@ -1443,6 +1447,8 @@ async function submitGuess() {
     if (!word) return;
     if (guessInput.disabled) return;
     
+    const originalPlaceholder = guessInput.placeholder;
+
     // Immediately clear input and disable for responsive feel
     guessInput.value = '';
     guessInput.disabled = true;
@@ -1459,50 +1465,99 @@ async function submitGuess() {
             player_id: gameState.playerId,
             word,
         });
-        
-        // Process AI turns with delay if in singleplayer
-        if (response.ai_turns && response.ai_turns.length > 0) {
-            await processAiTurnsWithDelay(response.ai_turns);
-        }
+
+        // Immediately show YOUR result first
+        const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+        updateGame(game);
+
+        // Then let AIs take their turns with simulated thinking time
+        maybeRunSingleplayerAiTurns(game);
     } catch (error) {
         showError(error.message);
     } finally {
-        // Re-enable input
-        guessInput.disabled = false;
-        guessInput.placeholder = 'Enter your guess...';
+        // Restore placeholder; input enabled/disabled is managed by updateGame()
+        guessInput.placeholder = originalPlaceholder;
     }
 }
 
-// Process AI turns with a delay between each for smooth turn-based feel
-async function processAiTurnsWithDelay(aiTurns) {
-    // First, fetch the final game state (all AI turns already happened on backend)
-    let finalGame;
+// ============ SINGLEPLAYER AI TURN RUNNER ============
+
+let singleplayerAiRunnerActive = false;
+let singleplayerAiPickWordsInFlight = false;
+let singleplayerAiPickWordsLastAttempt = 0;
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function maybeTriggerSingleplayerAiWordPick(game) {
+    if (!game?.is_singleplayer) return;
+    if (game.status !== 'word_selection') return;
+    const hasUnpickedAi = (game.players || []).some(p => p.is_ai && !p.has_word);
+    if (!hasUnpickedAi) return;
+    if (singleplayerAiPickWordsInFlight) return;
+    const now = Date.now();
+    if (now - singleplayerAiPickWordsLastAttempt < 1500) return; // simple cooldown
+    singleplayerAiPickWordsLastAttempt = now;
+    singleplayerAiPickWordsInFlight = true;
+
+    // Fire-and-forget: let AIs pick words while the human chooses theirs
+    apiCall(`/api/games/${gameState.code}/ai-pick-words`, 'POST', {
+        player_id: gameState.playerId,
+    }).catch(err => {
+        console.error('AI pick-words error:', err);
+    }).finally(() => {
+        singleplayerAiPickWordsInFlight = false;
+    });
+}
+
+function isAiTurn(game) {
+    const current = game.players?.find(p => p.id === game.current_player_id);
+    return Boolean(game.is_singleplayer && game.status === 'playing' && !game.waiting_for_word_change && current?.is_ai);
+}
+
+async function maybeRunSingleplayerAiTurns(game) {
+    if (singleplayerAiRunnerActive) return;
+    if (!game || !isAiTurn(game)) return;
+    // Fire and forget - keep UI responsive
+    runSingleplayerAiTurns().catch(err => console.error('AI runner error:', err));
+}
+
+async function runSingleplayerAiTurns() {
+    if (singleplayerAiRunnerActive) return;
+    singleplayerAiRunnerActive = true;
+
     try {
-        finalGame = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
-    } catch (e) {
-        console.error('Error fetching game after AI turns:', e);
-        return;
+        while (true) {
+            const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+            if (!isAiTurn(game)) break;
+
+            const currentAi = game.players.find(p => p.id === game.current_player_id);
+            const turnText = document.getElementById('turn-text');
+            if (turnText && currentAi) {
+                turnText.textContent = `${currentAi.name} is thinking...`;
+            }
+
+            // Simulated thinking time (requested: ~1s per AI)
+            await sleep(1000);
+
+            // Process exactly one AI move server-side
+            await apiCall(`/api/games/${gameState.code}/ai-step`, 'POST', {
+                player_id: gameState.playerId,
+            });
+
+            // Show updated state after that single AI move
+            const updated = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+            if (updated.status === 'finished') {
+                clearInterval(gameState.pollingInterval);
+                showGameOver(updated);
+                break;
+            }
+            updateGame(updated);
+        }
+    } finally {
+        singleplayerAiRunnerActive = false;
     }
-    
-    // Get the history before AI turns (current display state)
-    const historyBeforeAI = finalGame.history.length - aiTurns.length;
-    
-    // Show each AI turn one at a time with delay
-    for (let i = 0; i < aiTurns.length; i++) {
-        // Wait between turns for turn-based feel
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        // Create a partial game state showing only up to this AI turn
-        const partialGame = JSON.parse(JSON.stringify(finalGame));
-        partialGame.history = finalGame.history.slice(0, historyBeforeAI + i + 1);
-        
-        // Update the UI with partial state
-        updateGame(partialGame);
-    }
-    
-    // Final update with complete state
-    await new Promise(resolve => setTimeout(resolve, 200));
-    updateGame(finalGame);
 }
 
 // Change word - also handle Enter key
@@ -1513,14 +1568,13 @@ document.getElementById('change-word-btn').addEventListener('click', async () =>
 // Skip word change button
 document.getElementById('skip-word-change-btn').addEventListener('click', async () => {
     try {
-        const response = await apiCall(`/api/games/${gameState.code}/skip-word-change`, 'POST', {
+        await apiCall(`/api/games/${gameState.code}/skip-word-change`, 'POST', {
             player_id: gameState.playerId,
         });
-        
-        // Process AI turns with delay if in singleplayer
-        if (response.ai_turns && response.ai_turns.length > 0) {
-            await processAiTurnsWithDelay(response.ai_turns);
-        }
+
+        const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+        updateGame(game);
+        maybeRunSingleplayerAiTurns(game);
     } catch (error) {
         showError(error.message);
     }
@@ -1536,17 +1590,16 @@ async function submitWordChange() {
     }
     
     try {
-        const response = await apiCall(`/api/games/${gameState.code}/change-word`, 'POST', {
+        await apiCall(`/api/games/${gameState.code}/change-word`, 'POST', {
             player_id: gameState.playerId,
             new_word: newWord,
         });
         newWordDisplay.textContent = 'Click a word above';
         newWordDisplay.dataset.word = '';
-        
-        // Process AI turns with delay if in singleplayer
-        if (response.ai_turns && response.ai_turns.length > 0) {
-            await processAiTurnsWithDelay(response.ai_turns);
-        }
+
+        const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+        updateGame(game);
+        maybeRunSingleplayerAiTurns(game);
     } catch (error) {
         showError(error.message);
     }
