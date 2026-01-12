@@ -630,13 +630,25 @@ function showGameOver(game) {
     const winner = game.players.find(p => p.id === game.winner);
     const isWinner = game.winner === gameState.playerId;
     
-    document.getElementById('gameover-title').textContent = isWinner ? 'You Won!' : 'Game Over!';
+    document.getElementById('gameover-title').textContent = isWinner ? '🏆 You Won!' : 'Game Over!';
     document.getElementById('gameover-message').textContent = winner 
         ? `${winner.name} is the last one standing!`
         : 'The game has ended.';
     
+    // Show all players' secret words
     const revealedWords = document.getElementById('revealed-words');
-    revealedWords.innerHTML = '<p style="color: var(--text-muted);">Secret words are hidden for privacy.</p>';
+    revealedWords.innerHTML = '<h3>Secret Words Revealed</h3>';
+    
+    game.players.forEach(player => {
+        const isWinnerPlayer = player.id === game.winner;
+        const div = document.createElement('div');
+        div.className = `revealed-word-item${isWinnerPlayer ? ' winner' : ''}${!player.is_alive ? ' eliminated' : ''}`;
+        div.innerHTML = `
+            <span class="player-name">${player.name}${isWinnerPlayer ? ' 👑' : ''}</span>
+            <span class="player-word">${player.secret_word || '???'}</span>
+        `;
+        revealedWords.appendChild(div);
+    });
 }
 
 document.getElementById('play-again-btn').addEventListener('click', () => {

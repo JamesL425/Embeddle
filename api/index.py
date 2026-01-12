@@ -384,6 +384,9 @@ class handler(BaseHTTPRequestHandler):
             if not player:
                 return self._send_error("You are not in this game", 403)
             
+            # Reveal all words if game is finished
+            game_finished = game['status'] == 'finished'
+            
             # Build response with hidden words
             response = {
                 "code": game['code'],
@@ -404,7 +407,8 @@ class handler(BaseHTTPRequestHandler):
                 player_data = {
                     "id": p['id'],
                     "name": p['name'],
-                    "secret_word": p['secret_word'] if p['id'] == player_id else None,
+                    # Reveal all words when game is finished, otherwise only show your own
+                    "secret_word": p['secret_word'] if (p['id'] == player_id or game_finished) else None,
                     "is_alive": p['is_alive'],
                     "can_change_word": p.get('can_change_word', False) if p['id'] == player_id else None,
                 }
