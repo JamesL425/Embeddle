@@ -498,7 +498,7 @@ async function updateSingleplayerLobby() {
                         ${isYou ? '<span class="sp-player-badge host">HOST</span>' : ''}
                         ${isAI ? `<span class="sp-player-badge ${difficultyClass}">${escapeHtml(p.difficulty)}</span>` : ''}
                     </div>
-                    ${isAI ? `<button class="sp-remove-ai" data-ai-id="${escapeHtml(p.id)}">✕ Remove</button>` : ''}
+                    ${isAI ? `<button class="sp-remove-ai" data-ai-id="${escapeHtml(p.id)}" title="Remove AI" aria-label="Remove AI">×</button>` : ''}
                 </div>
             `;
         }).join('');
@@ -1826,6 +1826,6 @@ initMatrixRain();
 // Try to rejoin existing game, otherwise show home
 attemptRejoin().then(rejoined => {
     if (!rejoined) {
-        showScreen('home');
+showScreen('home');
     }
 });
