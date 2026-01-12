@@ -139,19 +139,49 @@
                 </div>
                 
                 <div class="players-list" id="lobby-players">
-                    <!-- Players will be added here with ready status -->
+                    <!-- Players will be added here -->
                 </div>
                 <div class="lobby-info">
-                    <p>Operatives: <span id="player-count">0</span>/6 | Ready: <span id="ready-count">0</span>/<span id="total-players">0</span></p>
-                    <p class="min-players">All operatives must be ready to start</p>
-                </div>
-                <div class="lobby-actions">
-                    <button id="ready-btn" class="btn btn-secondary">&gt; READY_UP</button>
+                    <p>Operatives: <span id="player-count">0</span>/6</p>
+                    <p class="min-players">Minimum 2 operatives required</p>
                 </div>
                 <div id="host-controls" class="host-controls hidden">
-                    <button id="start-game-btn" class="btn btn-primary" disabled>&gt; INITIATE_BREACH</button>
+                    <button id="start-game-btn" class="btn btn-primary" disabled>&gt; SELECT_WORDS</button>
                 </div>
                 <button id="leave-lobby-btn" class="btn btn-ghost">&lt; DISCONNECT</button>
+            </div>
+        </div>
+
+        <!-- Word Selection Screen -->
+        <div id="wordselect-screen" class="screen">
+            <div class="card word-select-card">
+                <h2>// SELECT_CODEWORD</h2>
+                <p class="theme-label">DATABASE: <span id="wordselect-theme-name">-</span></p>
+                
+                <div class="word-select-status">
+                    <p>Locked in: <span id="locked-count">0</span>/<span id="total-count">0</span></p>
+                    <div id="player-status-list" class="player-status-list">
+                        <!-- Player status will be shown here -->
+                    </div>
+                </div>
+                
+                <div id="word-select-pool" class="word-select-pool">
+                    <!-- Word options will be shown here -->
+                </div>
+                
+                <div id="word-select-controls" class="word-select-controls">
+                    <input type="text" id="selected-word-input" placeholder="Click a word or type..." readonly>
+                    <button id="lock-word-btn" class="btn btn-primary">&gt; LOCK_IN</button>
+                </div>
+                
+                <div id="word-locked-notice" class="word-locked-notice hidden">
+                    <p>✓ CODEWORD LOCKED: <span id="locked-word-display">-</span></p>
+                    <p class="waiting-text">Waiting for other operatives...</p>
+                </div>
+                
+                <div id="host-begin-controls" class="host-begin-controls hidden">
+                    <button id="begin-game-btn" class="btn btn-primary btn-large" disabled>&gt; INITIATE_BREACH</button>
+                </div>
             </div>
         </div>
 

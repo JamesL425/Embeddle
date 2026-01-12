@@ -639,15 +639,15 @@ class handler(BaseHTTPRequestHandler):
                 "is_ready": player['is_ready'],
             })
 
-        # POST /api/games/{code}/set-word - Set secret word (after game starts)
+        # POST /api/games/{code}/set-word - Set secret word (during word selection)
         if '/set-word' in path:
             code = path.split('/')[3].upper()
             game = load_game(code)
             
             if not game:
                 return self._send_error("Game not found", 404)
-            if game['status'] != 'playing':
-                return self._send_error("Game not started yet", 400)
+            if game['status'] not in ['word_selection', 'playing']:
+                return self._send_error("Not in word selection phase", 400)
             
             player_id = body.get('player_id', '')
             secret_word = body.get('secret_word', '').strip()
@@ -680,8 +680,8 @@ class handler(BaseHTTPRequestHandler):
                 "word_pool": player['word_pool'],
             })
 
-        # POST /api/games/{code}/start
-        if '/start' in path:
+        # POST /api/games/{code}/start - Move from lobby to word selection
+        if '/start' in path and '/begin' not in path:
             code = path.split('/')[3].upper()
             game = load_game(code)
             
@@ -695,11 +695,6 @@ class handler(BaseHTTPRequestHandler):
                 return self._send_error("Game already started", 400)
             if len(game['players']) < MIN_PLAYERS:
                 return self._send_error(f"Need at least {MIN_PLAYERS} players", 400)
-            
-            # Check all players are ready
-            not_ready = [p['name'] for p in game['players'] if not p.get('is_ready', False)]
-            if not_ready:
-                return self._send_error(f"Waiting for: {', '.join(not_ready)}", 400)
             
             # Determine winning theme from votes
             votes = game.get('theme_votes', {})
@@ -728,10 +723,34 @@ class handler(BaseHTTPRequestHandler):
                 end_idx = start_idx + words_per_player
                 p['word_pool'] = sorted(shuffled_words[start_idx:end_idx])
             
-            game['status'] = 'playing'
+            # Move to word selection phase (not playing yet)
+            game['status'] = 'word_selection'
             game['current_turn'] = 0
             save_game(code, game)
-            return self._send_json({"status": "started", "theme": game['theme']['name']})
+            return self._send_json({"status": "word_selection", "theme": game['theme']['name']})
+
+        # POST /api/games/{code}/begin - Start the actual game after word selection
+        if '/begin' in path:
+            code = path.split('/')[3].upper()
+            game = load_game(code)
+            
+            if not game:
+                return self._send_error("Game not found", 404)
+            
+            player_id = body.get('player_id', '')
+            if game['host_id'] != player_id:
+                return self._send_error("Only the host can begin", 403)
+            if game['status'] != 'word_selection':
+                return self._send_error("Game not in word selection phase", 400)
+            
+            # Check all players have set their words
+            not_ready = [p['name'] for p in game['players'] if not p.get('secret_word')]
+            if not_ready:
+                return self._send_error(f"Waiting for: {', '.join(not_ready)}", 400)
+            
+            game['status'] = 'playing'
+            save_game(code, game)
+            return self._send_json({"status": "playing"})
 
         # POST /api/games/{code}/guess
         if '/guess' in path:

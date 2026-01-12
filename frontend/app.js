@@ -59,6 +59,7 @@ const screens = {
     home: document.getElementById('home-screen'),
     join: document.getElementById('join-screen'),
     lobby: document.getElementById('lobby-screen'),
+    wordselect: document.getElementById('wordselect-screen'),
     game: document.getElementById('game-screen'),
     gameover: document.getElementById('gameover-screen'),
 };
@@ -218,30 +219,16 @@ async function updateLobby() {
     try {
         const data = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
         
-        // Update players list with ready status
+        // Update players list
         const playersList = document.getElementById('lobby-players');
         playersList.innerHTML = data.players.map(p => `
-            <div class="lobby-player ${p.id === data.host_id ? 'host' : ''} ${p.is_ready ? 'ready' : ''}">
+            <div class="lobby-player ${p.id === data.host_id ? 'host' : ''}">
                 <span class="player-name">${p.name}${p.id === gameState.playerId ? ' (you)' : ''}</span>
-                <span class="player-status">${p.is_ready ? '✓ READY' : '○ WAITING'}</span>
                 ${p.id === data.host_id ? '<span class="host-badge">HOST</span>' : ''}
             </div>
         `).join('');
         
         document.getElementById('player-count').textContent = data.players.length;
-        document.getElementById('ready-count').textContent = data.ready_count || 0;
-        document.getElementById('total-players').textContent = data.players.length;
-        
-        // Update ready button state
-        const myPlayer = data.players.find(p => p.id === gameState.playerId);
-        const readyBtn = document.getElementById('ready-btn');
-        if (myPlayer?.is_ready) {
-            readyBtn.textContent = '✓ READY';
-            readyBtn.classList.add('ready');
-        } else {
-            readyBtn.textContent = '> READY_UP';
-            readyBtn.classList.remove('ready');
-        }
         
         // Update theme voting with voter names
         updateThemeVoting(data.theme_options, data.theme_votes);
@@ -250,19 +237,17 @@ async function updateLobby() {
         const hostControls = document.getElementById('host-controls');
         if (gameState.isHost) {
             hostControls.classList.remove('hidden');
-            // Enable start only if all players ready and minimum met
-            const allReady = data.players.length >= 2 && data.ready_count === data.players.length;
-            document.getElementById('start-game-btn').disabled = !allReady;
+            document.getElementById('start-game-btn').disabled = data.players.length < 2;
         } else {
             hostControls.classList.add('hidden');
         }
         
-        // Check if game started
-        if (data.status === 'playing') {
+        // Check if game moved to word selection
+        if (data.status === 'word_selection') {
             clearInterval(gameState.pollingInterval);
             gameState.theme = data.theme;
             gameState.allThemeWords = data.theme?.words || [];
-            showWordSelectionOrGame(data);
+            showWordSelectionScreen(data);
         }
     } catch (error) {
         // Silently ignore polling errors
@@ -304,14 +289,135 @@ async function voteForTheme(theme) {
     }
 }
 
+// Word Selection Screen
+function showWordSelectionScreen(data) {
+    gameState.theme = data.theme;
+    gameState.allThemeWords = data.theme?.words || [];
+    
+    const myPlayer = data.players.find(p => p.id === gameState.playerId);
+    gameState.wordPool = myPlayer?.word_pool || [];
+    
+    // Set theme name
+    document.getElementById('wordselect-theme-name').textContent = data.theme?.name || '-';
+    
+    // Show word pool as clickable buttons
+    const poolContainer = document.getElementById('word-select-pool');
+    poolContainer.innerHTML = gameState.wordPool.map(word => `
+        <span class="word-option" data-word="${word}">${word}</span>
+    `).join('');
+    
+    // Add click handlers
+    poolContainer.querySelectorAll('.word-option').forEach(el => {
+        el.addEventListener('click', () => {
+            // Deselect others
+            poolContainer.querySelectorAll('.word-option').forEach(w => w.classList.remove('selected'));
+            el.classList.add('selected');
+            document.getElementById('selected-word-input').value = el.dataset.word;
+        });
+    });
+    
+    // Reset state
+    document.getElementById('selected-word-input').value = '';
+    document.getElementById('word-select-controls').classList.remove('hidden');
+    document.getElementById('word-locked-notice').classList.add('hidden');
+    
+    showScreen('wordselect');
+    startWordSelectPolling();
+}
+
+function startWordSelectPolling() {
+    if (gameState.pollingInterval) {
+        clearInterval(gameState.pollingInterval);
+    }
+    updateWordSelectScreen();
+    gameState.pollingInterval = setInterval(updateWordSelectScreen, 2000);
+}
+
+async function updateWordSelectScreen() {
+    try {
+        const data = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+        
+        // Update player status
+        const lockedCount = data.players.filter(p => p.has_word).length;
+        document.getElementById('locked-count').textContent = lockedCount;
+        document.getElementById('total-count').textContent = data.players.length;
+        
+        const statusList = document.getElementById('player-status-list');
+        statusList.innerHTML = data.players.map(p => `
+            <div class="player-status-item ${p.has_word ? 'locked' : ''}">
+                <span>${p.name}${p.id === gameState.playerId ? ' (you)' : ''}</span>
+                <span>${p.has_word ? '✓ LOCKED' : '○ SELECTING'}</span>
+            </div>
+        `).join('');
+        
+        // Show host controls if all locked
+        const myPlayer = data.players.find(p => p.id === gameState.playerId);
+        if (gameState.isHost) {
+            document.getElementById('host-begin-controls').classList.remove('hidden');
+            document.getElementById('begin-game-btn').disabled = lockedCount < data.players.length;
+        }
+        
+        // Check if game started
+        if (data.status === 'playing') {
+            clearInterval(gameState.pollingInterval);
+            showScreen('game');
+            startGamePolling();
+        }
+    } catch (error) {
+        // Silently ignore
+    }
+}
+
+// Lock in word button
+document.getElementById('lock-word-btn')?.addEventListener('click', async () => {
+    const word = document.getElementById('selected-word-input').value.trim();
+    if (!word) {
+        showError('Please select a word');
+        return;
+    }
+    
+    try {
+        await apiCall(`/api/games/${gameState.code}/set-word`, 'POST', {
+            player_id: gameState.playerId,
+            secret_word: word,
+        });
+        
+        // Show locked notice
+        document.getElementById('word-select-controls').classList.add('hidden');
+        document.getElementById('word-locked-notice').classList.remove('hidden');
+        document.getElementById('locked-word-display').textContent = word.toUpperCase();
+        
+        // Disable word selection
+        document.querySelectorAll('.word-option').forEach(el => {
+            el.style.pointerEvents = 'none';
+            if (el.dataset.word.toLowerCase() !== word.toLowerCase()) {
+                el.style.opacity = '0.3';
+            }
+        });
+    } catch (error) {
+        showError(error.message);
+    }
+});
+
+// Begin game button (host only)
+document.getElementById('begin-game-btn')?.addEventListener('click', async () => {
+    try {
+        await apiCall(`/api/games/${gameState.code}/begin`, 'POST', {
+            player_id: gameState.playerId,
+        });
+        // Polling will detect status change
+    } catch (error) {
+        showError(error.message);
+    }
+});
+
+// Keep old functions for backwards compatibility but redirect
 function showWordSelectionOrGame(data) {
     const myPlayer = data.players.find(p => p.id === gameState.playerId);
     
     if (!myPlayer.secret_word) {
-        // Need to pick a word
-        showWordSelection(data);
+        showWordSelectionScreen(data);
     } else {
-        // Already have a word, go to game
         gameState.wordPool = myPlayer.word_pool || [];
         showScreen('game');
         startGamePolling();
@@ -319,22 +425,7 @@ function showWordSelectionOrGame(data) {
 }
 
 function showWordSelection(data) {
-    // Show join screen for word selection
-    document.getElementById('join-screen-title').textContent = 'Pick Your Secret Word';
-    document.getElementById('join-submit-btn').textContent = 'Start Playing';
-    document.getElementById('game-code-group').style.display = 'none';
-    document.getElementById('player-name').value = gameState.playerName;
-    document.getElementById('player-name').readOnly = true;
-    document.querySelector('#join-form .form-group:nth-child(2)').style.display = 'none';
-    
-    // Get this player's word pool (not all theme words)
-    const myPlayer = data.players.find(p => p.id === gameState.playerId);
-    const wordPool = myPlayer?.word_pool || [];
-    
-    // Show word pool
-    displayWordPool(data.theme?.name, wordPool);
-    
-    showScreen('join');
+    showWordSelectionScreen(data);
 }
 
 // Screen: Join (for word selection after game starts)
@@ -423,18 +514,6 @@ document.getElementById('leave-lobby-btn')?.addEventListener('click', () => {
     gameState.playerId = null;
     showScreen('home');
     loadLobbies();
-});
-
-// Ready button
-document.getElementById('ready-btn')?.addEventListener('click', async () => {
-    try {
-        await apiCall(`/api/games/${gameState.code}/ready`, 'POST', {
-            player_id: gameState.playerId,
-        });
-        // Update will happen via polling
-    } catch (error) {
-        showError(error.message);
-    }
 });
 
 // Screen: Game
