@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bagofwordsdle</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Bagofwordsdle</h1>
+            <p class="tagline">Guess the word. Eliminate your rivals.</p>
+        </header>
+
+        <!-- Home Screen -->
+        <div id="home-screen" class="screen active">
+            <div class="card">
+                <h2>Start Playing</h2>
+                <div class="button-group">
+                    <button id="create-game-btn" class="btn btn-primary">Create Game</button>
+                    <button id="join-game-btn" class="btn btn-secondary">Join Game</button>
+                </div>
+            </div>
+
+            <div class="card rules">
+                <h3>How to Play</h3>
+                <ul>
+                    <li>Each player picks a secret word</li>
+                    <li>On your turn, guess a word</li>
+                    <li>See how similar your guess is to everyone's secrets</li>
+                    <li>Get &gt;95% similarity to eliminate a player</li>
+                    <li>Last one standing wins!</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Join Screen -->
+        <div id="join-screen" class="screen">
+            <div class="card">
+                <h2>Join Game</h2>
+                <form id="join-form">
+                    <div class="form-group">
+                        <label for="game-code">Game Code</label>
+                        <input type="text" id="game-code" maxlength="6" placeholder="ABC123" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="player-name">Your Name</label>
+                        <input type="text" id="player-name" maxlength="20" placeholder="Enter your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="secret-word">Your Secret Word</label>
+                        <input type="text" id="secret-word" maxlength="30" placeholder="Choose wisely..." required>
+                        <small>Pick a word others will try to guess!</small>
+                    </div>
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary">Join</button>
+                        <button type="button" id="back-home-btn" class="btn btn-ghost">Back</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Lobby Screen -->
+        <div id="lobby-screen" class="screen">
+            <div class="card">
+                <h2>Game Lobby</h2>
+                <div class="game-code-display">
+                    <span>Code:</span>
+                    <span id="lobby-code" class="code">------</span>
+                    <button id="copy-code-btn" class="btn btn-small">Copy</button>
+                </div>
+                <div class="players-list" id="lobby-players">
+                    <!-- Players will be added here -->
+                </div>
+                <div class="lobby-info">
+                    <p>Waiting for players... <span id="player-count">0</span>/4</p>
+                    <p class="min-players">Need at least 3 players to start</p>
+                </div>
+                <button id="start-game-btn" class="btn btn-primary" disabled>Start Game</button>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="game-header">
+                <div class="your-word">
+                    <span>Your secret word:</span>
+                    <span id="your-secret-word" class="secret">???</span>
+                </div>
+                <div id="change-word-container" class="change-word-container hidden">
+                    <input type="text" id="new-word-input" placeholder="New word...">
+                    <button id="change-word-btn" class="btn btn-small btn-accent">Change Word</button>
+                </div>
+            </div>
+
+            <div class="players-grid" id="players-grid">
+                <!-- Player cards will be added here -->
+            </div>
+
+            <div class="turn-indicator" id="turn-indicator">
+                <span id="turn-text">Waiting...</span>
+            </div>
+
+            <div class="guess-section" id="guess-section">
+                <form id="guess-form">
+                    <input type="text" id="guess-input" placeholder="Enter your guess..." maxlength="30">
+                    <button type="submit" class="btn btn-primary">Guess</button>
+                </form>
+            </div>
+
+            <div class="history-section">
+                <h3>Game History</h3>
+                <div id="history-log" class="history-log">
+                    <!-- History entries will be added here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameover-screen" class="screen">
+            <div class="card gameover-card">
+                <h2 id="gameover-title">Game Over!</h2>
+                <p id="gameover-message"></p>
+                <div class="revealed-words" id="revealed-words">
+                    <!-- All secret words revealed -->
+                </div>
+                <button id="play-again-btn" class="btn btn-primary">Play Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
