@@ -302,9 +302,9 @@ class handler(BaseHTTPRequestHandler):
             # Available words = all words not yet assigned to any player
             available_words = [w for w in all_theme_words if w.lower() not in {x.lower() for x in assigned_words}]
             
-            # Give the next player a random 30 from available (unassigned) words
-            if len(available_words) > 25:
-                next_player_pool = random.sample(available_words, 25)
+            # Give the next player a random 20 from available (unassigned) words
+            if len(available_words) > 20:
+                next_player_pool = random.sample(available_words, 20)
             else:
                 next_player_pool = available_words
             
@@ -447,6 +447,17 @@ class handler(BaseHTTPRequestHandler):
             if not game:
                 return self._send_error("Game not found", 404)
             if game['status'] != 'waiting':
+                # Check if player is trying to rejoin
+                name = body.get('name', '').strip()
+                existing_player = next((p for p in game['players'] if p['name'].lower() == name.lower()), None)
+                if existing_player:
+                    # Allow rejoin - return their player_id
+                    return self._send_json({
+                        "player_id": existing_player['id'],
+                        "game_code": code,
+                        "is_host": existing_player['id'] == game['host_id'],
+                        "rejoined": True,
+                    })
                 return self._send_error("Game has already started", 400)
             if len(game['players']) >= MAX_PLAYERS:
                 return self._send_error("Game is full", 400)
@@ -457,6 +468,7 @@ class handler(BaseHTTPRequestHandler):
             if not name or not secret_word:
                 return self._send_error("Name and secret word required", 400)
             
+            # Check if name already taken (in waiting phase)
             if any(p['name'].lower() == name.lower() for p in game['players']):
                 return self._send_error("Name already taken", 400)
             
@@ -478,9 +490,9 @@ class handler(BaseHTTPRequestHandler):
             # Available words = all words not yet assigned to any player
             available_words = [w for w in all_theme_words if w.lower() not in assigned_words]
             
-            # Give this player a random 25 from unassigned words (for future word changes)
-            if len(available_words) > 25:
-                player_word_pool = random.sample(available_words, 25)
+            # Give this player a random 20 from unassigned words (for future word changes)
+            if len(available_words) > 20:
+                player_word_pool = random.sample(available_words, 20)
             else:
                 player_word_pool = available_words
             
