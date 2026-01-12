@@ -1475,6 +1475,77 @@ class handler(BaseHTTPRequestHandler):
                 "word_pool": sorted(next_player_pool),  # This player's available words (sorted for display)
             })
 
+        # GET /api/games/{code}/spectate - Spectator view (no player_id required)
+        if path.endswith('/spectate') and path.startswith('/api/games/'):
+            code = sanitize_game_code(path.split('/')[3])
+            if not code:
+                return self._send_error("Invalid game code format", 400)
+            
+            game = load_game(code)
+            if not game:
+                return self._send_error("Game not found", 404)
+            
+            try:
+                game_finished = game['status'] == 'finished'
+                all_words_set = all(p.get('secret_word') for p in game.get('players', [])) if game.get('players') else False
+                
+                current_player_id = None
+                if game['status'] == 'playing' and game.get('players') and all_words_set:
+                    current_player_id = game['players'][game['current_turn']]['id']
+                
+                theme_data = game.get('theme') or {}
+                
+                # Build vote info with player names (for lobbies)
+                theme_votes = game.get('theme_votes', {})
+                theme_votes_with_names = {}
+                for theme, voter_ids in theme_votes.items():
+                    voters = []
+                    for vid in voter_ids:
+                        voter = next((p for p in game.get('players', []) if p['id'] == vid), None)
+                        if voter:
+                            voters.append({"id": vid, "name": voter['name']})
+                    theme_votes_with_names[theme] = voters
+                
+                response = {
+                    "code": game['code'],
+                    "host_id": game.get('host_id', ''),
+                    "players": [],
+                    "current_turn": game.get('current_turn', 0),
+                    "current_player_id": current_player_id,
+                    "status": game.get('status', ''),
+                    "winner": game.get('winner'),
+                    "history": game.get('history', []),
+                    "theme": {
+                        "name": theme_data.get('name', ''),
+                        "words": theme_data.get('words', []),
+                    },
+                    "waiting_for_word_change": game.get('waiting_for_word_change'),
+                    "theme_options": game.get('theme_options', []),
+                    "theme_votes": theme_votes_with_names,
+                    "all_words_set": all_words_set,
+                    "ready_count": sum(1 for p in game.get('players', []) if p.get('is_ready', False)),
+                    "is_singleplayer": game.get('is_singleplayer', False),
+                    "is_spectator": True,
+                }
+                
+                for p in game.get('players', []):
+                    response['players'].append({
+                        "id": p.get('id'),
+                        "name": p.get('name'),
+                        "secret_word": p.get('secret_word') if game_finished else None,
+                        "has_word": bool(p.get('secret_word')),
+                        "is_alive": p.get('is_alive', True),
+                        "is_ready": p.get('is_ready', False),
+                        "cosmetics": p.get('cosmetics', {}),
+                        "is_ai": p.get('is_ai', False),
+                        "difficulty": p.get('difficulty'),
+                    })
+                
+                return self._send_json(response)
+            except Exception as e:
+                print(f"Error building spectate response: {e}")
+                return self._send_error("Failed to load game. Please try again.", 500)
+
         # GET /api/games/{code}
         if path.startswith('/api/games/') and path.count('/') == 3:
             code = sanitize_game_code(path.split('/')[3])
@@ -2112,7 +2183,12 @@ class handler(BaseHTTPRequestHandler):
             for i, p in enumerate(game['players']):
                 start_idx = i * words_per_player
                 end_idx = start_idx + words_per_player
-                p['word_pool'] = sorted(shuffled_words[start_idx:end_idx])
+                pool = shuffled_words[start_idx:end_idx]
+                # If the theme list is smaller than players*20, later players can end up with empty pools.
+                # Ensure everyone gets a non-empty pool (may overlap when theme is small).
+                if not pool and all_words:
+                    pool = random.sample(all_words, min(words_per_player, len(all_words)))
+                p['word_pool'] = sorted(pool)
             
             # Move to word selection phase (not playing yet)
             game['status'] = 'word_selection'
@@ -2139,6 +2215,26 @@ class handler(BaseHTTPRequestHandler):
                 return self._send_error("Only the host can begin", 403)
             if game['status'] != 'word_selection':
                 return self._send_error("Game not in word selection phase", 400)
+
+            # Singleplayer safety: if AIs haven't picked yet, pick them now (fallback for slow clients / many AIs)
+            if game.get('is_singleplayer'):
+                for p in game.get('players', []):
+                    if not p.get('is_ai'):
+                        continue
+                    if p.get('secret_word') and p.get('secret_embedding'):
+                        continue
+                    pool = p.get('word_pool', []) or game.get('theme', {}).get('words', [])
+                    if not pool:
+                        continue
+                    selected_word = ai_select_secret_word(p, pool)
+                    if not selected_word:
+                        continue
+                    try:
+                        embedding = get_embedding(selected_word)
+                        p['secret_word'] = selected_word.lower()
+                        p['secret_embedding'] = embedding
+                    except Exception as e:
+                        print(f"AI word selection error (begin): {e}")
             
             # Check all players have set their words
             not_ready = [p['name'] for p in game['players'] if not p.get('secret_word')]
@@ -2168,15 +2264,24 @@ class handler(BaseHTTPRequestHandler):
                 return self._send_error("Invalid player ID format", 400)
             if game.get('host_id') != player_id:
                 return self._send_error("Only the host can trigger AI word selection", 403)
+
+            max_to_pick = body.get('max_to_pick', 3)
+            try:
+                max_to_pick = int(max_to_pick)
+            except Exception:
+                max_to_pick = 3
+            max_to_pick = max(1, min(max_to_pick, 10))
             
             picked = 0
             errors = 0
             for p in game.get('players', []):
+                if picked >= max_to_pick:
+                    break
                 if not p.get('is_ai'):
                     continue
                 if p.get('secret_word') and p.get('secret_embedding'):
                     continue
-                pool = p.get('word_pool', [])
+                pool = p.get('word_pool', []) or game.get('theme', {}).get('words', [])
                 if not pool:
                     continue
                 selected_word = ai_select_secret_word(p, pool)

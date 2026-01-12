@@ -31,6 +31,7 @@ let gameState = {
     myVote: null,
     authToken: null,  // JWT token for authenticated users
     authUser: null,   // Authenticated user data
+    isSpectator: false,
 };
 
 // ============ SESSION PERSISTENCE ============
@@ -44,6 +45,7 @@ function saveGameSession() {
             isSingleplayer: gameState.isSingleplayer || false,
         };
         localStorage.setItem('embeddle_session', JSON.stringify(session));
+        upsertRecentGame(session);
         // Update URL to include game code
         if (window.location.pathname !== `/game/${gameState.code}`) {
             history.pushState({ gameCode: gameState.code }, '', `/game/${gameState.code}`);
@@ -52,6 +54,9 @@ function saveGameSession() {
 }
 
 function clearGameSession() {
+    // Keep a record for "recent games" even if the user leaves the session
+    const existing = getSavedSession();
+    if (existing) upsertRecentGame(existing);
     localStorage.removeItem('embeddle_session');
     // Reset URL to home
     if (window.location.pathname !== '/') {
@@ -67,6 +72,86 @@ function getSavedSession() {
         localStorage.removeItem('embeddle_session');
         return null;
     }
+}
+
+function getRecentGames() {
+    try {
+        const raw = localStorage.getItem('embeddle_recent_games');
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        localStorage.removeItem('embeddle_recent_games');
+        return [];
+    }
+}
+
+function upsertRecentGame(session) {
+    if (!session?.code) return;
+    const list = getRecentGames();
+    const now = Date.now();
+    const entry = {
+        code: session.code,
+        playerId: session.playerId || null,
+        playerName: session.playerName || null,
+        isSingleplayer: Boolean(session.isSingleplayer),
+        lastSeen: now,
+    };
+    const idx = list.findIndex(x => x.code === entry.code && x.playerName === entry.playerName);
+    if (idx >= 0) {
+        list[idx] = { ...list[idx], ...entry };
+    } else {
+        list.unshift(entry);
+    }
+    localStorage.setItem('embeddle_recent_games', JSON.stringify(list.slice(0, 10)));
+}
+
+async function renderRecentGames() {
+    const container = document.getElementById('recent-games');
+    if (!container) return;
+    const list = getRecentGames();
+    if (!list.length) {
+        container.innerHTML = '<p class="no-lobbies">No recent games.</p>';
+        return;
+    }
+
+    // Fetch status for each (best-effort)
+    const rows = await Promise.all(list.map(async entry => {
+        try {
+            const g = await apiCall(`/api/games/${entry.code}/spectate`);
+            return { entry, status: g.status, playerCount: g.players?.length || 0, isSingleplayer: Boolean(g.is_singleplayer) };
+        } catch (e) {
+            return { entry, status: 'expired', playerCount: 0, isSingleplayer: entry.isSingleplayer };
+        }
+    }));
+
+    container.innerHTML = rows.map(({ entry, status, playerCount, isSingleplayer }) => {
+        const label = status === 'expired' ? 'EXPIRED' : String(status || '').toUpperCase();
+        const mode = isSingleplayer ? 'SOLO' : 'MULTI';
+        return `
+            <div class="lobby-item" data-code="${escapeHtml(entry.code)}">
+                <div class="lobby-info-row">
+                    <span class="lobby-code">${escapeHtml(entry.code)}</span>
+                    <span class="lobby-players">${escapeHtml(mode)} • ${escapeHtml(label)} • ${escapeHtml(playerCount)} players</span>
+                </div>
+                <button class="btn btn-small btn-secondary rejoin-game-btn" data-code="${escapeHtml(entry.code)}">
+                    ${status === 'expired' ? 'REMOVE' : 'OPEN'}
+                </button>
+            </div>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.rejoin-game-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const code = btn.dataset.code;
+            if (btn.textContent.trim() === 'REMOVE') {
+                const next = getRecentGames().filter(x => x.code !== code);
+                localStorage.setItem('embeddle_recent_games', JSON.stringify(next));
+                renderRecentGames();
+                return;
+            }
+            history.pushState({ gameCode: code }, '', `/game/${code}`);
+            await attemptRejoin();
+        });
+    });
 }
 
 function getGameCodeFromURL() {
@@ -317,6 +402,7 @@ function showScreen(screenName) {
     // Start/stop lobby refresh based on screen
     if (screenName === 'home') {
         startLobbyRefresh();
+        renderRecentGames();
     } else {
         stopLobbyRefresh();
     }
@@ -1016,6 +1102,7 @@ function showGame(game) {
 }
 
 function updateGame(game) {
+    const isSpectator = Boolean(gameState.isSpectator);
     const myPlayer = game.players.find(p => p.id === gameState.playerId);
     
     // Check if waiting for other players to pick words
@@ -1042,7 +1129,11 @@ function updateGame(game) {
         return;
     }
     
-    if (myPlayer) {
+    if (isSpectator) {
+        // Spectator: hide personal state / actions
+        document.getElementById('your-secret-word').textContent = 'SPECTATING';
+        document.getElementById('change-word-container')?.classList.add('hidden');
+    } else if (myPlayer) {
         document.getElementById('your-secret-word').textContent = myPlayer.secret_word || '???';
         
         const changeWordContainer = document.getElementById('change-word-container');
@@ -1115,11 +1206,11 @@ function updateGame(game) {
     }
     
     // Disable guessing if waiting for word change
-    const isMyTurn = game.current_player_id === gameState.playerId && myPlayer?.is_alive && !game.waiting_for_word_change;
+    const isMyTurn = !isSpectator && game.current_player_id === gameState.playerId && myPlayer?.is_alive && !game.waiting_for_word_change;
     const guessInput = document.getElementById('guess-input');
     const guessForm = document.getElementById('guess-form');
-    guessInput.disabled = !isMyTurn;
-    guessForm.querySelector('button').disabled = !isMyTurn;
+    guessInput.disabled = isSpectator || !isMyTurn;
+    guessForm.querySelector('button').disabled = isSpectator || !isMyTurn;
     
     if (isMyTurn && !game.waiting_for_word_change) {
         guessInput.focus();
@@ -1730,6 +1821,33 @@ function stopPolling() {
     }
 }
 
+// ============ SPECTATOR MODE ============
+
+function startSpectatePolling(code) {
+    stopPolling();
+    gameState.code = code;
+    gameState.isSpectator = true;
+    showScreen('game');
+    pollSpectate();
+    gameState.pollingInterval = setInterval(pollSpectate, 2000);
+}
+
+async function pollSpectate() {
+    if (!gameState.code) return;
+    try {
+        const game = await apiCall(`/api/games/${gameState.code}/spectate`);
+        // Finished games should still render; showGameOver will reveal if provided
+        if (game.status === 'finished') {
+            clearInterval(gameState.pollingInterval);
+            showGameOver(game);
+            return;
+        }
+        updateGame(game);
+    } catch (e) {
+        console.error('Spectate poll error:', e);
+    }
+}
+
 // Matrix Rain Effect
 function initMatrixRain() {
     const canvas = document.createElement('canvas');
@@ -1779,6 +1897,7 @@ async function attemptRejoin() {
     // Check URL first
     const urlCode = getGameCodeFromURL();
     const savedSession = getSavedSession();
+    const recentGames = getRecentGames();
     
     // Determine which code and session to use
     let code = urlCode;
@@ -1800,17 +1919,26 @@ async function attemptRejoin() {
             isSingleplayer = savedSession.isSingleplayer || false;
         }
     }
+
+    // If we have a URL code but no active session, try to restore from recent games
+    if (urlCode && !playerId) {
+        const recent = recentGames.find(r => r.code === urlCode);
+        if (recent) {
+            playerId = recent.playerId || playerId;
+            playerName = recent.playerName || playerName;
+            isSingleplayer = recent.isSingleplayer || isSingleplayer;
+        }
+    }
     
     if (!code) {
         return false; // No game to rejoin
     }
     
     try {
-        // Try to fetch the game state
-        const url = playerId 
-            ? `/api/games/${code}?player_id=${playerId}`
-            : `/api/games/${code}`;
-        const game = await apiCall(url);
+        // Try to fetch the game state (spectate endpoint works without membership)
+        const game = playerId
+            ? await apiCall(`/api/games/${code}?player_id=${playerId}`)
+            : await apiCall(`/api/games/${code}/spectate`);
         
         if (!game || game.status === 'finished') {
             // Game is over or doesn't exist
@@ -1824,9 +1952,8 @@ async function attemptRejoin() {
             : game.players.find(p => p.name.toLowerCase() === playerName?.toLowerCase());
         
         if (!player) {
-            // Player not in game - try to rejoin by name if we have one
+            // Not a participant. If lobby is open and we have a callsign, join; otherwise spectate.
             if (playerName && game.status === 'waiting') {
-                // Can rejoin lobby
                 if (isSingleplayer || game.is_singleplayer) {
                     await joinSingleplayerLobby(code, playerName);
                 } else {
@@ -1834,8 +1961,9 @@ async function attemptRejoin() {
                 }
                 return true;
             }
-            clearGameSession();
-            return false;
+            // Spectate started games
+            startSpectatePolling(code);
+            return true;
         }
         
         // Restore game state
@@ -1844,6 +1972,7 @@ async function attemptRejoin() {
         gameState.playerName = player.name;
         gameState.isHost = game.host_id === player.id;
         gameState.isSingleplayer = game.is_singleplayer || false;
+        gameState.isSpectator = false;
         
         // Save/update the session
         saveGameSession();
@@ -1869,6 +1998,9 @@ async function attemptRejoin() {
                 showScreen('game');
                 startGamePolling();
             }
+        } else {
+            // Fallback: spectate unknown states
+            startSpectatePolling(code);
         }
         
         return true;

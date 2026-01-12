@@ -8,11 +8,11 @@
     <meta name="theme-color" content="#000000">
     
     <!-- Favicon and Icons -->
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.json">
     
     <!-- Open Graph / Social -->
     <meta property="og:title" content="EMBEDDLE">
@@ -21,7 +21,8 @@
     <meta property="og:url" content="https://embeddle.vercel.app">
     <meta name="twitter:card" content="summary_large_image">
     
-    <link rel="stylesheet" href="style.css">
+    <!-- Use absolute URLs so /game/:code routes still load assets -->
+    <link rel="stylesheet" href="/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
@@ -75,6 +76,14 @@
                 <div class="button-group">
                     <button id="create-game-btn" class="btn btn-primary btn-large">&gt; CREATE_SERVER</button>
                     <button id="singleplayer-btn" class="btn btn-secondary btn-large">&gt; SOLO_MISSION</button>
+                </div>
+            </div>
+
+            <!-- Recent / Active Games -->
+            <div class="card lobbies-card">
+                <h3>// YOUR_SESSIONS</h3>
+                <div id="recent-games" class="open-lobbies">
+                    <p class="loading-lobbies">No recent games.</p>
                 </div>
             </div>
 
@@ -374,7 +383,7 @@
         </footer>
     </div>
 
-    <script src="cosmetics.js"></script>
-    <script src="app.js"></script>
+    <script src="/cosmetics.js"></script>
+    <script src="/app.js"></script>
 </body>
 </html>
