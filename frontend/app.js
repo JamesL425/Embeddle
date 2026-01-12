@@ -1827,21 +1827,68 @@ function startSpectatePolling(code) {
     stopPolling();
     gameState.code = code;
     gameState.isSpectator = true;
-    showScreen('game');
     pollSpectate();
     gameState.pollingInterval = setInterval(pollSpectate, 2000);
+}
+
+function showSpectateLobby(game) {
+    // Reuse lobby UI but make it read-only
+    document.getElementById('lobby-code').textContent = game.code;
+    showScreen('lobby');
+
+    // Hide host controls and voting interactions
+    document.getElementById('host-controls')?.classList.add('hidden');
+
+    // Players list
+    const playersList = document.getElementById('lobby-players');
+    if (playersList) {
+        playersList.innerHTML = (game.players || []).map(p => `
+            <div class="lobby-player ${p.id === game.host_id ? 'host' : ''}">
+                <span class="player-name">${escapeHtml(p.name)}</span>
+                ${p.id === game.host_id ? '<span class="host-badge">HOST</span>' : ''}
+            </div>
+        `).join('');
+    }
+
+    const countEl = document.getElementById('player-count');
+    if (countEl) countEl.textContent = (game.players || []).length;
+
+    // Read-only theme voting
+    const container = document.getElementById('theme-vote-options');
+    const options = game.theme_options || [];
+    const votes = game.theme_votes || {};
+    if (container && options.length) {
+        container.innerHTML = options.map(theme => {
+            const voters = votes[theme] || [];
+            const voteCount = voters.length;
+            const voterNames = voters.map(v => escapeHtml(v.name)).join(', ');
+            return `
+                <button class="btn theme-vote-btn" disabled>
+                    <span class="theme-name">${escapeHtml(theme)}</span>
+                    <span class="vote-count">${escapeHtml(voteCount)} vote${voteCount !== 1 ? 's' : ''}</span>
+                    ${voterNames ? `<span class="voter-names">${voterNames}</span>` : ''}
+                </button>
+            `;
+        }).join('');
+    }
 }
 
 async function pollSpectate() {
     if (!gameState.code) return;
     try {
         const game = await apiCall(`/api/games/${gameState.code}/spectate`);
+        if (game.status === 'waiting') {
+            showSpectateLobby(game);
+            return;
+        }
         // Finished games should still render; showGameOver will reveal if provided
         if (game.status === 'finished') {
             clearInterval(gameState.pollingInterval);
             showGameOver(game);
             return;
         }
+        // word_selection / playing -> game screen
+        showScreen('game');
         updateGame(game);
     } catch (e) {
         console.error('Spectate poll error:', e);
