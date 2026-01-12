@@ -349,14 +349,16 @@ class handler(BaseHTTPRequestHandler):
             
             import random
             
-            # Get all theme words and words already chosen by players
+            # Get all theme words and words already assigned to other players
             all_theme_words = game.get('theme', {}).get('words', [])
-            chosen_words = set(p.get('secret_word', '').lower() for p in game['players'])
+            assigned_words = set()
+            for p in game['players']:
+                assigned_words.update(p.get('word_pool', []))
             
-            # Available words = all words except ones already chosen as secrets
-            available_words = [w for w in all_theme_words if w.lower() not in chosen_words]
+            # Available words = all words not yet assigned to any player
+            available_words = [w for w in all_theme_words if w.lower() not in {x.lower() for x in assigned_words}]
             
-            # Give the next player a random 30 from available words
+            # Give the next player a random 30 from available (unassigned) words
             if len(available_words) > 30:
                 next_player_pool = random.sample(available_words, 30)
             else:
@@ -484,27 +486,24 @@ class handler(BaseHTTPRequestHandler):
             
             import random
             
-            # Get all theme words and words already chosen by other players
+            # Get all theme words and words already assigned to other players
             all_theme_words = game.get('theme', {}).get('words', [])
-            chosen_words = set(p.get('secret_word', '').lower() for p in game['players'])
+            assigned_words = set()
+            for p in game['players']:
+                assigned_words.update(w.lower() for w in p.get('word_pool', []))
             
-            # Available words = all words except ones already chosen as secrets
-            available_words = [w for w in all_theme_words if w.lower() not in chosen_words]
+            # Available words = all words not yet assigned to any player
+            available_words = [w for w in all_theme_words if w.lower() not in assigned_words]
             
-            # Give this player a random 30 from available words
+            # Give this player a random 30 from unassigned words
             if len(available_words) > 30:
                 player_word_pool = random.sample(available_words, 30)
             else:
                 player_word_pool = available_words
             
-            # Check if the chosen word is in this player's pool (from what they saw)
-            # We need to be lenient here - they picked from the pool they were shown
-            if all_theme_words and secret_word.lower() not in [w.lower() for w in all_theme_words]:
-                return self._send_error(f"Please choose a word from the theme", 400)
-            
-            # Check if word is already taken
-            if secret_word.lower() in chosen_words:
-                return self._send_error("That word is already taken by another player", 400)
+            # Check if the chosen word is in this player's pool
+            if player_word_pool and secret_word.lower() not in [w.lower() for w in player_word_pool]:
+                return self._send_error("Please choose a word from your word pool", 400)
             
             try:
                 embedding = get_embedding(secret_word)
@@ -519,7 +518,7 @@ class handler(BaseHTTPRequestHandler):
                 "secret_embedding": embedding,
                 "is_alive": True,
                 "can_change_word": False,
-                "word_pool": sorted(player_word_pool),  # Store their pool for word changes later
+                "word_pool": sorted(player_word_pool),  # Store their distinct pool
             }
             game['players'].append(player)
             
