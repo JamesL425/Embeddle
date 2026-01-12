@@ -1366,19 +1366,36 @@ async function submitGuess() {
     }
 }
 
-// Process AI turns with a delay between each for smooth visual feedback
+// Process AI turns with a delay between each for smooth turn-based feel
 async function processAiTurnsWithDelay(aiTurns) {
-    for (const turn of aiTurns) {
-        // Wait 100ms between each AI turn
-        await new Promise(resolve => setTimeout(resolve, 100));
-        // Fetch updated game state to show the AI's turn
-        try {
-            const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
-            updateGame(game);
-        } catch (e) {
-            console.error('Error fetching game after AI turn:', e);
-        }
+    // First, fetch the final game state (all AI turns already happened on backend)
+    let finalGame;
+    try {
+        finalGame = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+    } catch (e) {
+        console.error('Error fetching game after AI turns:', e);
+        return;
     }
+    
+    // Get the history before AI turns (current display state)
+    const historyBeforeAI = finalGame.history.length - aiTurns.length;
+    
+    // Show each AI turn one at a time with delay
+    for (let i = 0; i < aiTurns.length; i++) {
+        // Wait between turns for turn-based feel
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // Create a partial game state showing only up to this AI turn
+        const partialGame = JSON.parse(JSON.stringify(finalGame));
+        partialGame.history = finalGame.history.slice(0, historyBeforeAI + i + 1);
+        
+        // Update the UI with partial state
+        updateGame(partialGame);
+    }
+    
+    // Final update with complete state
+    await new Promise(resolve => setTimeout(resolve, 200));
+    updateGame(finalGame);
 }
 
 // Change word - also handle Enter key

@@ -1955,13 +1955,16 @@ header h1 {
 
 .player-card.border-neon_glow {
     border: 2px solid var(--accent-primary);
-    box-shadow: 0 0 15px var(--accent-glow), inset 0 0 15px rgba(0, 255, 65, 0.1);
-    animation: neon-pulse 2s ease-in-out infinite;
+    box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.player-card.border-neon_glow.current-turn {
+    animation: neon-pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes neon-pulse {
-    0%, 100% { box-shadow: 0 0 15px var(--accent-glow), inset 0 0 15px rgba(0, 255, 65, 0.1); }
-    50% { box-shadow: 0 0 25px var(--accent-glow), inset 0 0 20px rgba(0, 255, 65, 0.2); }
+    0%, 100% { box-shadow: 0 0 8px var(--accent-glow); }
+    50% { box-shadow: 0 0 20px var(--accent-glow), inset 0 0 10px rgba(0, 255, 65, 0.15); }
 }
 
 .player-card.border-fire {
