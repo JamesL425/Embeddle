@@ -43,6 +43,7 @@ async function loadUserCosmetics() {
                 cosmeticsState.paywallEnabled = data.paywall_enabled;
             }
             applyPersonalCosmetics();
+            updateCosmeticsPreview();
         }
     } catch (e) {
         console.error('Failed to load user cosmetics:', e);
@@ -68,6 +69,7 @@ async function equipCosmetic(category, cosmeticId) {
             cosmeticsState.userCosmetics = data.cosmetics;
             applyPersonalCosmetics();
             updateCosmeticsPanel();
+            updateCosmeticsPreview();
             return true;
         } else {
             const err = await response.json();
@@ -108,17 +110,18 @@ function updateCosmeticsPanel() {
     
     // Admins have full access like donors. If paywall is disabled, everyone has access.
     const hasFullAccess = !cosmeticsState.paywallEnabled || cosmeticsState.isDonor || cosmeticsState.isAdmin;
+    const userStats = (typeof gameState !== 'undefined' && gameState?.authUser?.stats) ? gameState.authUser.stats : {};
     const equipped = cosmeticsState.userCosmetics || {};
     
     let html = '';
     
     // Donor status banner / paywall banner
     if (!cosmeticsState.paywallEnabled) {
-        html += `<div class="cosmetics-banner donor">🎨 All cosmetics unlocked (paywall disabled)</div>`;
+        html += `<div class="cosmetics-banner donor">🎨 Premium cosmetics are free right now (paywall disabled). Progression unlocks still apply.</div>`;
     } else if (!hasFullAccess) {
         html += `
             <div class="cosmetics-banner">
-                <p>🔒 Donate to unlock all cosmetics!</p>
+                <p>🔒 Donate to unlock Premium cosmetics!</p>
                 <a href="https://ko-fi.com/jamesleung425" target="_blank" class="btn btn-primary btn-small">☕ Support on Ko-fi</a>
             </div>
         `;
@@ -143,7 +146,7 @@ function updateCosmeticsPanel() {
     ];
     
     visibleCategories.forEach(([key, catalogKey, label]) => {
-        html += renderCosmeticCategory(key, catalogKey, label, equipped, hasFullAccess);
+        html += renderCosmeticCategory(key, catalogKey, label, equipped, hasFullAccess, userStats);
     });
     
     // Personal section
@@ -157,7 +160,7 @@ function updateCosmeticsPanel() {
     ];
     
     personalCategories.forEach(([key, catalogKey, label]) => {
-        html += renderCosmeticCategory(key, catalogKey, label, equipped, hasFullAccess);
+        html += renderCosmeticCategory(key, catalogKey, label, equipped, hasFullAccess, userStats);
     });
     
     content.innerHTML = html;
@@ -169,14 +172,66 @@ function updateCosmeticsPanel() {
             const id = el.dataset.id;
             if (!el.classList.contains('locked')) {
                 equipCosmetic(cat, id);
-            } else if (cosmeticsState.paywallEnabled && !hasFullAccess) {
-                showError('Donate to unlock premium cosmetics!');
+            } else {
+                const reason = el.dataset.lockReason;
+                if (reason) {
+                    showError(reason);
+                } else if (cosmeticsState.paywallEnabled && !hasFullAccess) {
+                    showError('Donate to unlock premium cosmetics!');
+                } else {
+                    showError('Locked');
+                }
             }
         });
     });
+
+    updateCosmeticsPreview();
 }
 
-function renderCosmeticCategory(key, catalogKey, label, equipped, hasFullAccess) {
+function formatRequirement(req, stats) {
+    const metric = req?.metric;
+    const min = Number(req?.min || 0);
+    const have = Number(stats?.[metric] || 0);
+    const labels = {
+        mp_games_played: 'MP games',
+        mp_wins: 'MP wins',
+        mp_eliminations: 'MP elims',
+        mp_times_eliminated: 'MP deaths',
+    };
+    const metricLabel = labels[metric] || metric || 'progress';
+    return { metric, min, have, metricLabel };
+}
+
+function buildRequirementsInfo(requirements, stats) {
+    const reqs = Array.isArray(requirements) ? requirements : [];
+    if (!reqs.length) return { unmet: null, all: [] };
+    const parts = reqs
+        .map(r => formatRequirement(r, stats))
+        .filter(p => p.metric && p.min > 0);
+    const unmet = parts.find(p => p.have < p.min) || null;
+    return { unmet, all: parts };
+}
+
+function updateCosmeticsPreview() {
+    const card = document.getElementById('cosmetics-preview-card');
+    const nameEl = document.getElementById('cosmetics-preview-name');
+    if (!card || !nameEl) return;
+
+    const c = cosmeticsState.userCosmetics || {};
+    const keepTurn = card.classList.contains('current-turn');
+
+    const cosmeticClasses = typeof getPlayerCardClasses === 'function' ? getPlayerCardClasses(c) : '';
+    card.className = `player-card cosmetics-preview-card ${cosmeticClasses}`.trim();
+    if (keepTurn) card.classList.add('current-turn');
+
+    const nameColorClass = typeof getNameColorClass === 'function' ? getNameColorClass(c) : '';
+    nameEl.className = `name ${nameColorClass}`.trim();
+
+    const badgeHtml = typeof getBadgeHtml === 'function' ? getBadgeHtml(c) : '';
+    nameEl.innerHTML = `YOU${badgeHtml}`;
+}
+
+function renderCosmeticCategory(key, catalogKey, label, equipped, hasFullAccess, userStats) {
     const items = cosmeticsState.catalog[catalogKey] || {};
     const currentId = equipped[key] || Object.keys(items)[0];
     
@@ -184,14 +239,36 @@ function renderCosmeticCategory(key, catalogKey, label, equipped, hasFullAccess)
     
     Object.entries(items).forEach(([id, item]) => {
         const isEquipped = id === currentId;
-        const isLocked = cosmeticsState.paywallEnabled && item.premium && !hasFullAccess;
+        const isPremiumLocked = cosmeticsState.paywallEnabled && item.premium && !hasFullAccess;
+        const reqInfo = cosmeticsState.isAdmin ? { unmet: null, all: [] } : buildRequirementsInfo(item.requirements, userStats);
+        const isReqLocked = Boolean(reqInfo.unmet);
+        const isLocked = isPremiumLocked || isReqLocked;
         const icon = item.icon || '';
+
+        let lockReason = '';
+        let progressHtml = '';
+        if (isPremiumLocked) {
+            lockReason = 'Donate to unlock premium cosmetics!';
+        } else if (isReqLocked && reqInfo.unmet) {
+            lockReason = `Locked: requires ${reqInfo.unmet.min} ${reqInfo.unmet.metricLabel} (${reqInfo.unmet.have}/${reqInfo.unmet.min})`;
+            progressHtml = `<span class="cosmetic-progress">${reqInfo.unmet.have}/${reqInfo.unmet.min}</span>`;
+        }
+
+        const titleParts = [item.description].filter(Boolean);
+        if (isReqLocked && reqInfo.all.length) {
+            const detail = reqInfo.all
+                .map(p => `${p.metricLabel}: ${Math.min(p.have, p.min)}/${p.min}`)
+                .join(' • ');
+            titleParts.push(`Requires ${detail}`);
+        }
+        if (isPremiumLocked) titleParts.push('Donate to unlock');
         
         html += `
             <div class="cosmetic-option ${isEquipped ? 'equipped' : ''} ${isLocked ? 'locked' : ''}" 
-                 data-category="${key}" data-id="${id}" title="${item.description}">
+                 data-category="${key}" data-id="${id}" data-lock-reason="${lockReason}" title="${titleParts.join(' — ')}">
                 ${icon ? `<span class="cosmetic-icon">${icon}</span>` : ''}
                 <span class="cosmetic-name">${item.name}</span>
+                ${progressHtml}
                 ${isLocked ? '<span class="lock-icon">🔒</span>' : ''}
             </div>
         `;
@@ -270,8 +347,19 @@ function getNameColorClass(cosmetics) {
 function getBadgeHtml(cosmetics) {
     if (!cosmetics || !cosmetics.badge || cosmetics.badge === 'none') return '';
     const badges = {
-        coffee: '☕', star: '⭐', diamond: '💎', heart: '❤️',
-        crown: '👑', lightning: '⚡', flame: '🔥'
+        coffee: '☕',
+        diamond: '💎',
+        rookie: '🔰',
+        hunter: '⚔️',
+        executioner: '☠️',
+        champion: '🏆',
+        legend: '👑',
+        // Legacy v1 IDs (kept so old game states still render)
+        star: '⭐',
+        heart: '❤️',
+        crown: '👑',
+        lightning: '⚡',
+        flame: '🔥'
     };
     return badges[cosmetics.badge] ? `<span class="player-badge">${badges[cosmetics.badge]}</span>` : '';
 }
@@ -290,8 +378,8 @@ function playEliminationEffect(playerId, effectId) {
     }, 1500);
 }
 
-function playGuessEffect(effectId) {
-    const form = document.getElementById('guess-form');
+function playGuessEffect(effectId, targetEl = null) {
+    const form = targetEl || document.getElementById('guess-form');
     if (!form) return;
     
     const effect = effectId || 'classic';
@@ -302,8 +390,8 @@ function playGuessEffect(effectId) {
     }, 800);
 }
 
-function playVictoryEffect(effectId) {
-    const container = document.getElementById('confetti-container');
+function playVictoryEffect(effectId, targetEl = null) {
+    const container = targetEl || document.getElementById('confetti-container');
     if (!container) return;
     
     const effect = effectId || 'classic';
@@ -324,7 +412,9 @@ function playVictoryEffect(effectId) {
             createSupernovaEffect(container);
             break;
         default:
-            createConfetti(); // Use existing confetti
+            if (typeof createConfetti === 'function') {
+                createConfetti(container); // Use existing confetti (allow override)
+            }
     }
 }
 
@@ -379,4 +469,24 @@ function createSupernovaEffect(container) {
 // Initialize cosmetics
 document.addEventListener('DOMContentLoaded', () => {
     loadCosmeticsCatalog();
+    // Preview/test harness
+    document.getElementById('cosmetics-test-turn')?.addEventListener('click', () => {
+        const card = document.getElementById('cosmetics-preview-card');
+        if (!card) return;
+        card.classList.toggle('current-turn');
+        updateCosmeticsPreview();
+    });
+    document.getElementById('cosmetics-test-guess')?.addEventListener('click', () => {
+        const c = cosmeticsState.userCosmetics || {};
+        playGuessEffect(c.guess_effect || 'classic', document.getElementById('cosmetics-guess-form'));
+    });
+    document.getElementById('cosmetics-test-elim')?.addEventListener('click', () => {
+        const c = cosmeticsState.userCosmetics || {};
+        playEliminationEffect('cosmetics_preview', c.elimination_effect || 'classic');
+    });
+    document.getElementById('cosmetics-test-victory')?.addEventListener('click', () => {
+        const c = cosmeticsState.userCosmetics || {};
+        playVictoryEffect(c.victory_effect || 'classic', document.getElementById('cosmetics-victory-container'));
+    });
+    updateCosmeticsPreview();
 });

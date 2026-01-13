@@ -154,6 +154,68 @@ DEFAULT_COSMETICS = {
     "alt_background": "matrix"
 }
 
+# Cosmetics schema version for stored user cosmetics payload.
+COSMETICS_SCHEMA_VERSION = 2
+
+# Map category keys stored on users -> catalog keys in api/cosmetics.json
+COSMETIC_CATEGORY_TO_CATALOG_KEY = {
+    'card_border': 'card_borders',
+    'card_background': 'card_backgrounds',
+    'name_color': 'name_colors',
+    'badge': 'badges',
+    'elimination_effect': 'elimination_effects',
+    'guess_effect': 'guess_effects',
+    'turn_indicator': 'turn_indicators',
+    'victory_effect': 'victory_effects',
+    'matrix_color': 'matrix_colors',
+    'particle_overlay': 'particle_overlays',
+    'seasonal_theme': 'seasonal_themes',
+    'alt_background': 'alt_backgrounds',
+}
+
+# Legacy cosmetic ID migrations for hard restarts.
+# NOTE: Badge remaps are handled conditionally (supporter vs non-supporter) at runtime.
+LEGACY_COSMETIC_ID_MAP = {
+    'card_background': {
+        'starfield': 'default',
+    },
+    'guess_effect': {
+        'data_stream': 'classic',
+        'fire_trail': 'classic',
+        'ice_crystals': 'classic',
+        'glitch_pulse': 'classic',
+    },
+    'victory_effect': {
+        'glitch_victory': 'classic',
+        'matrix_cascade': 'classic',
+    },
+    'badge': {
+        # v1 supporter-style badges -> v2 supporter badge (coffee) when allowed
+        'star': 'coffee',
+        'heart': 'coffee',
+        'crown': 'coffee',
+        'lightning': 'coffee',
+        'flame': 'coffee',
+    },
+}
+
+# Default stats stored on authenticated (Google) users.
+# NOTE: Unlock progression uses the mp_* fields (multiplayer-only).
+DEFAULT_USER_STATS = {
+    "wins": 0,
+    "games_played": 0,
+    "eliminations": 0,
+    "times_eliminated": 0,
+    "total_guesses": 0,
+    "win_streak": 0,
+    "best_streak": 0,
+    # Multiplayer-only progression (used for cosmetics unlocks)
+    "mp_games_played": 0,
+    "mp_wins": 0,
+    "mp_eliminations": 0,
+    "mp_times_eliminated": 0,
+}
+
 # ============== AI PLAYER CONFIGURATION ==============
 
 # AI difficulty settings
@@ -724,6 +786,15 @@ def get_or_create_user(google_user: dict) -> dict:
         # Ensure cosmetics field exists for existing users
         if 'cosmetics' not in user:
             user['cosmetics'] = DEFAULT_COSMETICS.copy()
+        if 'cosmetics_version' not in user:
+            user['cosmetics_version'] = 1
+        # Ensure stats exist (and include new mp_* fields)
+        if 'stats' not in user or not isinstance(user.get('stats'), dict):
+            user['stats'] = DEFAULT_USER_STATS.copy()
+        else:
+            merged = DEFAULT_USER_STATS.copy()
+            merged.update(user.get('stats', {}))
+            user['stats'] = merged
         if 'is_donor' not in user:
             user['is_donor'] = False
         # Auto-grant donor status to admins
@@ -743,15 +814,8 @@ def get_or_create_user(google_user: dict) -> dict:
         'is_donor': is_admin,  # Admins start as donors
         'donation_date': int(time.time()) if is_admin else None,
         'cosmetics': DEFAULT_COSMETICS.copy(),
-        'stats': {
-            'wins': 0,
-            'games_played': 0,
-            'eliminations': 0,
-            'times_eliminated': 0,
-            'total_guesses': 0,
-            'win_streak': 0,
-            'best_streak': 0,
-        }
+        'cosmetics_version': COSMETICS_SCHEMA_VERSION,
+        'stats': DEFAULT_USER_STATS.copy(),
     }
     redis.set(user_key, json.dumps(user))
     
@@ -792,11 +856,104 @@ def get_user_by_email(email: str) -> Optional[dict]:
 
 
 def get_user_cosmetics(user: dict) -> dict:
-    """Get user's equipped cosmetics with defaults for missing fields."""
+    """
+    Get user's equipped cosmetics with defaults for missing fields.
+
+    Also performs schema migration + enforcement so:
+    - removed/renamed cosmetics are mapped or reset
+    - premium cosmetics can't be used by non-donors when paywall is enabled
+    - grind-locked cosmetics can't be used without meeting requirements
+    """
+    if not isinstance(user, dict):
+        return DEFAULT_COSMETICS.copy()
+
     cosmetics = user.get('cosmetics', {})
+    if not isinstance(cosmetics, dict):
+        cosmetics = {}
+
     # Merge with defaults to ensure all fields exist
     result = DEFAULT_COSMETICS.copy()
     result.update(cosmetics)
+
+    # Track whether we need to persist a migrated/sanitized payload
+    changed = False
+
+    # Ensure schema version exists and is current
+    try:
+        stored_version = int(user.get('cosmetics_version', 1) or 1)
+    except Exception:
+        stored_version = 1
+    if stored_version != COSMETICS_SCHEMA_VERSION:
+        user['cosmetics_version'] = COSMETICS_SCHEMA_VERSION
+        changed = True
+
+    is_donor = bool(user.get('is_donor', False))
+    is_admin = bool(user.get('is_admin', False))
+    user_stats = get_user_stats(user)
+
+    for category_key, catalog_key in COSMETIC_CATEGORY_TO_CATALOG_KEY.items():
+        desired = result.get(category_key, DEFAULT_COSMETICS.get(category_key))
+
+        item = get_cosmetic_item(catalog_key, desired)
+        if not item:
+            # Try legacy ID mapping (for hard restarts)
+            mapped = (LEGACY_COSMETIC_ID_MAP.get(category_key) or {}).get(desired)
+            if mapped:
+                # If we mapped into a supporter badge, only keep it when allowed.
+                if (
+                    category_key == 'badge'
+                    and mapped == 'coffee'
+                    and COSMETICS_PAYWALL_ENABLED
+                    and not (is_donor or is_admin)
+                ):
+                    mapped = 'none'
+                desired = mapped
+                item = get_cosmetic_item(catalog_key, desired)
+
+            # If still invalid, reset to default
+            if not item:
+                desired = DEFAULT_COSMETICS.get(category_key)
+                item = get_cosmetic_item(catalog_key, desired)
+
+            result[category_key] = desired
+            changed = True
+
+        # Enforce premium gating (feature-flagged)
+        if (
+            item
+            and COSMETICS_PAYWALL_ENABLED
+            and item.get('premium', False)
+            and not (is_donor or is_admin)
+        ):
+            fallback = DEFAULT_COSMETICS.get(category_key)
+            if result.get(category_key) != fallback:
+                result[category_key] = fallback
+                changed = True
+            continue
+
+        # Enforce progression gating (always on)
+        if item and not is_admin:
+            unmet = get_unmet_cosmetic_requirement(item, user_stats)
+            if unmet:
+                fallback = DEFAULT_COSMETICS.get(category_key)
+                if result.get(category_key) != fallback:
+                    result[category_key] = fallback
+                    changed = True
+                continue
+
+    if changed:
+        user['cosmetics'] = result
+        save_user(user)
+
+    return result
+
+
+def get_user_stats(user: dict) -> dict:
+    """Get authenticated user's stats with defaults for missing fields."""
+    stats = user.get('stats', {})
+    result = DEFAULT_USER_STATS.copy()
+    if isinstance(stats, dict):
+        result.update(stats)
     return result
 
 
@@ -827,6 +984,54 @@ def validate_cosmetic(category: str, cosmetic_id: str, is_donor: bool, is_admin:
     if COSMETICS_PAYWALL_ENABLED and item.get('premium', False) and not is_donor and not is_admin:
         return False
     return True
+
+
+COSMETIC_REQUIREMENT_LABELS = {
+    "mp_games_played": "multiplayer games",
+    "mp_wins": "multiplayer wins",
+    "mp_eliminations": "multiplayer eliminations",
+    "mp_times_eliminated": "multiplayer times eliminated",
+}
+
+
+def get_cosmetic_item(catalog_key: str, cosmetic_id: str) -> Optional[dict]:
+    """Get a cosmetic item from the catalog, or None if it doesn't exist."""
+    category_items = COSMETICS_CATALOG.get(catalog_key)
+    if not isinstance(category_items, dict):
+        return None
+    item = category_items.get(cosmetic_id)
+    return item if isinstance(item, dict) else None
+
+
+def get_unmet_cosmetic_requirement(item: dict, user_stats: dict) -> Optional[dict]:
+    """Return the first unmet requirement dict, or None if all are met."""
+    reqs = item.get('requirements')
+    if not reqs:
+        return None
+    if not isinstance(reqs, list):
+        return None
+    for req in reqs:
+        if not isinstance(req, dict):
+            continue
+        metric = req.get('metric')
+        if not metric or not isinstance(metric, str):
+            continue
+        try:
+            min_value = int(req.get('min', 0))
+        except Exception:
+            continue
+        have_value = user_stats.get(metric, 0)
+        try:
+            have_value = int(have_value)
+        except Exception:
+            have_value = 0
+        if have_value < min_value:
+            return {
+                "metric": metric,
+                "min": min_value,
+                "have": have_value,
+            }
+    return None
 
 
 # ============== HELPERS ==============
@@ -995,6 +1200,7 @@ def get_weekly_leaderboard_key() -> str:
 def update_game_stats(game: dict):
     """Update stats for all players after a game ends."""
     winner_id = game.get('winner')
+    is_multiplayer = not bool(game.get('is_singleplayer'))
     
     # Count eliminations per player
     eliminations_by_player = {}
@@ -1046,6 +1252,22 @@ def update_game_stats(game: dict):
                     stats['total_similarity'] += max(other_sims)
         
         save_player_stats(player['name'], stats)
+
+        # Multiplayer-only: also update authenticated user's mp_* stats for cosmetics unlocks.
+        if is_multiplayer:
+            auth_user_id = player.get('auth_user_id')
+            if auth_user_id and auth_user_id != 'admin_local':
+                auth_user = get_user_by_id(auth_user_id)
+                if auth_user:
+                    u_stats = get_user_stats(auth_user)
+                    u_stats['mp_games_played'] = u_stats.get('mp_games_played', 0) + 1
+                    u_stats['mp_eliminations'] = u_stats.get('mp_eliminations', 0) + eliminations_by_player.get(player['id'], 0)
+                    if player['id'] == winner_id:
+                        u_stats['mp_wins'] = u_stats.get('mp_wins', 0) + 1
+                    if player['id'] in eliminated_players:
+                        u_stats['mp_times_eliminated'] = u_stats.get('mp_times_eliminated', 0) + 1
+                    auth_user['stats'] = u_stats
+                    save_user(auth_user)
 
 
 def get_leaderboard(leaderboard_type: str = 'alltime') -> list:
@@ -1367,7 +1589,7 @@ class handler(BaseHTTPRequestHandler):
                     'name': 'Admin',
                     'email': 'admin@embeddle.io',
                     'avatar': '',
-                    'stats': {},
+                    'stats': DEFAULT_USER_STATS.copy(),
                     'is_donor': True,
                     'is_admin': True,
                     'cosmetics': DEFAULT_COSMETICS.copy(),
@@ -1382,7 +1604,7 @@ class handler(BaseHTTPRequestHandler):
                 'name': user['name'],
                 'email': user.get('email', ''),
                 'avatar': user.get('avatar', ''),
-                'stats': user.get('stats', {}),
+                'stats': get_user_stats(user),
                 'is_donor': user.get('is_donor', False),
                 'is_admin': user.get('is_admin', False),
                 'cosmetics': get_user_cosmetics(user),
@@ -2700,6 +2922,30 @@ class handler(BaseHTTPRequestHandler):
             
             if not category or not cosmetic_id:
                 return self._send_error("Category and cosmetic_id required", 400)
+
+            # Map category names to cosmetics keys
+            category_map = {
+                'card_border': 'card_borders',
+                'card_background': 'card_backgrounds',
+                'name_color': 'name_colors',
+                'badge': 'badges',
+                'elimination_effect': 'elimination_effects',
+                'guess_effect': 'guess_effects',
+                'turn_indicator': 'turn_indicators',
+                'victory_effect': 'victory_effects',
+                'matrix_color': 'matrix_colors',
+                'particle_overlay': 'particle_overlays',
+                'seasonal_theme': 'seasonal_themes',
+                'alt_background': 'alt_backgrounds',
+            }
+            
+            catalog_key = category_map.get(category)
+            if not catalog_key:
+                return self._send_error("Invalid category", 400)
+            
+            item = get_cosmetic_item(catalog_key, cosmetic_id)
+            if not item:
+                return self._send_error("Invalid cosmetic", 400)
             
             # Handle admin user specially - store cosmetics in Redis with short expiry
             if payload['sub'] == 'admin_local':
@@ -2731,33 +2977,22 @@ class handler(BaseHTTPRequestHandler):
             if not category or not cosmetic_id:
                 return self._send_error("Category and cosmetic_id required", 400)
             
-            # Map category names to cosmetics keys
-            category_map = {
-                'card_border': 'card_borders',
-                'card_background': 'card_backgrounds',
-                'name_color': 'name_colors',
-                'badge': 'badges',
-                'elimination_effect': 'elimination_effects',
-                'guess_effect': 'guess_effects',
-                'turn_indicator': 'turn_indicators',
-                'victory_effect': 'victory_effects',
-                'matrix_color': 'matrix_colors',
-                'particle_overlay': 'particle_overlays',
-                'seasonal_theme': 'seasonal_themes',
-                'alt_background': 'alt_backgrounds',
-            }
-            
-            catalog_key = category_map.get(category)
-            if not catalog_key:
-                return self._send_error("Invalid category", 400)
-            
             is_donor = user.get('is_donor', False)
             is_admin = user.get('is_admin', False)
-            if not validate_cosmetic(catalog_key, cosmetic_id, is_donor, is_admin):
-                item = COSMETICS_CATALOG.get(catalog_key, {}).get(cosmetic_id)
-                if COSMETICS_PAYWALL_ENABLED and item and item.get('premium', False) and not is_donor and not is_admin:
-                    return self._send_error("Donate to unlock premium cosmetics!", 403)
-                return self._send_error("Invalid cosmetic", 400)
+
+            # Premium gating (feature-flagged)
+            if COSMETICS_PAYWALL_ENABLED and item.get('premium', False) and not is_donor and not is_admin:
+                return self._send_error("Donate to unlock premium cosmetics!", 403)
+            
+            # Progression gating (always on): requirements are multiplayer-only stats (mp_*)
+            if not is_admin:
+                unmet = get_unmet_cosmetic_requirement(item, get_user_stats(user))
+                if unmet:
+                    label = COSMETIC_REQUIREMENT_LABELS.get(unmet['metric'], unmet['metric'])
+                    return self._send_error(
+                        f"Locked: requires {unmet['min']} {label} ({unmet['have']}/{unmet['min']})",
+                        403,
+                    )
             
             # Update user's cosmetics
             if 'cosmetics' not in user:

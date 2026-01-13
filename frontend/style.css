@@ -94,6 +94,19 @@ header h1 {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
+    .matrix-bg {
+        opacity: 0.05;
+    }
+}
+
 /* Cards */
 .card {
     background: var(--bg-card);
@@ -858,6 +871,7 @@ header h1 {
 #guess-form {
     display: flex;
     gap: 1rem;
+    position: relative;
 }
 
 #guess-input {
@@ -1869,6 +1883,59 @@ header h1 {
     padding: 1rem;
 }
 
+.cosmetics-tools {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.cosmetics-preview-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: stretch;
+}
+
+.player-card.cosmetics-preview-card {
+    flex: 1;
+    padding: 0.9rem;
+    margin: 0;
+}
+
+.cosmetics-test-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.cosmetics-test-buttons .btn {
+    white-space: nowrap;
+    justify-content: center;
+}
+
+.cosmetics-guess-form {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px dashed var(--border-light);
+    border-radius: var(--radius);
+    position: relative;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    user-select: none;
+}
+
+.cosmetics-victory-preview {
+    margin-top: 0.75rem;
+    height: 110px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: rgba(0, 0, 0, 0.35);
+    position: relative;
+    overflow: hidden;
+}
+
 .cosmetics-banner {
     background: var(--bg-secondary);
     border: 1px solid var(--border);
@@ -1949,6 +2016,21 @@ header h1 {
 
 .cosmetic-option .cosmetic-icon {
     font-size: 0.9rem;
+}
+
+.cosmetic-option .cosmetic-progress {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-left: 0.15rem;
+}
+
+.cosmetic-option.locked .cosmetic-progress {
+    color: var(--warning);
+}
+
+.cosmetic-option.equipped .cosmetic-progress {
+    color: var(--bg-primary);
+    opacity: 0.85;
 }
 
 /* ============ CARD BORDER COSMETICS ============ */
@@ -2230,7 +2312,8 @@ header h1 {
 
 /* ============ GUESS EFFECTS ============ */
 
-#guess-form.guess-pulse_wave::after {
+#guess-form.guess-pulse_wave::after,
+#cosmetics-guess-form.guess-pulse_wave::after {
     content: '';
     position: absolute;
     top: 50%;
@@ -2247,7 +2330,8 @@ header h1 {
     100% { transform: translate(-50%, -50%) scale(20); opacity: 0; }
 }
 
-#guess-form.guess-spark_burst {
+#guess-form.guess-spark_burst,
+#cosmetics-guess-form.guess-spark_burst {
     animation: spark-burst 0.3s ease-out;
 }
 

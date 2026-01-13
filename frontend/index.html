@@ -54,6 +54,24 @@
             <h2>🎨 COSMETICS</h2>
             <button id="close-cosmetics-btn" class="btn btn-ghost btn-tiny">×</button>
         </div>
+        <div class="cosmetics-tools">
+            <div class="cosmetics-preview-row">
+                <div id="cosmetics-preview-card" class="player-card cosmetics-preview-card" data-player-id="cosmetics_preview">
+                    <div id="cosmetics-preview-name" class="name">YOU</div>
+                    <div class="status alive">Preview</div>
+                </div>
+                <div class="cosmetics-test-buttons">
+                    <button id="cosmetics-test-turn" class="btn btn-ghost btn-small" type="button">TOGGLE TURN</button>
+                    <button id="cosmetics-test-guess" class="btn btn-ghost btn-small" type="button">TEST GUESS</button>
+                    <button id="cosmetics-test-elim" class="btn btn-ghost btn-small" type="button">TEST ELIM</button>
+                    <button id="cosmetics-test-victory" class="btn btn-ghost btn-small" type="button">TEST VICTORY</button>
+                </div>
+            </div>
+            <div id="cosmetics-guess-form" class="cosmetics-guess-form" aria-label="Guess effect preview">
+                <span class="cosmetics-guess-text">SUBMIT</span>
+            </div>
+            <div id="cosmetics-victory-container" class="cosmetics-victory-preview" aria-label="Victory effect preview"></div>
+        </div>
         <div class="cosmetics-content">
             <!-- Content populated by JS -->
         </div>

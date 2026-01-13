@@ -1914,8 +1914,8 @@ function showGameOver(game) {
     });
 }
 
-function createConfetti() {
-    const container = document.getElementById('confetti-container');
+function createConfetti(targetEl = null) {
+    const container = targetEl || document.getElementById('confetti-container');
     if (!container) return;
     
     container.innerHTML = '';
