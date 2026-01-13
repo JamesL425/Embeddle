@@ -77,24 +77,12 @@ DEFAULT_THEME_ROSTER: List[Dict[str, str]] = [
         "prompt": "halloween, haunted houses, spooky vibes, costumes, scares (clean).",
     },
     {
-        "name": "Disaster & Survival",
-        "prompt": "survival, disasters, storms, rescues, emergency gear, wilderness.",
-    },
-    {
         "name": "Kitchen Chaos",
         "prompt": "cooking, kitchen tools, recipes, snacks, restaurants, food chaos.",
     },
     {
         "name": "Music & Concerts",
         "prompt": "music genres, instruments, concerts, festivals, DJs, band life.",
-    },
-    {
-        "name": "Animals (Wild & Weird)",
-        "prompt": "animals and wildlife (fun variety, avoid ultra-obscure species).",
-    },
-    {
-        "name": "Ocean & Adventure",
-        "prompt": "ocean, islands, storms, sea life, sailing, diving, exploration.",
     },
 ]
 

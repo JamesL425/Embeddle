@@ -76,6 +76,8 @@ Push to main branch - Vercel will auto-deploy.
 │   ├── requirements.txt  # Python dependencies
 │   ├── config.json       # Game settings
 │   ├── themes.json       # Pre-generated theme word lists
+│   ├── generate_themes.py # Optional: regenerate themes.json (OpenAI + wordfreq filtering)
+│   └── theme_overrides.json # Optional: per-theme include/exclude overrides for generation
 │   └── cosmetics.json    # Cosmetic items catalog
 ├── frontend/
 │   ├── index.html        # Main page
@@ -90,6 +92,19 @@ Push to main branch - Vercel will auto-deploy.
 - **Players**: 2-6 per game
 - **Elimination**: Guess someone's exact word
 - **Word change reward**: Earned by eliminating another player
+- **Word choice pool**: Each player gets 18 unique word choices at the start (no overlap between players)
+
+## Theme Word Sets
+
+- **Theme size**: Each theme dataset is curated to exactly 120 words.
+- **Regenerating themes (optional)**:
+
+```bash
+python3 api/generate_themes.py --validate-only
+python3 api/generate_themes.py --model gpt-4o-mini --count 120 --min-zipf 3.0
+```
+
+Use `api/theme_overrides.json` to force-include or force-exclude specific words.
 
 ## Strategy Tips
 
