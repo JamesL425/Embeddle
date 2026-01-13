@@ -44,6 +44,7 @@
     <div id="logged-in-box" class="logged-in-box hidden">
         <img id="user-avatar" class="user-avatar hidden" src="" alt="">
         <span id="logged-in-name">OPERATIVE</span>
+        <button id="daily-btn" class="btn btn-ghost btn-tiny" title="Daily Ops">🎯</button>
         <button id="cosmetics-btn" class="btn btn-ghost btn-tiny" title="Cosmetics">🎨</button>
         <button id="chat-btn" class="btn btn-ghost btn-tiny" title="Chat">💬<span id="chat-unread-dot" class="unread-dot hidden"></span></button>
         <button id="options-btn" class="btn btn-ghost btn-tiny" title="Options">⚙️</button>
@@ -76,6 +77,30 @@
         </div>
         <div class="cosmetics-content">
             <!-- Content populated by JS -->
+        </div>
+    </div>
+
+    <!-- Daily Ops Panel -->
+    <div id="daily-panel" class="drawer-panel daily-panel">
+        <div class="daily-header">
+            <h2>🎯 DAILY OPS</h2>
+            <button id="close-daily-btn" class="btn btn-ghost btn-tiny">×</button>
+        </div>
+        <div class="daily-content">
+            <div class="daily-balance">
+                <span>CREDITS:</span>
+                <span id="daily-credits">0</span>
+            </div>
+
+            <h3 class="daily-section-title">DAILY QUESTS</h3>
+            <div id="daily-quests" class="daily-quests">
+                <div class="daily-empty">Loading...</div>
+            </div>
+
+            <h3 class="daily-section-title">SHOP</h3>
+            <div id="daily-shop" class="daily-shop">
+                <div class="daily-empty">Loading...</div>
+            </div>
         </div>
     </div>
 
@@ -564,6 +589,7 @@
     </div>
 
     <script src="/cosmetics.js"></script>
+    <script src="/daily.js"></script>
     <script src="/app.js"></script>
 </body>
 </html>

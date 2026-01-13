@@ -1407,6 +1407,7 @@ def get_user_cosmetics(user: dict) -> dict:
     is_donor = bool(user.get('is_donor', False))
     is_admin = bool(user.get('is_admin', False))
     user_stats = get_user_stats(user)
+    owned_cosmetics = (ensure_user_economy(user, persist=False).get("owned_cosmetics") or {}) if isinstance(user, dict) else {}
 
     for category_key, catalog_key in COSMETIC_CATEGORY_TO_CATALOG_KEY.items():
         desired = result.get(category_key, DEFAULT_COSMETICS.get(category_key))
@@ -1448,6 +1449,21 @@ def get_user_cosmetics(user: dict) -> dict:
                 result[category_key] = fallback
                 changed = True
             continue
+
+        # Enforce shop ownership gating (priced cosmetics must be purchased)
+        if item and not (is_admin or COSMETICS_UNLOCK_ALL):
+            try:
+                price = int(item.get('price', 0) or 0)
+            except Exception:
+                price = 0
+            if price > 0:
+                owned_list = owned_cosmetics.get(category_key, [])
+                if not isinstance(owned_list, list) or desired not in owned_list:
+                    fallback = DEFAULT_COSMETICS.get(category_key)
+                    if result.get(category_key) != fallback:
+                        result[category_key] = fallback
+                        changed = True
+                    continue
 
         # Enforce progression gating (always on)
         if item and not (is_admin or COSMETICS_UNLOCK_ALL):
@@ -5282,6 +5298,15 @@ class handler(BaseHTTPRequestHandler):
                         f"Locked: requires {unmet['min']} {label} ({unmet['have']}/{unmet['min']})",
                         403,
                     )
+
+            # Shop ownership gating: priced cosmetics must be purchased before equipping
+            if not (is_admin or COSMETICS_UNLOCK_ALL):
+                try:
+                    price = int(item.get('price', 0) or 0)
+                except Exception:
+                    price = 0
+                if price > 0 and not user_owns_cosmetic(user, category, cosmetic_id):
+                    return self._send_error(f"Locked: purchase in Shop ({price} credits)", 403)
             
             # Update user's cosmetics
             if 'cosmetics' not in user:
