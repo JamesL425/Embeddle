@@ -12,7 +12,7 @@
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.py" },
-    { "source": "/game/:code", "destination": "/frontend/index.html" },
+    { "source": "/game/(.*)", "destination": "/frontend/index.html" },
     { "source": "/privacy", "destination": "/frontend/privacy.html" },
     { "source": "/privacy/", "destination": "/frontend/privacy.html" },
     { "source": "/terms", "destination": "/frontend/terms.html" },
