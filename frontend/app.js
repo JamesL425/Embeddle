@@ -1327,20 +1327,20 @@ function processToastQueue() {
         setTimeout(() => {
             toastActive = false;
             processToastQueue();
-        }, 300);
+        }, 150); // Reduced from 300ms
     }, duration);
 }
 
 function showError(message) {
-    showToast(message, 'error', 4000);
+    showToast(message, 'error', 3000);
 }
 
 function showSuccess(message) {
-    showToast(message, 'success', 3000);
+    showToast(message, 'success', 2000);
 }
 
 function showInfo(message) {
-    showToast(message, 'info', 3000);
+    showToast(message, 'info', 2000);
 }
 
 async function apiCall(endpoint, method = 'GET', body = null) {
@@ -2464,7 +2464,7 @@ document.getElementById('copy-code-btn').addEventListener('click', () => {
     document.getElementById('copy-code-btn').textContent = 'Copied!';
     setTimeout(() => {
         document.getElementById('copy-code-btn').textContent = 'Copy';
-    }, 2000);
+    }, 1000);
 });
 
 document.getElementById('start-game-btn').addEventListener('click', async () => {
@@ -3123,32 +3123,67 @@ async function submitGuess() {
     // Immediately clear input and disable for responsive feel
     guessInput.value = '';
     guessInput.disabled = true;
-    guessInput.placeholder = 'Processing...';
+    guessInput.placeholder = 'Submitting...';
+    
+    // Play guess effect immediately for responsive feedback
+    const guessEffect = cosmeticsState?.userCosmetics?.guess_effect || 'classic';
+    if (typeof playGuessEffect === 'function') {
+        playGuessEffect(guessEffect);
+    }
+    
+    // Optimistic UI: show pending guess in history immediately
+    addPendingGuessToHistory(word, gameState.playerName || 'You');
     
     try {
-        // Play guess effect
-        const guessEffect = cosmeticsState?.userCosmetics?.guess_effect || 'classic';
-        if (typeof playGuessEffect === 'function') {
-            playGuessEffect(guessEffect);
-        }
-        
-        const response = await apiCall(`/api/games/${gameState.code}/guess`, 'POST', {
+        // Submit guess - server returns updated game state
+        const game = await apiCall(`/api/games/${gameState.code}/guess`, 'POST', {
             player_id: gameState.playerId,
             word,
         });
 
-        // Immediately show YOUR result first
-        const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+        // Update with real server state (removes pending entry)
         updateGame(game);
 
-        // Then let AIs take their turns with simulated thinking time
+        // Then let AIs take their turns
         maybeRunSingleplayerAiTurns(game);
     } catch (error) {
         showError(error.message);
+        // Remove pending entry on error and re-fetch state
+        removePendingGuessFromHistory();
+        try {
+            const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+            updateGame(game);
+        } catch (e) {
+            // ignore secondary fetch error
+        }
     } finally {
-        // Restore placeholder; input enabled/disabled is managed by updateGame()
         guessInput.placeholder = originalPlaceholder;
     }
+}
+
+// Optimistic UI helpers for guess submission
+function addPendingGuessToHistory(word, playerName) {
+    const historyLog = document.getElementById('history-log');
+    if (!historyLog) return;
+    
+    // Create pending entry at the top (history is shown in reverse)
+    const div = document.createElement('div');
+    div.className = 'history-entry pending-guess';
+    div.id = 'pending-guess-entry';
+    div.innerHTML = `
+        <div class="header">
+            <span class="guesser">${escapeHtml(playerName)}</span>
+            <span class="word">"${escapeHtml(word)}"</span>
+            <span class="pending-indicator">⏳</span>
+        </div>
+        <div class="similarities"><span class="pending-text">Calculating...</span></div>
+    `;
+    historyLog.insertBefore(div, historyLog.firstChild);
+}
+
+function removePendingGuessFromHistory() {
+    const pending = document.getElementById('pending-guess-entry');
+    if (pending) pending.remove();
 }
 
 // ============ SINGLEPLAYER AI TURN RUNNER ============
@@ -3199,32 +3234,33 @@ async function runSingleplayerAiTurns() {
     singleplayerAiRunnerActive = true;
 
     try {
-        while (true) {
-            const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
-            if (!isAiTurn(game)) break;
-
+        // Get initial state to check if it's AI turn
+        let game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+        
+        while (isAiTurn(game)) {
             const currentAi = game.players.find(p => p.id === game.current_player_id);
             const turnText = document.getElementById('turn-text');
             if (turnText && currentAi) {
                 turnText.textContent = `${currentAi.name} is thinking...`;
             }
 
-            // Simulated thinking time (requested: ~1s per AI)
-            await sleep(1000);
+            // Reduced thinking time for snappier feel (350ms instead of 1000ms)
+            await sleep(350);
 
-            // Process exactly one AI move server-side
-            await apiCall(`/api/games/${gameState.code}/ai-step`, 'POST', {
+            // Process AI move - server returns updated game state
+            const updated = await apiCall(`/api/games/${gameState.code}/ai-step`, 'POST', {
                 player_id: gameState.playerId,
             });
-
-            // Show updated state after that single AI move
-            const updated = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
-            if (updated.status === 'finished') {
+            
+            // Use the returned game state directly (no second fetch needed)
+            game = updated;
+            
+            if (game.status === 'finished') {
                 clearInterval(gameState.pollingInterval);
-                showGameOver(updated);
+                showGameOver(game);
                 break;
             }
-            updateGame(updated);
+            updateGame(game);
         }
     } finally {
         singleplayerAiRunnerActive = false;
@@ -3238,16 +3274,27 @@ document.getElementById('change-word-btn').addEventListener('click', async () =>
 
 // Skip word change button
 document.getElementById('skip-word-change-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('skip-word-change-btn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Keeping...';
+    
+    // Optimistic: hide the change word UI immediately
+    document.getElementById('change-word-container')?.classList.add('hidden');
+    
     try {
-        await apiCall(`/api/games/${gameState.code}/skip-word-change`, 'POST', {
+        const game = await apiCall(`/api/games/${gameState.code}/skip-word-change`, 'POST', {
             player_id: gameState.playerId,
         });
-
-        const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
         updateGame(game);
         maybeRunSingleplayerAiTurns(game);
     } catch (error) {
         showError(error.message);
+        // Restore UI on error
+        document.getElementById('change-word-container')?.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
     }
 });
 
@@ -3260,19 +3307,40 @@ async function submitWordChange() {
         return;
     }
     
+    const changeBtn = document.getElementById('change-word-btn');
+    const originalBtnText = changeBtn?.textContent;
+    if (changeBtn) {
+        changeBtn.disabled = true;
+        changeBtn.textContent = 'Changing...';
+    }
+    
+    // Optimistic: update secret word display and hide change UI immediately
+    document.getElementById('your-secret-word').textContent = newWord.toUpperCase();
+    document.getElementById('change-word-container')?.classList.add('hidden');
+    newWordDisplay.textContent = 'Click a word above';
+    newWordDisplay.dataset.word = '';
+    
     try {
-        await apiCall(`/api/games/${gameState.code}/change-word`, 'POST', {
+        const game = await apiCall(`/api/games/${gameState.code}/change-word`, 'POST', {
             player_id: gameState.playerId,
             new_word: newWord,
         });
-        newWordDisplay.textContent = 'Click a word above';
-        newWordDisplay.dataset.word = '';
-
-        const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
         updateGame(game);
         maybeRunSingleplayerAiTurns(game);
     } catch (error) {
         showError(error.message);
+        // Restore UI on error - re-fetch to get correct state
+        try {
+            const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+            updateGame(game);
+        } catch (e) {
+            // ignore secondary fetch error
+        }
+    } finally {
+        if (changeBtn) {
+            changeBtn.disabled = false;
+            changeBtn.textContent = originalBtnText;
+        }
     }
 }
 
@@ -3469,7 +3537,7 @@ document.getElementById('copy-results-btn')?.addEventListener('click', async () 
         setTimeout(() => {
             btn.textContent = '📋 COPY';
             btn.classList.remove('copied');
-        }, 2000);
+        }, 1000);
     } catch (e) {
         console.error('Failed to copy:', e);
         showError('Failed to copy to clipboard');
@@ -3520,7 +3588,7 @@ document.getElementById('challenge-friend-btn')?.addEventListener('click', async
         setTimeout(() => {
             btn.textContent = '⚔️ CHALLENGE';
             btn.disabled = false;
-        }, 2000);
+        }, 1000);
     } catch (e) {
         console.error('Failed to create challenge:', e);
         showError('Failed to create challenge link');

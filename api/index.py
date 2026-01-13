@@ -3062,6 +3062,86 @@ class handler(BaseHTTPRequestHandler):
             return {}
         return data if isinstance(data, dict) else {}
 
+    def _build_game_response(self, game: dict, player_id: str, code: str) -> dict:
+        """Build a standard game response for a player. Used by GET /api/games/{code} and POST endpoints."""
+        try:
+            game_finished = game['status'] == 'finished'
+            all_words_set = all(p.get('secret_word') for p in game['players']) if game['players'] else False
+            
+            current_player_id = None
+            if game['status'] == 'playing' and game['players'] and all_words_set:
+                current_player_id = game['players'][game['current_turn']]['id']
+            
+            theme_data = game.get('theme') or {}
+            theme_votes = game.get('theme_votes', {})
+            theme_votes_with_names = {}
+            for theme, voter_ids in theme_votes.items():
+                voters = []
+                for vid in voter_ids:
+                    voter = next((p for p in game['players'] if p['id'] == vid), None)
+                    if voter:
+                        voters.append({"id": vid, "name": voter['name']})
+                theme_votes_with_names[theme] = voters
+            
+            ready_count = sum(1 for p in game['players'] if p.get('is_ready', False))
+            spectator_count = get_spectator_count(code)
+            
+            response = {
+                "code": game['code'],
+                "host_id": game['host_id'],
+                "players": [],
+                "current_turn": game['current_turn'],
+                "current_player_id": current_player_id,
+                "status": game['status'],
+                "winner": game.get('winner'),
+                "history": game.get('history', []),
+                "visibility": game.get('visibility', 'public'),
+                "is_ranked": bool(game.get('is_ranked', False)),
+                "spectator_count": spectator_count,
+                "theme": {
+                    "name": theme_data.get('name', ''),
+                    "words": theme_data.get('words', []),
+                },
+                "waiting_for_word_change": game.get('waiting_for_word_change'),
+                "theme_options": game.get('theme_options', []),
+                "theme_votes": theme_votes_with_names,
+                "all_words_set": all_words_set,
+                "ready_count": ready_count,
+                "is_singleplayer": game.get('is_singleplayer', False),
+            }
+
+            ranked_mmr = game.get('ranked_mmr') if isinstance(game.get('ranked_mmr'), dict) else None
+            
+            for p in game['players']:
+                player_data = {
+                    "id": p['id'],
+                    "name": p['name'],
+                    "secret_word": p['secret_word'] if (p['id'] == player_id or game_finished) else None,
+                    "has_word": bool(p.get('secret_word')),
+                    "is_alive": p['is_alive'],
+                    "can_change_word": p.get('can_change_word', False) if p['id'] == player_id else None,
+                    "is_ready": p.get('is_ready', False),
+                    "cosmetics": p.get('cosmetics', {}),
+                    "is_ai": p.get('is_ai', False),
+                    "difficulty": p.get('difficulty'),
+                }
+                if game_finished and bool(game.get('is_ranked', False)) and ranked_mmr:
+                    mmr_entry = ranked_mmr.get(str(p.get('id')))
+                    if isinstance(mmr_entry, dict):
+                        player_data['mmr_before'] = mmr_entry.get('old')
+                        player_data['mmr'] = mmr_entry.get('new')
+                        player_data['mmr_delta'] = mmr_entry.get('delta')
+                if p['id'] == player_id:
+                    player_data['word_pool'] = p.get('word_pool', [])
+                    if p.get('word_change_options') is not None:
+                        player_data['word_change_options'] = p.get('word_change_options', [])
+                response['players'].append(player_data)
+            
+            return response
+        except Exception as e:
+            print(f"Error building game response: {e}")
+            return None
+
     def do_OPTIONS(self):
         self.send_response(200)
         cors_origin = self._get_cors_origin()
@@ -5326,6 +5406,13 @@ class handler(BaseHTTPRequestHandler):
                 game['current_turn'] = next_turn
             
             save_game(code, game)
+            
+            # Return full game state to avoid client needing a second fetch
+            game_response = self._build_game_response(game, player_id, code)
+            if game_response:
+                return self._send_json(game_response)
+            
+            # Fallback to minimal response if helper fails
             return self._send_json({
                 "status": "ai_step",
                 "ai_player_id": current_ai.get('id'),
@@ -5456,6 +5543,12 @@ class handler(BaseHTTPRequestHandler):
             
             save_game(code, game)
             
+            # Return full game state to avoid client needing a second fetch
+            game_response = self._build_game_response(game, player_id, code)
+            if game_response:
+                return self._send_json(game_response)
+            
+            # Fallback to minimal response if helper fails
             response = {
                 "similarities": similarities,
                 "eliminations": eliminations,
@@ -5544,6 +5637,11 @@ class handler(BaseHTTPRequestHandler):
             game['history'].append(history_entry)
             
             save_game(code, game)
+            
+            # Return full game state to avoid client needing a second fetch
+            game_response = self._build_game_response(game, player_id, code)
+            if game_response:
+                return self._send_json(game_response)
             return self._send_json({"status": "word_changed"})
 
         # POST /api/games/{code}/skip-word-change - Skip changing word
@@ -5595,6 +5693,11 @@ class handler(BaseHTTPRequestHandler):
             })
             
             save_game(code, game)
+            
+            # Return full game state to avoid client needing a second fetch
+            game_response = self._build_game_response(game, player_id, code)
+            if game_response:
+                return self._send_json(game_response)
             return self._send_json({"status": "skipped"})
 
         # POST /api/user/daily/claim - Claim a completed daily or weekly quest for credits
