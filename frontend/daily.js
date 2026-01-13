@@ -54,8 +54,8 @@ async function loadDaily() {
         
         const data = await response.json();
         dailyState.wallet = data.wallet || { credits: 0 };
-        dailyState.quests = (data.daily && data.daily.quests) || [];
-        dailyState.date = (data.daily && data.daily.date) || '';
+        dailyState.quests = data.quests || [];
+        dailyState.date = data.date || '';
         dailyState.ownedCosmetics = data.owned_cosmetics || {};
         
         renderDailyPanel();
