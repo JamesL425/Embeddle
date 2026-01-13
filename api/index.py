@@ -3350,6 +3350,45 @@ class handler(BaseHTTPRequestHandler):
                     return self._send_error("Not authorized for this player", 403)
 
             status = game.get('status')
+            is_singleplayer = bool(game.get('is_singleplayer', False))
+
+            # Singleplayer QoL: allow "soft leave" so players can go join other games and later resume.
+            # By default, leaving a singleplayer game does NOT forfeit. If the client explicitly passes
+            # {"forfeit": true}, we treat it as an intentional solo forfeit and delete the run.
+            if is_singleplayer:
+                wants_forfeit = False
+                try:
+                    if isinstance(body, dict) and 'forfeit' in body:
+                        wants_forfeit = parse_bool(body.get('forfeit', False), default=False)
+                except Exception:
+                    wants_forfeit = False
+
+                if wants_forfeit:
+                    try:
+                        delete_game(code)
+                    except Exception:
+                        pass
+                    return self._send_json({
+                        "status": "left",
+                        "forfeit": True,
+                        "deleted": True,
+                        "is_singleplayer": True,
+                        "game_status": status,
+                    })
+
+                # Soft leave: keep the game and player state intact.
+                # Best-effort refresh expiry so it survives the hop.
+                try:
+                    save_game(code, game)
+                except Exception:
+                    pass
+                return self._send_json({
+                    "status": "left",
+                    "forfeit": False,
+                    "preserved": True,
+                    "is_singleplayer": True,
+                    "game_status": status,
+                })
 
             # Lobby / word selection: remove the player from the game
             if status in ('waiting', 'word_selection'):

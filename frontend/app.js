@@ -2890,14 +2890,33 @@ function openLeaveGameModal() {
     if (!modal) return;
 
     const textEl = modal.querySelector('.modal-text');
-    const confirmBtn = document.getElementById('leave-game-confirm');
+    const exitBtn = document.getElementById('leave-game-exit');
+    const confirmBtn = document.getElementById('leave-game-confirm'); // forfeit button
 
     if (gameState.isSpectator) {
         if (textEl) textEl.textContent = 'Stop spectating and return to base?';
-        if (confirmBtn) confirmBtn.textContent = '> LEAVE';
+        if (exitBtn) {
+            exitBtn.textContent = '> LEAVE';
+            exitBtn.classList.remove('hidden');
+        }
+        if (confirmBtn) confirmBtn.classList.add('hidden');
+    } else if (gameState.isSingleplayer) {
+        if (textEl) textEl.textContent = 'Exit to base? Your solo run will stay active — reopen it from Recent Games.';
+        if (exitBtn) {
+            exitBtn.textContent = '> SAVE & EXIT';
+            exitBtn.classList.remove('hidden');
+        }
+        if (confirmBtn) {
+            confirmBtn.textContent = '> FORFEIT';
+            confirmBtn.classList.remove('hidden');
+        }
     } else {
         if (textEl) textEl.textContent = 'Are you sure? Leaving will forfeit your current match.';
-        if (confirmBtn) confirmBtn.textContent = '> FORFEIT';
+        if (exitBtn) exitBtn.classList.add('hidden');
+        if (confirmBtn) {
+            confirmBtn.textContent = '> FORFEIT';
+            confirmBtn.classList.remove('hidden');
+        }
     }
 
     modal.classList.remove('hidden');
@@ -2909,7 +2928,7 @@ function closeLeaveGameModal() {
     modal.classList.add('hidden');
 }
 
-async function confirmLeaveGame() {
+async function confirmLeaveGame({ forfeit = false } = {}) {
     closeLeaveGameModal();
 
     // Spectators just return home (no server-side action)
@@ -2929,7 +2948,12 @@ async function confirmLeaveGame() {
 
     try {
         if (code && playerId) {
-            await apiCall(`/api/games/${code}/leave`, 'POST', { player_id: playerId });
+            const payload = { player_id: playerId };
+            // Only solo games support "soft exit" vs "forfeit".
+            if (gameState.isSingleplayer && forfeit) {
+                payload.forfeit = true;
+            }
+            await apiCall(`/api/games/${code}/leave`, 'POST', payload);
         }
     } catch (e) {
         // Best-effort: still leave locally
@@ -2948,7 +2972,8 @@ async function confirmLeaveGame() {
 
 document.getElementById('leave-game-btn')?.addEventListener('click', openLeaveGameModal);
 document.getElementById('leave-game-cancel')?.addEventListener('click', closeLeaveGameModal);
-document.getElementById('leave-game-confirm')?.addEventListener('click', confirmLeaveGame);
+document.getElementById('leave-game-exit')?.addEventListener('click', () => confirmLeaveGame({ forfeit: false }));
+document.getElementById('leave-game-confirm')?.addEventListener('click', () => confirmLeaveGame({ forfeit: true }));
 
 document.getElementById('leave-game-modal')?.addEventListener('click', (e) => {
     if (e.target?.dataset?.close) closeLeaveGameModal();
