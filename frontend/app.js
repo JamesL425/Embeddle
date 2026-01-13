@@ -904,7 +904,7 @@ document.getElementById('close-chat-btn')?.addEventListener('click', closeChatPa
 
 // Track last send time for debounce
 let lastChatSendTime = 0;
-const CHAT_SEND_DEBOUNCE_MS = 500;
+const CHAT_SEND_DEBOUNCE_MS = 150;
 
 document.getElementById('chat-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
