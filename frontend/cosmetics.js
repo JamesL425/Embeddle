@@ -328,8 +328,197 @@ function applyParticleOverlay(particleId) {
     document.body.dataset.particles = particleId;
 }
 
+// ============ SEASONAL: SPOOKY FLOATING GHOST ============
+
+let spookyGhostAnim = {
+    rafId: null,
+    current: null,
+    next: null,
+    switchAt: 0,
+    blendStart: 0,
+    blendMs: 0,
+};
+
+function prefersReducedMotion() {
+    try {
+        return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) {
+        return false;
+    }
+}
+
+function rand(min, max) {
+    return min + Math.random() * (max - min);
+}
+
+function easeInOutSine(t) {
+    // 0..1 -> 0..1
+    return 0.5 - 0.5 * Math.cos(Math.PI * t);
+}
+
+function getSpookyGhostSizePx() {
+    const w = window.innerWidth || 800;
+    const h = window.innerHeight || 600;
+    const minDim = Math.min(w, h);
+    // Responsive size: big enough to read as "ghost", but not overwhelming
+    return Math.max(160, Math.min(320, Math.round(minDim * 0.28)));
+}
+
+function makeGhostParams(startMs) {
+    const twoPi = Math.PI * 2;
+    const w1 = rand(0.6, 0.85);
+    return {
+        startMs,
+        // Smooth but "random" curve comes from mixing 2 sine waves with random speeds/phases
+        w1,
+        w2: 1 - w1,
+        sx1: rand(0.02, 0.05) * twoPi,  // rad/sec
+        sx2: rand(0.06, 0.13) * twoPi,
+        sy1: rand(0.02, 0.05) * twoPi,
+        sy2: rand(0.06, 0.13) * twoPi,
+        phx1: rand(0, twoPi),
+        phx2: rand(0, twoPi),
+        phy1: rand(0, twoPi),
+        phy2: rand(0, twoPi),
+        // Independent bob/tilt for "cute float"
+        sRot: rand(0.18, 0.32) * twoPi,
+        sRot2: rand(0.06, 0.12) * twoPi,
+        pRot: rand(0, twoPi),
+        pRot2: rand(0, twoPi),
+        sScale: rand(0.14, 0.26) * twoPi,
+        pScale: rand(0, twoPi),
+    };
+}
+
+function ghostPose(params, ts) {
+    const w = window.innerWidth || 800;
+    const h = window.innerHeight || 600;
+    const size = getSpookyGhostSizePx();
+    const margin = 18; // keep away from edges
+    const ax = Math.max(0, (w - size) / 2 - margin);
+    const ay = Math.max(0, (h - size) / 2 - margin);
+
+    const t = Math.max(0, (ts - params.startMs) / 1000);
+    const xNorm = params.w1 * Math.sin(params.sx1 * t + params.phx1) + params.w2 * Math.sin(params.sx2 * t + params.phx2);
+    const yNorm = params.w1 * Math.sin(params.sy1 * t + params.phy1) + params.w2 * Math.sin(params.sy2 * t + params.phy2);
+
+    const x = (w / 2) + ax * xNorm;
+    const y = (h / 2) + ay * yNorm;
+
+    const rot = (6 * Math.sin(params.sRot * t + params.pRot)) + (2.5 * Math.sin(params.sRot2 * t + params.pRot2));
+    const scale = 1 + (0.06 * Math.sin(params.sScale * t + params.pScale));
+
+    return { x, y, rot, scale, size };
+}
+
+function setSpookyGhostCSS({ x, y, rot, scale, size }) {
+    document.body.style.setProperty('--spooky-ghost-x', `${x}px`);
+    document.body.style.setProperty('--spooky-ghost-y', `${y}px`);
+    document.body.style.setProperty('--spooky-ghost-rot', `${rot}deg`);
+    document.body.style.setProperty('--spooky-ghost-scale', `${scale}`);
+    document.body.style.setProperty('--spooky-ghost-size', `${size}px`);
+}
+
+function clearSpookyGhostCSS() {
+    document.body.style.removeProperty('--spooky-ghost-x');
+    document.body.style.removeProperty('--spooky-ghost-y');
+    document.body.style.removeProperty('--spooky-ghost-rot');
+    document.body.style.removeProperty('--spooky-ghost-scale');
+    document.body.style.removeProperty('--spooky-ghost-size');
+}
+
+function stopSpookyGhostAnimation() {
+    if (spookyGhostAnim.rafId) {
+        cancelAnimationFrame(spookyGhostAnim.rafId);
+    }
+    spookyGhostAnim.rafId = null;
+    spookyGhostAnim.current = null;
+    spookyGhostAnim.next = null;
+    spookyGhostAnim.switchAt = 0;
+    spookyGhostAnim.blendStart = 0;
+    spookyGhostAnim.blendMs = 0;
+    clearSpookyGhostCSS();
+}
+
+function startSpookyGhostAnimation() {
+    // Avoid double loops
+    if (spookyGhostAnim.rafId) return;
+
+    // Respect reduced motion: show a static ghost and stop.
+    if (prefersReducedMotion()) {
+        const w = window.innerWidth || 800;
+        const h = window.innerHeight || 600;
+        const size = getSpookyGhostSizePx();
+        setSpookyGhostCSS({ x: w * 0.72, y: h * 0.22, rot: 0, scale: 1, size });
+        return;
+    }
+
+    const now = performance.now();
+    spookyGhostAnim.current = makeGhostParams(now);
+    spookyGhostAnim.switchAt = now + rand(24000, 42000);
+
+    const tick = (ts) => {
+        if (document.body.dataset.seasonal !== 'spooky') {
+            stopSpookyGhostAnimation();
+            return;
+        }
+
+        // If user flips reduced-motion on mid-flight, stop animating.
+        if (prefersReducedMotion()) {
+            stopSpookyGhostAnimation();
+            const w = window.innerWidth || 800;
+            const h = window.innerHeight || 600;
+            const size = getSpookyGhostSizePx();
+            setSpookyGhostCSS({ x: w * 0.72, y: h * 0.22, rot: 0, scale: 1, size });
+            return;
+        }
+
+        // Periodically reroll the curve, but blend smoothly so it never teleports.
+        if (!spookyGhostAnim.next && ts >= spookyGhostAnim.switchAt) {
+            spookyGhostAnim.next = makeGhostParams(ts);
+            spookyGhostAnim.blendStart = ts;
+            spookyGhostAnim.blendMs = rand(4500, 7500);
+        }
+
+        const p1 = spookyGhostAnim.current;
+        const pose1 = ghostPose(p1, ts);
+
+        let pose = pose1;
+        if (spookyGhostAnim.next) {
+            const tBlend = Math.min(1, Math.max(0, (ts - spookyGhostAnim.blendStart) / spookyGhostAnim.blendMs));
+            const a = easeInOutSine(tBlend);
+            const pose2 = ghostPose(spookyGhostAnim.next, ts);
+            pose = {
+                x: pose1.x * (1 - a) + pose2.x * a,
+                y: pose1.y * (1 - a) + pose2.y * a,
+                rot: pose1.rot * (1 - a) + pose2.rot * a,
+                scale: pose1.scale * (1 - a) + pose2.scale * a,
+                size: pose1.size * (1 - a) + pose2.size * a,
+            };
+
+            if (tBlend >= 1) {
+                spookyGhostAnim.current = spookyGhostAnim.next;
+                spookyGhostAnim.next = null;
+                spookyGhostAnim.switchAt = ts + rand(24000, 42000);
+                spookyGhostAnim.blendStart = 0;
+                spookyGhostAnim.blendMs = 0;
+            }
+        }
+
+        setSpookyGhostCSS(pose);
+        spookyGhostAnim.rafId = requestAnimationFrame(tick);
+    };
+
+    spookyGhostAnim.rafId = requestAnimationFrame(tick);
+}
+
 function applySeasonalTheme(seasonalId) {
     document.body.dataset.seasonal = seasonalId;
+    if (seasonalId === 'spooky') {
+        startSpookyGhostAnimation();
+    } else {
+        stopSpookyGhostAnimation();
+    }
 }
 
 // ============ PLAYER CARD COSMETICS ============
