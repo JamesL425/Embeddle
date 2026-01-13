@@ -394,6 +394,7 @@ async function sendChatMessage(text) {
             pollChatOnce();
         }
     } catch (e) {
+        console.error('Chat send failed:', e);
         showError(e.message || 'Failed to send message');
     } finally {
         chatSendInFlight = false;
@@ -967,7 +968,23 @@ async function apiCall(endpoint, method = 'GET', body = null) {
     }
 
     if (!response.ok) {
-        throw new Error(data.detail || data.error || data.message || 'An error occurred');
+        let msg = data.detail || data.error || data.message || 'An error occurred';
+        if (data.error_code) msg += ` [${data.error_code}]`;
+        if (data.error_id) msg += ` (ref: ${data.error_id})`;
+        if (data.debug && typeof data.debug === 'object') {
+            const where = data.debug.where ? String(data.debug.where) : 'debug';
+            const typ = data.debug.type ? String(data.debug.type) : '';
+            const err = data.debug.error ? String(data.debug.error) : '';
+            const trace = data.debug.trace ? String(data.debug.trace) : '';
+            msg += `\n\n${where}${typ ? `: ${typ}` : ''}${err ? `: ${err}` : ''}${trace ? `\n${trace}` : ''}`;
+        }
+        const error = new Error(msg);
+        error.status = response.status;
+        error.endpoint = endpoint;
+        error.method = method;
+        error.response = data;
+        console.error('API error', { endpoint, method, status: response.status, data });
+        throw error;
     }
 
     return data;

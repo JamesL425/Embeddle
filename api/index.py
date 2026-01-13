@@ -2099,6 +2099,9 @@ ALLOWED_ORIGINS = [
 
 # Allow localhost in development
 DEV_MODE = os.getenv('VERCEL_ENV', 'development') == 'development'
+# When enabled, include extra debug context in some error responses.
+DEBUG_ERRORS = env_bool("DEBUG_ERRORS", (CONFIG.get("debug", {}) or {}).get("errors", False))
+DEBUG_ERROR_TTL_SECONDS = int(os.getenv("DEBUG_ERROR_TTL_SECONDS", "3600"))
 
 
 class handler(BaseHTTPRequestHandler):
@@ -3546,7 +3549,8 @@ class handler(BaseHTTPRequestHandler):
                     except Exception:
                         pass
                 except Exception as e:
-                    print(f"Chat write error: {e}")
+                    err_id = secrets.token_hex(4)
+                    print(f"Chat write error [{err_id}]: {e}")
                     # Fallback: store chat messages on the game object (uses setex, which is already used everywhere).
                     try:
                         msgs = game.get('chat_messages', [])
@@ -3564,13 +3568,63 @@ class handler(BaseHTTPRequestHandler):
                         game['chat_last_id'] = max(prev, msg_id)
                         save_game(code, game)
                     except Exception as e2:
-                        print(f"Chat fallback write error: {e2}")
-                        return self._send_error("Failed to send message. Please try again.", 500)
+                        err2_id = secrets.token_hex(4)
+                        print(f"Chat fallback write error [{err2_id}]: {e2}")
+                        resp = {
+                            "detail": "Failed to send message. Please try again.",
+                            "error_id": err2_id,
+                            "error_code": "CHAT_FALLBACK_WRITE_ERROR",
+                        }
+                        if DEBUG_ERRORS:
+                            resp["debug"] = {
+                                "where": "chat_fallback_write",
+                                "type": type(e2).__name__,
+                                "error": str(e2)[:500],
+                            }
+                            # Best-effort store debug for later inspection
+                            try:
+                                redis.setex(f"debug:chat_error:{err2_id}", DEBUG_ERROR_TTL_SECONDS, json.dumps(resp["debug"]))
+                            except Exception:
+                                pass
+                            try:
+                                game["chat_last_error"] = resp["debug"]
+                                save_game(code, game)
+                            except Exception:
+                                pass
+                        return self._send_json(resp, 500)
 
                 return self._send_json({"message": payload})
             except Exception as e:
-                print(f"Chat handler error: {e}")
-                return self._send_error("Failed to send message. Please try again.", 500)
+                err_id = secrets.token_hex(4)
+                print(f"Chat handler error [{err_id}]: {e}")
+                resp = {
+                    "detail": "Failed to send message. Please try again.",
+                    "error_id": err_id,
+                    "error_code": "CHAT_HANDLER_ERROR",
+                }
+                if DEBUG_ERRORS:
+                    import traceback
+                    resp["debug"] = {
+                        "where": "chat_handler",
+                        "type": type(e).__name__,
+                        "error": str(e)[:500],
+                        "trace": traceback.format_exc(limit=8),
+                    }
+                    # Best-effort store debug for later inspection
+                    try:
+                        redis = get_redis()
+                        redis.setex(f"debug:chat_error:{err_id}", DEBUG_ERROR_TTL_SECONDS, json.dumps(resp["debug"]))
+                    except Exception:
+                        pass
+                    try:
+                        # Try to stash on the game too if we managed to load it
+                        if 'game' in locals() and isinstance(locals().get('game'), dict) and locals().get('code'):
+                            g = locals().get('game')
+                            g["chat_last_error"] = resp["debug"]
+                            save_game(locals().get('code'), g)
+                    except Exception:
+                        pass
+                return self._send_json(resp, 500)
 
         # POST /api/games/{code}/join - Join lobby (just name, no word yet)
         if '/join' in path and '/set-word' not in path:
