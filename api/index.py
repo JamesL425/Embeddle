@@ -2,6 +2,7 @@
 
 import json
 import hashlib
+import hmac
 import os
 import re
 import html
@@ -22,6 +23,38 @@ from openai import OpenAI
 from wordfreq import word_frequency
 from upstash_redis import Redis
 from upstash_ratelimit import Ratelimit, FixedWindow
+
+# Import security modules
+from security.rate_limiter import (
+    RateLimitConfig,
+    check_rate_limit_strict,
+    check_embedding_rate_limit,
+    get_combined_identifier,
+    RateLimitResult,
+)
+from security.validators import (
+    validate_request_body_size,
+    get_request_size_limit,
+    REQUEST_SIZE_LIMITS,
+)
+from security.auth import (
+    constant_time_compare,
+    generate_oauth_state,
+    revoke_token as revoke_jwt_token,
+    is_token_revoked,
+)
+from security.monitoring import (
+    SecurityEventType,
+    log_security_event,
+    log_auth_success,
+    log_auth_failure,
+    log_rate_limit_hit,
+    log_rate_limit_blocked,
+    log_webhook_event,
+    log_admin_action,
+    log_suspicious_input,
+)
+from security.env_validator import validate_required_env_vars, print_env_status
 
 
 # ============== INPUT VALIDATION ==============
@@ -1092,7 +1125,8 @@ def get_redis():
 
 # ============== RATE LIMITING ==============
 
-# Rate limiters (lazy initialized)
+# Rate limiters (lazy initialized) - kept for backwards compatibility
+# New code should use security.rate_limiter module
 _ratelimit_general = None
 _ratelimit_game_create = None
 _ratelimit_join = None
@@ -1113,12 +1147,12 @@ def get_ratelimit_general():
 
 
 def get_ratelimit_game_create():
-    """Game creation rate limiter: 5 games/minute per IP."""
+    """Game creation rate limiter: 3 games/minute per IP (reduced from 5)."""
     global _ratelimit_game_create
     if _ratelimit_game_create is None:
         _ratelimit_game_create = Ratelimit(
             redis=get_redis(),
-            limiter=FixedWindow(max_requests=5, window=60),
+            limiter=FixedWindow(max_requests=3, window=60),
             prefix="ratelimit:create",
         )
     return _ratelimit_game_create
@@ -1149,12 +1183,12 @@ def get_ratelimit_guess():
 
 
 def get_ratelimit_chat():
-    """Chat rate limiter: 20 messages/minute per player."""
+    """Chat rate limiter: 15 messages/minute per player (reduced from 20)."""
     global _ratelimit_chat
     if _ratelimit_chat is None:
         _ratelimit_chat = Ratelimit(
             redis=get_redis(),
-            limiter=FixedWindow(max_requests=20, window=60),
+            limiter=FixedWindow(max_requests=15, window=60),
             prefix="ratelimit:chat",
         )
     return _ratelimit_chat
@@ -1166,8 +1200,31 @@ def check_rate_limit(limiter, identifier: str) -> bool:
         result = limiter.limit(identifier)
         return result.allowed
     except Exception:
-        # If rate limiting fails, allow the request (fail open)
+        # SECURITY: Changed from fail-open to fail-closed for critical endpoints
+        # For non-critical endpoints, we still fail open to maintain availability
         return True
+
+
+def check_rate_limit_secure(config_name: str, identifier: str, client_ip: str = None) -> bool:
+    """
+    Secure rate limit check with fail-closed behavior and monitoring.
+    
+    Use this for security-critical endpoints.
+    """
+    allowed, metadata = check_rate_limit_strict(config_name, identifier, fail_closed=True)
+    
+    if not allowed:
+        # Log rate limit event
+        if metadata.get("result") == "blocked":
+            log_rate_limit_blocked(
+                client_ip or identifier,
+                config_name,
+                metadata.get("blocked_until", 0) - int(time.time()),
+            )
+        else:
+            log_rate_limit_hit(client_ip or identifier, config_name)
+    
+    return allowed
 
 
 def get_client_ip(headers) -> str:
@@ -1224,9 +1281,25 @@ def get_theme_words(category: str) -> dict:
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', '')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
-JWT_SECRET = os.getenv('JWT_SECRET', secrets.token_hex(32))
+
+# JWT Configuration - SECURITY: Require JWT_SECRET in production
+def _get_jwt_secret() -> str:
+    """Get JWT secret, failing in production if not set."""
+    secret = os.getenv('JWT_SECRET')
+    if not secret:
+        if os.getenv('VERCEL_ENV') == 'production':
+            raise RuntimeError("JWT_SECRET environment variable is required in production")
+        # Development fallback with warning
+        print("[SECURITY WARNING] JWT_SECRET not set. Using insecure development secret.")
+        return "INSECURE_DEV_SECRET_DO_NOT_USE_IN_PRODUCTION"
+    if len(secret) < 32:
+        print("[SECURITY WARNING] JWT_SECRET should be at least 32 characters.")
+    return secret
+
+JWT_SECRET = _get_jwt_secret()
 JWT_ALGORITHM = 'HS256'
 JWT_EXPIRY_HOURS = 24 * 7  # 1 week
+JWT_REFRESH_THRESHOLD_HOURS = 24  # Refresh if less than 24h remaining
 
 # OAuth URLs
 GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'
@@ -1273,23 +1346,32 @@ def get_oauth_redirect_uri() -> str:
     return f"{protocol}://{base_url}/api/auth/callback"
 
 
-def create_jwt_token(user_data: dict) -> str:
-    """Create a JWT token for authenticated user."""
+def create_jwt_token(user_data: dict, custom_expiry_hours: Optional[int] = None) -> str:
+    """Create a JWT token for authenticated user with jti for revocation."""
+    expiry_hours = custom_expiry_hours or JWT_EXPIRY_HOURS
+    now = int(time.time())
+    # Generate unique token ID for revocation tracking
+    jti = secrets.token_hex(16)
     payload = {
         'sub': user_data['id'],
         'email': user_data.get('email', ''),
         'name': user_data.get('name', ''),
         'avatar': user_data.get('avatar', ''),
-        'iat': int(time.time()),
-        'exp': int(time.time()) + (JWT_EXPIRY_HOURS * 3600),
+        'iat': now,
+        'exp': now + (expiry_hours * 3600),
+        'jti': jti,
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
 def verify_jwt_token(token: str) -> Optional[dict]:
-    """Verify and decode a JWT token. Returns None if invalid."""
+    """Verify and decode a JWT token. Returns None if invalid or revoked."""
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        # Check if token has been revoked
+        jti = payload.get('jti')
+        if jti and is_token_revoked(jti):
+            return None
         return payload
     except jwt.ExpiredSignatureError:
         return None
@@ -1297,10 +1379,46 @@ def verify_jwt_token(token: str) -> Optional[dict]:
         return None
 
 
+def refresh_jwt_token_if_needed(token: str) -> Optional[str]:
+    """Refresh a JWT token if it's close to expiry. Returns new token or None."""
+    payload = verify_jwt_token(token)
+    if not payload:
+        return None
+    
+    # Check if refresh is needed
+    exp = payload.get('exp', 0)
+    now = int(time.time())
+    remaining_hours = (exp - now) / 3600
+    
+    if remaining_hours > JWT_REFRESH_THRESHOLD_HOURS:
+        return None  # No refresh needed
+    
+    # Revoke old token
+    old_jti = payload.get('jti')
+    if old_jti:
+        revoke_jwt_token(old_jti, exp - now)
+    
+    # Create new token
+    user_data = {
+        'id': payload.get('sub'),
+        'email': payload.get('email', ''),
+        'name': payload.get('name', ''),
+        'avatar': payload.get('avatar', ''),
+    }
+    return create_jwt_token(user_data)
+
+
 # Admin emails that automatically get donor status
-ADMIN_EMAILS = [
-    'jamesleung425@gmail.com',
-]
+# SECURITY: Load from environment variable in production
+def _get_admin_emails() -> list:
+    """Get admin emails from environment or fallback."""
+    env_admins = os.getenv('ADMIN_EMAILS', '')
+    if env_admins:
+        return [e.strip().lower() for e in env_admins.split(',') if e.strip()]
+    # Fallback for backwards compatibility
+    return ['jamesleung425@gmail.com']
+
+ADMIN_EMAILS = _get_admin_emails()
 
 def get_or_create_user(google_user: dict) -> dict:
     """Get existing user or create new one from Google user data."""
@@ -6102,6 +6220,8 @@ class handler(BaseHTTPRequestHandler):
 
         # POST /api/webhooks/kofi - Handle Ko-fi donation webhooks
         if path == '/api/webhooks/kofi':
+            client_ip = get_client_ip(self.headers)
+            
             # Ko-fi sends data as form-urlencoded with a 'data' field containing JSON
             try:
                 # The body should contain a 'data' field with JSON
@@ -6111,16 +6231,30 @@ class handler(BaseHTTPRequestHandler):
                 elif not kofi_data:
                     kofi_data = body  # Fallback to direct body
                 
-                # Verify the webhook token if configured
+                # SECURITY: Verify the webhook token
+                # In production, this is REQUIRED to prevent spoofed donations
+                is_production = os.getenv('VERCEL_ENV') == 'production'
+                received_token = kofi_data.get('verification_token', '')
+                
                 if KOFI_VERIFICATION_TOKEN:
-                    received_token = kofi_data.get('verification_token', '')
-                    if received_token != KOFI_VERIFICATION_TOKEN:
-                        print(f"Ko-fi webhook: Invalid verification token")
+                    # Use constant-time comparison to prevent timing attacks
+                    if not constant_time_compare(received_token, KOFI_VERIFICATION_TOKEN):
+                        log_webhook_event(client_ip, "kofi", False, {"reason": "invalid_token"})
+                        print(f"Ko-fi webhook: Invalid verification token from {client_ip}")
                         return self._send_error("Invalid verification token", 403)
+                elif is_production:
+                    # SECURITY: In production, require verification token
+                    log_webhook_event(client_ip, "kofi", False, {"reason": "no_token_configured"})
+                    print(f"[SECURITY ERROR] Ko-fi webhook received but KOFI_VERIFICATION_TOKEN not configured")
+                    return self._send_error("Webhook verification not configured", 500)
+                else:
+                    # Development: warn but allow
+                    print(f"[SECURITY WARNING] Ko-fi webhook verification skipped (development mode)")
                 
                 # Get donor email
                 donor_email = kofi_data.get('email', '').lower().strip()
                 if not donor_email:
+                    log_webhook_event(client_ip, "kofi", True, {"status": "no_email"})
                     print(f"Ko-fi webhook: No email provided")
                     return self._send_json({"status": "ok", "message": "No email to process"})
                 
@@ -6134,6 +6268,7 @@ class handler(BaseHTTPRequestHandler):
                         'timestamp': int(time.time()),
                         'message': kofi_data.get('message', ''),
                     }))
+                    log_webhook_event(client_ip, "kofi", True, {"status": "pending", "email_hash": hashlib.sha256(donor_email.encode()).hexdigest()[:8]})
                     print(f"Ko-fi webhook: Stored pending donation for {donor_email}")
                     return self._send_json({"status": "ok", "message": "Pending donation stored"})
                 
@@ -6143,10 +6278,12 @@ class handler(BaseHTTPRequestHandler):
                 user['donation_amount'] = kofi_data.get('amount', '0')
                 save_user(user)
                 
+                log_webhook_event(client_ip, "kofi", True, {"status": "processed", "user_id": user.get('id', '')[:16]})
                 print(f"Ko-fi webhook: Marked {donor_email} as donor")
                 return self._send_json({"status": "ok", "message": "Donor status updated"})
                 
             except Exception as e:
+                log_webhook_event(client_ip, "kofi", False, {"reason": "exception", "error": str(e)[:100]})
                 print(f"Ko-fi webhook error: {e}")
                 return self._send_error("Webhook processing failed", 500)
 
