@@ -1241,6 +1241,14 @@ header h1 {
     font-weight: 700;
 }
 
+.chat-message .chat-time {
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 0.75rem;
+    margin-right: 0.5rem;
+    letter-spacing: 0.02em;
+}
+
 .chat-message .chat-text {
     color: var(--text-primary);
     word-wrap: break-word;

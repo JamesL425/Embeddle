@@ -281,6 +281,32 @@ function resetChatIfNeeded() {
     }
 }
 
+function formatChatTime(ts) {
+    const n = Number(ts || 0);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    const ms = n < 100000000000 ? n * 1000 : n; // seconds -> ms (heuristic)
+    const d = new Date(ms);
+    if (!Number.isFinite(d.getTime())) return '';
+    try {
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+        return d.toTimeString().slice(0, 5);
+    }
+}
+
+function formatChatTimeTitle(ts) {
+    const n = Number(ts || 0);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    const ms = n < 100000000000 ? n * 1000 : n;
+    const d = new Date(ms);
+    if (!Number.isFinite(d.getTime())) return '';
+    try {
+        return d.toLocaleString();
+    } catch (e) {
+        return d.toString();
+    }
+}
+
 function renderChat() {
     const log = document.getElementById('chat-log');
     const input = document.getElementById('chat-input');
@@ -316,6 +342,7 @@ function renderChat() {
     const html = msgs.length
         ? msgs.map(m => `
             <div class="chat-message">
+                ${formatChatTime(m.ts) ? `<span class="chat-time" title="${escapeHtml(formatChatTimeTitle(m.ts))}">${escapeHtml(formatChatTime(m.ts))}</span>` : ''}
                 <span class="chat-sender">${escapeHtml(m.sender_name || '???')}</span>
                 <span class="chat-text">: ${escapeHtml(m.text || '')}</span>
             </div>

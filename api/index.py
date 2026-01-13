@@ -1,6 +1,7 @@
 """Vercel serverless function for Embeddle API with Upstash Redis storage."""
 
 import json
+import hashlib
 import os
 import re
 import html
@@ -316,6 +317,30 @@ DEFAULT_USER_STATS = {
     "ranked_wins": 0,
     "ranked_losses": 0,
 }
+
+# ============== DAILY QUESTS / ECONOMY ==============
+#
+# These fields live on authenticated (Google) user records stored in Redis as JSON.
+# Guests (name-only) do not have persistent server-side state.
+#
+# NOTE: "credits" is intentionally generic so we can rename it in the UI later.
+DEFAULT_WALLET = {
+    "credits": 0,
+}
+
+# Stored as: { "<category_key>": ["<cosmetic_id>", ...] }
+# Example: { "card_border": ["border_synthwave"] }
+DEFAULT_OWNED_COSMETICS = {}
+
+# Stored as: { "date": "YYYY-MM-DD", "quests": [ ... ] }
+DEFAULT_DAILY_QUESTS = {
+    "date": "",
+    "quests": [],
+}
+
+def new_daily_quests_state() -> dict:
+    """Return a fresh default daily-quests payload (avoid shared list references)."""
+    return {"date": "", "quests": []}
 
 # ============== AI PLAYER CONFIGURATION ==============
 
@@ -1263,6 +1288,22 @@ def get_or_create_user(google_user: dict) -> dict:
             merged = DEFAULT_USER_STATS.copy()
             merged.update(user.get('stats', {}))
             user['stats'] = merged
+        # Ensure economy fields exist (daily quests + currency + owned cosmetics)
+        if 'wallet' not in user or not isinstance(user.get('wallet'), dict):
+            user['wallet'] = DEFAULT_WALLET.copy()
+        else:
+            # Best-effort sanitize credits
+            try:
+                credits = int((user.get('wallet') or {}).get('credits', 0) or 0)
+            except Exception:
+                credits = 0
+            if credits < 0:
+                credits = 0
+            user['wallet'] = {"credits": credits}
+        if 'owned_cosmetics' not in user or not isinstance(user.get('owned_cosmetics'), dict):
+            user['owned_cosmetics'] = {}
+        if 'daily_quests' not in user or not isinstance(user.get('daily_quests'), dict):
+            user['daily_quests'] = new_daily_quests_state()
         if 'is_donor' not in user:
             user['is_donor'] = False
         # Auto-grant donor status to admins
@@ -1284,6 +1325,9 @@ def get_or_create_user(google_user: dict) -> dict:
         'cosmetics': DEFAULT_COSMETICS.copy(),
         'cosmetics_version': COSMETICS_SCHEMA_VERSION,
         'stats': DEFAULT_USER_STATS.copy(),
+        'wallet': DEFAULT_WALLET.copy(),
+        'owned_cosmetics': {},
+        'daily_quests': new_daily_quests_state(),
     }
     redis.set(user_key, json.dumps(user))
     
@@ -1424,6 +1468,166 @@ def get_user_stats(user: dict) -> dict:
     if isinstance(stats, dict):
         result.update(stats)
     return result
+
+
+def _normalize_wallet(wallet) -> dict:
+    """Best-effort normalize wallet payload."""
+    if not isinstance(wallet, dict):
+        wallet = {}
+    try:
+        credits = int(wallet.get('credits', 0) or 0)
+    except Exception:
+        credits = 0
+    if credits < 0:
+        credits = 0
+    return {"credits": credits}
+
+
+def _normalize_owned_cosmetics(owned) -> dict:
+    """Normalize owned cosmetics to {category_key: [cosmetic_id, ...]}."""
+    if not isinstance(owned, dict):
+        return {}
+    result = {}
+    for k, v in owned.items():
+        if not isinstance(k, str):
+            continue
+        # Only keep known cosmetic category keys
+        if k not in COSMETIC_CATEGORY_TO_CATALOG_KEY:
+            continue
+        if not isinstance(v, list):
+            continue
+        seen = set()
+        cleaned = []
+        for item in v:
+            if not isinstance(item, str):
+                continue
+            cid = item.strip()
+            if not cid:
+                continue
+            if cid in seen:
+                continue
+            seen.add(cid)
+            cleaned.append(cid)
+        if cleaned:
+            result[k] = cleaned
+    return result
+
+
+def _normalize_daily_quests_state(state) -> dict:
+    """Normalize daily quest state payload shape (does not validate quest contents)."""
+    if not isinstance(state, dict):
+        return new_daily_quests_state()
+    date = state.get('date', '')
+    if not isinstance(date, str):
+        date = ''
+    quests = state.get('quests', [])
+    if not isinstance(quests, list):
+        quests = []
+    return {"date": date, "quests": quests}
+
+
+def ensure_user_economy(user: dict, persist: bool = True) -> dict:
+    """
+    Ensure economy fields exist and are normalized on an authenticated user record.
+
+    Returns a dict containing wallet/owned_cosmetics/daily_quests (normalized).
+    """
+    if not isinstance(user, dict):
+        return {
+            "wallet": DEFAULT_WALLET.copy(),
+            "owned_cosmetics": {},
+            "daily_quests": new_daily_quests_state(),
+        }
+
+    changed = False
+
+    wallet_norm = _normalize_wallet(user.get('wallet', {}))
+    if user.get('wallet') != wallet_norm:
+        user['wallet'] = wallet_norm
+        changed = True
+
+    owned_norm = _normalize_owned_cosmetics(user.get('owned_cosmetics', {}))
+    # Only compare dicts; if original isn't dict, it's definitely changed
+    if not isinstance(user.get('owned_cosmetics'), dict) or user.get('owned_cosmetics') != owned_norm:
+        user['owned_cosmetics'] = owned_norm
+        changed = True
+
+    daily_norm = _normalize_daily_quests_state(user.get('daily_quests'))
+    if not isinstance(user.get('daily_quests'), dict) or user.get('daily_quests') != daily_norm:
+        user['daily_quests'] = daily_norm
+        changed = True
+
+    if changed and persist:
+        save_user(user)
+
+    return {
+        "wallet": wallet_norm,
+        "owned_cosmetics": owned_norm,
+        "daily_quests": daily_norm,
+    }
+
+
+def get_user_credits(user: dict) -> int:
+    econ = ensure_user_economy(user, persist=False)
+    try:
+        return int((econ.get('wallet') or {}).get('credits', 0) or 0)
+    except Exception:
+        return 0
+
+
+def add_user_credits(user: dict, delta: int, persist: bool = True) -> int:
+    econ = ensure_user_economy(user, persist=False)
+    try:
+        delta_int = int(delta or 0)
+    except Exception:
+        delta_int = 0
+    credits = get_user_credits(user)
+    new_credits = credits + delta_int
+    if new_credits < 0:
+        new_credits = 0
+    user['wallet'] = {"credits": int(new_credits)}
+    if persist:
+        save_user(user)
+    return int(new_credits)
+
+
+def user_owns_cosmetic(user: dict, category_key: str, cosmetic_id: str) -> bool:
+    if not isinstance(category_key, str) or not isinstance(cosmetic_id, str):
+        return False
+    econ = ensure_user_economy(user, persist=False)
+    owned = econ.get('owned_cosmetics') or {}
+    items = owned.get(category_key, [])
+    if not isinstance(items, list):
+        return False
+    return cosmetic_id in items
+
+
+def grant_owned_cosmetic(user: dict, category_key: str, cosmetic_id: str, persist: bool = True) -> bool:
+    """Mark a cosmetic as owned for a user. Returns True if it changed."""
+    if not isinstance(user, dict):
+        return False
+    if not isinstance(category_key, str) or not isinstance(cosmetic_id, str):
+        return False
+    category_key = category_key.strip()
+    cosmetic_id = cosmetic_id.strip()
+    if not category_key or not cosmetic_id:
+        return False
+    if category_key not in COSMETIC_CATEGORY_TO_CATALOG_KEY:
+        return False
+
+    econ = ensure_user_economy(user, persist=False)
+    owned = econ.get('owned_cosmetics') or {}
+    current = owned.get(category_key, [])
+    if not isinstance(current, list):
+        current = []
+    if cosmetic_id in current:
+        return False
+    current.append(cosmetic_id)
+    owned[category_key] = current
+    user['owned_cosmetics'] = _normalize_owned_cosmetics(owned)
+    if persist:
+        save_user(user)
+    return True
 
 
 def get_visible_cosmetics(user: dict) -> dict:
@@ -2875,15 +3079,36 @@ class handler(BaseHTTPRequestHandler):
                 for item in raw:
                     if not item:
                         continue
+                    # Some clients may return (member, score) pairs
+                    if isinstance(item, (list, tuple)) and len(item) == 2:
+                        item = item[0]
                     if isinstance(item, bytes):
                         try:
                             item = item.decode()
                         except Exception:
                             continue
-                    try:
-                        msg = json.loads(item)
-                    except Exception:
-                        continue
+                    msg = None
+                    # Some Upstash clients may already deserialize JSON into dicts
+                    if isinstance(item, dict):
+                        # If this looks like our payload, accept directly.
+                        if 'text' in item and ('sender_id' in item or 'sender_name' in item):
+                            msg = item
+                        # Or if wrapped, unwrap common shapes
+                        elif 'member' in item:
+                            item = item.get('member')
+                        elif 'value' in item:
+                            item = item.get('value')
+                    if msg is None:
+                        try:
+                            if isinstance(item, bytes):
+                                item = item.decode()
+                            if isinstance(item, str):
+                                msg = json.loads(item)
+                            else:
+                                # Last resort: stringify and attempt JSON parse
+                                msg = json.loads(str(item))
+                        except Exception:
+                            msg = None
                     if isinstance(msg, dict):
                         zset_messages.append(msg)
 
