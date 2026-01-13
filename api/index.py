@@ -132,6 +132,8 @@ MAX_PLAYERS = CONFIG.get("game", {}).get("max_players", 4)
 GAME_EXPIRY_SECONDS = CONFIG.get("game", {}).get("game_expiry_seconds", 7200)
 LOBBY_EXPIRY_SECONDS = CONFIG.get("game", {}).get("lobby_expiry_seconds", 600)
 WORD_CHANGE_SAMPLE_SIZE = CONFIG.get("game", {}).get("word_change_sample_size", 6)
+WORDS_PER_PLAYER = int((CONFIG.get("game", {}) or {}).get("words_per_player", 18) or 18)
+WORDS_PER_PLAYER = max(1, min(50, WORDS_PER_PLAYER))
 
 # Presence settings (spectator counts, etc.)
 PRESENCE_TTL_SECONDS = int((CONFIG.get("presence", {}) or {}).get("ttl_seconds", 15) or 15)
@@ -1098,7 +1100,26 @@ def get_client_ip(headers) -> str:
 
 def get_theme_words(category: str) -> dict:
     """Get pre-generated theme words for a category."""
-    words = PREGENERATED_THEMES.get(category, [])
+    def _sanitize_theme_words(raw_words: list) -> list:
+        cleaned = []
+        seen = set()
+        for w in (raw_words or []):
+            token = str(w or "").strip().lower()
+            if not token:
+                continue
+            # Only allow words that match the game's input validation (letters only, 2-30 chars)
+            if not WORD_PATTERN.match(token):
+                continue
+            # Remove profane words from playable pools (chat filter is separate)
+            if token in PROFANITY_WORDS:
+                continue
+            if token in seen:
+                continue
+            seen.add(token)
+            cleaned.append(token)
+        return cleaned
+
+    words = _sanitize_theme_words(PREGENERATED_THEMES.get(category, []))
     return {"name": category, "words": words}
 
 
@@ -1694,11 +1715,30 @@ def apply_ranked_mmr_updates(game: dict):
         return
     if not bool(game.get('is_ranked', False)):
         return
-    if game.get('ranked_processed'):
-        return
 
     code = game.get('code') or ''
     redis = get_redis()
+    result_key = f"ranked:{code}:mmr_result"
+
+    def _attach_saved_result():
+        """Best-effort: attach previously computed ranked MMR results to the game dict."""
+        try:
+            raw = redis.get(result_key)
+            if not raw:
+                return
+            if isinstance(raw, bytes):
+                raw = raw.decode()
+            data = json.loads(raw)
+            if isinstance(data, dict):
+                game['ranked_mmr'] = data
+        except Exception:
+            return
+
+    # If already processed, still try to attach saved results (for robustness against concurrent saves)
+    if game.get('ranked_processed'):
+        if not game.get('ranked_mmr'):
+            _attach_saved_result()
+        return
 
     # Best-effort Redis guard to avoid double-processing across concurrent finish events
     try:
@@ -1706,6 +1746,8 @@ def apply_ranked_mmr_updates(game: dict):
         if hasattr(redis, 'setnx'):
             ok = redis.setnx(guard_key, "1")
             if not ok:
+                # Already processed elsewhere; attach saved results so we don't overwrite them on save.
+                _attach_saved_result()
                 game['ranked_processed'] = True
                 return
             try:
@@ -1809,6 +1851,8 @@ def apply_ranked_mmr_updates(game: dict):
     scale = float(RANKED_K_FACTOR) / float(max(1, n - 1))
 
     # Apply updates + persist
+    # Also record per-game deltas so the frontend can show MMR change on the game-over screen.
+    mmr_result_by_pid = {}
     for uid in uids:
         user = user_map.get(uid)
         if not user:
@@ -1821,6 +1865,12 @@ def apply_ranked_mmr_updates(game: dict):
             new_int = int(old)
         if new_int < 0:
             new_int = 0
+
+        try:
+            old_int = int(round(old))
+        except Exception:
+            old_int = int(new_int)
+        delta_int = int(new_int - old_int)
 
         u_stats = get_user_stats(user)
         u_stats['mmr'] = new_int
@@ -1847,7 +1897,26 @@ def apply_ranked_mmr_updates(game: dict):
         except Exception:
             pass
 
+        pid = uid_to_pid.get(uid)
+        if pid:
+            mmr_result_by_pid[str(pid)] = {
+                "uid": str(uid),
+                "old": int(old_int),
+                "new": int(new_int),
+                "delta": int(delta_int),
+            }
+
     game['ranked_processed'] = True
+    if mmr_result_by_pid:
+        game['ranked_mmr'] = mmr_result_by_pid
+        # Persist results in Redis so concurrent finish requests can attach them reliably.
+        try:
+            redis.setex(result_key, GAME_EXPIRY_SECONDS, json.dumps(mmr_result_by_pid))
+        except Exception:
+            try:
+                redis.set(result_key, json.dumps(mmr_result_by_pid))
+            except Exception:
+                pass
 
 
 def update_game_stats(game: dict):
@@ -2588,9 +2657,9 @@ class handler(BaseHTTPRequestHandler):
             # Available words = all words not yet in any player's pool
             available_words = [w for w in all_theme_words if w.lower() not in assigned_words]
             
-            # Give the next player a random 20 from available (unassigned) words
-            if len(available_words) > 20:
-                next_player_pool = random.sample(available_words, 20)
+            # Give the next player a random pool from available (unassigned) words
+            if len(available_words) >= WORDS_PER_PLAYER:
+                next_player_pool = random.sample(available_words, WORDS_PER_PLAYER)
             else:
                 next_player_pool = available_words
             
@@ -2836,6 +2905,9 @@ class handler(BaseHTTPRequestHandler):
                     "ready_count": ready_count,
                     "is_singleplayer": game.get('is_singleplayer', False),
                 }
+
+                # Ranked: include per-game MMR results on finished games (so clients can display deltas).
+                ranked_mmr = game.get('ranked_mmr') if isinstance(game.get('ranked_mmr'), dict) else None
                 
                 for p in game['players']:
                     player_data = {
@@ -2851,6 +2923,12 @@ class handler(BaseHTTPRequestHandler):
                         "is_ai": p.get('is_ai', False),  # Include AI flag
                         "difficulty": p.get('difficulty'),  # Include AI difficulty
                     }
+                    if game_finished and bool(game.get('is_ranked', False)) and ranked_mmr:
+                        mmr_entry = ranked_mmr.get(str(p.get('id')))
+                        if isinstance(mmr_entry, dict):
+                            player_data['mmr_before'] = mmr_entry.get('old')
+                            player_data['mmr'] = mmr_entry.get('new')
+                            player_data['mmr_delta'] = mmr_entry.get('delta')
                     # Include this player's word pool if it's them
                     if p['id'] == player_id:
                         player_data['word_pool'] = p.get('word_pool', [])
@@ -3629,19 +3707,36 @@ class handler(BaseHTTPRequestHandler):
 
             all_words = game['theme'].get('words', [])
             
-            # Assign distinct word pools to each player (20 words each, no overlap)
+            # Assign distinct word pools to each player (WORDS_PER_PLAYER words each, no overlap)
+            # NOTE: We intentionally fail closed if the theme is too small, because overlaps are not allowed.
+            unique_words = []
+            seen_words = set()
+            for w in (all_words or []):
+                token = str(w or "").strip().lower()
+                if not token:
+                    continue
+                if token in seen_words:
+                    continue
+                seen_words.add(token)
+                unique_words.append(token)
+            all_words = unique_words
+
+            required = WORDS_PER_PLAYER * len(game.get('players', []) or [])
+            if required and len(all_words) < required:
+                theme_name = (game.get('theme', {}) or {}).get('name', 'Unknown')
+                return self._send_error(
+                    f"Theme '{theme_name}' does not have enough words for this lobby. "
+                    f"Need {required} unique words ({WORDS_PER_PLAYER} per player), but only have {len(all_words)}.",
+                    400,
+                )
+
             shuffled_words = all_words.copy()
             random.shuffle(shuffled_words)
-            
-            words_per_player = 20
-            for i, p in enumerate(game['players']):
-                start_idx = i * words_per_player
-                end_idx = start_idx + words_per_player
+
+            for i, p in enumerate(game.get('players', []) or []):
+                start_idx = i * WORDS_PER_PLAYER
+                end_idx = start_idx + WORDS_PER_PLAYER
                 pool = shuffled_words[start_idx:end_idx]
-                # If the theme list is smaller than players*20, later players can end up with empty pools.
-                # Ensure everyone gets a non-empty pool (may overlap when theme is small).
-                if not pool and all_words:
-                    pool = random.sample(all_words, min(words_per_player, len(all_words)))
                 p['word_pool'] = sorted(pool)
             
             # Move to word selection phase (not playing yet)

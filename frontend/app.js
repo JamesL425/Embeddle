@@ -2751,6 +2751,7 @@ function showGameOver(game) {
     
     const winner = game.players.find(p => p.id === game.winner);
     const isWinner = game.winner === gameState.playerId;
+    const isRanked = Boolean(game.is_ranked);
     
     // Show trophy animation for winner
     const trophyIcon = document.getElementById('trophy-icon');
@@ -2759,9 +2760,23 @@ function showGameOver(game) {
     }
     
     document.getElementById('gameover-title').textContent = isWinner ? 'Victory!' : 'Game Over!';
-    document.getElementById('gameover-message').textContent = winner 
-        ? `${winner.name} is the last one standing!`
-        : 'The game has ended.';
+    const msgEl = document.getElementById('gameover-message');
+    const baseMsg = winner ? `${winner.name} is the last one standing!` : 'The game has ended.';
+
+    // Ranked: show your MMR + delta (if available)
+    let rankedLine = '';
+    if (isRanked) {
+        const me = game.players.find(p => p.id === gameState.playerId);
+        const mmr = Number(me?.mmr);
+        const delta = Number(me?.mmr_delta);
+        if (Number.isFinite(mmr) && Number.isFinite(delta)) {
+            const sign = delta > 0 ? '+' : '';
+            rankedLine = `\nMMR: ${mmr} (${sign}${delta})`;
+        } else if (Number.isFinite(mmr)) {
+            rankedLine = `\nMMR: ${mmr}`;
+        }
+    }
+    if (msgEl) msgEl.textContent = baseMsg + rankedLine;
     
     // Create victory effect based on winner's cosmetics
     if (isWinner) {
@@ -2788,9 +2803,22 @@ function showGameOver(game) {
         const isWinnerPlayer = player.id === game.winner;
         const div = document.createElement('div');
         div.className = `revealed-word-item${isWinnerPlayer ? ' winner' : ''}${!player.is_alive ? ' eliminated' : ''}`;
+
+        let mmrHtml = '';
+        if (isRanked && Number.isFinite(Number(player?.mmr))) {
+            const mmr = Number(player.mmr);
+            const delta = Number(player?.mmr_delta);
+            const showDelta = Number.isFinite(delta);
+            const sign = showDelta && delta > 0 ? '+' : '';
+            mmrHtml = `
+                <span class="player-mmr" title="Match MMR change">${escapeHtml(mmr)}${showDelta ? ` (${escapeHtml(sign)}${escapeHtml(delta)})` : ''}</span>
+            `;
+        }
+
         div.innerHTML = `
             <span class="player-name">${escapeHtml(player.name)}${isWinnerPlayer ? ' 👑' : ''}</span>
             <span class="player-word">${escapeHtml(player.secret_word) || '???'}</span>
+            ${mmrHtml}
         `;
         revealedWords.appendChild(div);
     });
