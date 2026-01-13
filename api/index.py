@@ -342,6 +342,11 @@ def new_daily_quests_state() -> dict:
     """Return a fresh default daily-quests payload (avoid shared list references)."""
     return {"date": "", "quests": []}
 
+# Admin sessions (admin_local) are not stored as normal users, but we keep best-effort
+# economy state in Redis so admin can test daily quests and the shop.
+ADMIN_ECONOMY_KEY = "admin_economy"
+ADMIN_ECONOMY_TTL_SECONDS = 3600
+
 # ============== AI PLAYER CONFIGURATION ==============
 
 # AI difficulty settings
@@ -1630,6 +1635,54 @@ def grant_owned_cosmetic(user: dict, category_key: str, cosmetic_id: str, persis
     return True
 
 
+def load_admin_economy_user(redis: "Redis") -> dict:
+    """Load admin_local economy state from Redis and return a user-like dict (not stored as user:{id})."""
+    state = {}
+    try:
+        raw = redis.get(ADMIN_ECONOMY_KEY)
+        if raw:
+            loaded = json.loads(raw)
+            if isinstance(loaded, dict):
+                state = loaded
+    except Exception:
+        state = {}
+
+    admin_user = {
+        "id": "admin_local",
+        "is_admin": True,
+        "is_donor": True,
+        "stats": DEFAULT_USER_STATS.copy(),
+        "wallet": state.get("wallet"),
+        "owned_cosmetics": state.get("owned_cosmetics"),
+        "daily_quests": state.get("daily_quests"),
+    }
+
+    ensure_user_economy(admin_user, persist=False)
+    # Default admin wallet: generous balance for testing
+    if get_user_credits(admin_user) <= 0:
+        admin_user["wallet"] = {"credits": 999999}
+    return admin_user
+
+
+def save_admin_economy_user(redis: "Redis", admin_user: dict):
+    """Persist admin_local economy state to Redis (best-effort)."""
+    if not isinstance(admin_user, dict):
+        return
+    econ = ensure_user_economy(admin_user, persist=False)
+    payload = {
+        "wallet": econ.get("wallet") or {"credits": 0},
+        "owned_cosmetics": econ.get("owned_cosmetics") or {},
+        "daily_quests": econ.get("daily_quests") or new_daily_quests_state(),
+    }
+    try:
+        redis.set(ADMIN_ECONOMY_KEY, json.dumps(payload), ex=ADMIN_ECONOMY_TTL_SECONDS)
+    except Exception:
+        try:
+            redis.set(ADMIN_ECONOMY_KEY, json.dumps(payload))
+        except Exception:
+            pass
+
+
 def utc_today_str() -> str:
     """Return today's date as YYYY-MM-DD in UTC."""
     return time.strftime('%Y-%m-%d', time.gmtime())
@@ -2175,7 +2228,10 @@ def apply_ranked_mmr_updates(game: dict):
         # If guard fails, fall back to in-game flag only
         pass
 
-    players = game.get('players', []) or []
+    # Prefer a frozen participant snapshot (set at match start) so forfeits/leaves don't
+    # shrink the rating pool mid-match.
+    snapshot = game.get('ranked_participants')
+    players = snapshot if isinstance(snapshot, list) and snapshot else (game.get('players', []) or [])
     winner_pid = game.get('winner')
 
     # Ranked participants: authenticated humans only (skip admin_local and AIs)
@@ -2406,12 +2462,27 @@ def update_game_stats(game: dict):
                 if auth_user:
                     u_stats = get_user_stats(auth_user)
                     u_stats['mp_games_played'] = u_stats.get('mp_games_played', 0) + 1
-                    u_stats['mp_eliminations'] = u_stats.get('mp_eliminations', 0) + eliminations_by_player.get(player['id'], 0)
+                    elim_count = eliminations_by_player.get(player['id'], 0) or 0
+                    u_stats['mp_eliminations'] = u_stats.get('mp_eliminations', 0) + elim_count
                     if player['id'] == winner_id:
                         u_stats['mp_wins'] = u_stats.get('mp_wins', 0) + 1
                     if player['id'] in eliminated_players:
                         u_stats['mp_times_eliminated'] = u_stats.get('mp_times_eliminated', 0) + 1
                     auth_user['stats'] = u_stats
+
+                    # Daily quests progress (credits awarded on claim).
+                    deltas = {
+                        "mp_games": 1,
+                        "mp_elims": int(elim_count or 0),
+                    }
+                    if player['id'] == winner_id:
+                        deltas["mp_wins"] = 1
+                    if is_ranked:
+                        deltas["ranked_games"] = 1
+                        if player['id'] == winner_id:
+                            deltas["ranked_wins"] = 1
+                    apply_daily_quest_progress(auth_user, deltas, persist=False)
+
                     save_user(auth_user)
 
     # Ranked: update MMR once per finished game (best-effort + idempotent flag)
@@ -2911,6 +2982,47 @@ class handler(BaseHTTPRequestHandler):
                 'cosmetics': get_user_cosmetics(user),
                 'paywall_enabled': COSMETICS_PAYWALL_ENABLED,
                 'unlock_all': COSMETICS_UNLOCK_ALL,
+            })
+
+        # GET /api/user/daily - Get daily quests + currency + owned cosmetics
+        if path == '/api/user/daily':
+            auth_header = self.headers.get('Authorization', '')
+            if not auth_header.startswith('Bearer '):
+                return self._send_error("Not authenticated", 401)
+
+            token = auth_header[7:]
+            payload = verify_jwt_token(token)
+
+            if not payload:
+                return self._send_error("Invalid or expired token", 401)
+
+            # Handle admin user specially (not stored in Redis as user:{id})
+            if payload.get('sub') == 'admin_local':
+                redis = get_redis()
+                admin_user = load_admin_economy_user(redis)
+                daily_state = ensure_daily_quests_today(admin_user, persist=False)
+                admin_user['daily_quests'] = daily_state
+                save_admin_economy_user(redis, admin_user)
+                econ = ensure_user_economy(admin_user, persist=False)
+                return self._send_json({
+                    "date": daily_state.get("date", ""),
+                    "quests": daily_state.get("quests", []),
+                    "wallet": econ.get("wallet") or {"credits": 0},
+                    "owned_cosmetics": econ.get("owned_cosmetics") or {},
+                })
+
+            user = get_user_by_id(payload.get('sub', ''))
+            if not user:
+                return self._send_error("User not found", 404)
+
+            econ = ensure_user_economy(user, persist=True)
+            daily_state = ensure_daily_quests_today(user, persist=True)
+
+            return self._send_json({
+                "date": daily_state.get("date", ""),
+                "quests": daily_state.get("quests", []),
+                "wallet": econ.get("wallet") or {"credits": 0},
+                "owned_cosmetics": econ.get("owned_cosmetics") or {},
             })
 
         # GET /api/lobbies - List open lobbies
@@ -3852,6 +3964,16 @@ class handler(BaseHTTPRequestHandler):
 
             # Lobby / word selection: remove the player from the game
             if status in ('waiting', 'word_selection'):
+                # Ranked fairness: once the match has progressed to word selection, leaving counts as a forfeit
+                # for MMR purposes (so remaining players' Elo/MMR still reflects the full lobby).
+                if is_ranked and status == 'word_selection':
+                    game.setdefault('history', []).append({
+                        "type": "forfeit",
+                        "player_id": player.get('id'),
+                        "player_name": player.get('name'),
+                        "word": player.get('secret_word'),
+                    })
+
                 game['players'] = [p for p in game.get('players', []) if p.get('id') != player_id]
 
                 # Clear any pause flags just in case
@@ -3870,8 +3992,28 @@ class handler(BaseHTTPRequestHandler):
                         pass
                     return self._send_json({"status": "left", "deleted": True})
 
+                # Ranked: if someone forfeits during word selection and only one player remains,
+                # finish immediately so the remaining player still gets the win/MMR.
+                if is_ranked and status == 'word_selection':
+                    alive_players = [p for p in game.get('players', []) if p.get('is_alive', True)]
+                    if len(alive_players) <= 1:
+                        game['status'] = 'finished'
+                        game['waiting_for_word_change'] = None
+                        game['winner'] = alive_players[0]['id'] if alive_players else None
+                        update_game_stats(game)
+                        save_game(code, game)
+                        return self._send_json({
+                            "status": "left",
+                            "forfeit": True,
+                            "game_over": True,
+                            "winner": game.get('winner'),
+                        })
+
                 save_game(code, game)
-                return self._send_json({"status": "left", "deleted": False, "host_id": game.get('host_id')})
+                resp = {"status": "left", "deleted": False, "host_id": game.get('host_id')}
+                if is_ranked and status == 'word_selection':
+                    resp["forfeit"] = True
+                return self._send_json(resp)
 
             # In-game: forfeit => mark eliminated, advance turn if needed
             if status == 'playing':
@@ -4319,6 +4461,31 @@ class handler(BaseHTTPRequestHandler):
                     return self._send_error("Add at least 1 AI opponent", 400)
             elif len(game['players']) < MIN_PLAYERS and not is_admin_host:
                 return self._send_error(f"Need at least {MIN_PLAYERS} players", 400)
+
+            # Ranked: snapshot participants at match start so later forfeits/leaves don't shrink the rating pool.
+            # This lets remaining players gain/lose MMR as if the forfeiter stayed in the match.
+            if bool(game.get('is_ranked', False)) and not bool(game.get('is_singleplayer', False)):
+                try:
+                    existing = game.get('ranked_participants')
+                    if not isinstance(existing, list) or not existing:
+                        rp = []
+                        for p in (game.get('players', []) or []):
+                            if not isinstance(p, dict):
+                                continue
+                            if p.get('is_ai'):
+                                continue
+                            uid = p.get('auth_user_id')
+                            if not uid or uid == 'admin_local':
+                                continue
+                            rp.append({
+                                "id": p.get('id'),
+                                "name": p.get('name'),
+                                "auth_user_id": uid,
+                            })
+                        if rp:
+                            game['ranked_participants'] = rp
+                except Exception:
+                    pass
             
             import random
             
@@ -4843,6 +5010,189 @@ class handler(BaseHTTPRequestHandler):
             
             save_game(code, game)
             return self._send_json({"status": "skipped"})
+
+        # POST /api/user/daily/claim - Claim a completed daily quest for credits
+        if path == '/api/user/daily/claim':
+            auth_header = self.headers.get('Authorization', '')
+            if not auth_header.startswith('Bearer '):
+                return self._send_error("Not authenticated", 401)
+
+            token = auth_header[7:]
+            payload = verify_jwt_token(token)
+            if not payload:
+                return self._send_error("Invalid or expired token", 401)
+
+            quest_id = body.get('quest_id', '')
+            if not isinstance(quest_id, str) or not quest_id.strip():
+                return self._send_error("quest_id required", 400)
+            quest_id = quest_id.strip()
+
+            # Admin user: store economy separately
+            if payload.get('sub') == 'admin_local':
+                redis = get_redis()
+                admin_user = load_admin_economy_user(redis)
+                daily_state = ensure_daily_quests_today(admin_user, persist=False)
+                quests = daily_state.get('quests', [])
+                if not isinstance(quests, list):
+                    quests = []
+
+                quest = next((q for q in quests if isinstance(q, dict) and q.get('id') == quest_id), None)
+                if not quest:
+                    return self._send_error("Quest not found", 404)
+
+                try:
+                    progress = int(quest.get('progress', 0) or 0)
+                    target = int(quest.get('target', 0) or 0)
+                    reward = int(quest.get('reward_credits', 0) or 0)
+                except Exception:
+                    progress, target, reward = 0, 0, 0
+
+                if target <= 0 or progress < target:
+                    return self._send_error("Quest not completed yet", 400)
+                if bool(quest.get('claimed', False)):
+                    return self._send_error("Quest already claimed", 400)
+
+                quest['claimed'] = True
+                add_user_credits(admin_user, reward, persist=False)
+                admin_user['daily_quests'] = daily_state
+                save_admin_economy_user(redis, admin_user)
+                econ = ensure_user_economy(admin_user, persist=False)
+                return self._send_json({
+                    "status": "claimed",
+                    "wallet": econ.get("wallet") or {"credits": 0},
+                    "daily": daily_state,
+                })
+
+            user = get_user_by_id(payload.get('sub', ''))
+            if not user:
+                return self._send_error("User not found", 404)
+
+            ensure_user_economy(user, persist=False)
+            daily_state = ensure_daily_quests_today(user, persist=False)
+            quests = daily_state.get('quests', [])
+            if not isinstance(quests, list):
+                quests = []
+
+            quest = next((q for q in quests if isinstance(q, dict) and q.get('id') == quest_id), None)
+            if not quest:
+                return self._send_error("Quest not found", 404)
+
+            try:
+                progress = int(quest.get('progress', 0) or 0)
+                target = int(quest.get('target', 0) or 0)
+                reward = int(quest.get('reward_credits', 0) or 0)
+            except Exception:
+                progress, target, reward = 0, 0, 0
+
+            if target <= 0 or progress < target:
+                return self._send_error("Quest not completed yet", 400)
+            if bool(quest.get('claimed', False)):
+                return self._send_error("Quest already claimed", 400)
+
+            quest['claimed'] = True
+            add_user_credits(user, reward, persist=False)
+            user['daily_quests'] = daily_state
+            save_user(user)
+            econ = ensure_user_economy(user, persist=False)
+            return self._send_json({
+                "status": "claimed",
+                "wallet": econ.get("wallet") or {"credits": 0},
+                "daily": daily_state,
+            })
+
+        # POST /api/shop/purchase - Purchase a cosmetic with credits (shop exclusives)
+        if path == '/api/shop/purchase':
+            auth_header = self.headers.get('Authorization', '')
+            if not auth_header.startswith('Bearer '):
+                return self._send_error("Not authenticated", 401)
+
+            token = auth_header[7:]
+            payload = verify_jwt_token(token)
+            if not payload:
+                return self._send_error("Invalid or expired token", 401)
+
+            category = body.get('category', '')
+            cosmetic_id = body.get('cosmetic_id', '')
+            if not isinstance(category, str) or not isinstance(cosmetic_id, str):
+                return self._send_error("category and cosmetic_id required", 400)
+            category = category.strip()
+            cosmetic_id = cosmetic_id.strip()
+            if not category or not cosmetic_id:
+                return self._send_error("category and cosmetic_id required", 400)
+
+            catalog_key = COSMETIC_CATEGORY_TO_CATALOG_KEY.get(category)
+            if not catalog_key:
+                return self._send_error("Invalid category", 400)
+
+            item = get_cosmetic_item(catalog_key, cosmetic_id)
+            if not item:
+                return self._send_error("Invalid cosmetic", 400)
+
+            # Shop does not sell premium cosmetics (donation-only)
+            if bool(item.get('premium', False)):
+                return self._send_error("Premium cosmetics cannot be purchased with credits", 403)
+
+            try:
+                price = int(item.get('price', 0) or 0)
+            except Exception:
+                price = 0
+            if price <= 0:
+                return self._send_error("This item is not for sale", 400)
+
+            # Admin user: store economy separately
+            if payload.get('sub') == 'admin_local':
+                redis = get_redis()
+                admin_user = load_admin_economy_user(redis)
+
+                if user_owns_cosmetic(admin_user, category, cosmetic_id):
+                    econ = ensure_user_economy(admin_user, persist=False)
+                    return self._send_json({
+                        "status": "already_owned",
+                        "wallet": econ.get("wallet") or {"credits": 0},
+                        "owned_cosmetics": econ.get("owned_cosmetics") or {},
+                    })
+
+                credits = get_user_credits(admin_user)
+                if credits < price:
+                    return self._send_error("Not enough credits", 403)
+
+                add_user_credits(admin_user, -price, persist=False)
+                grant_owned_cosmetic(admin_user, category, cosmetic_id, persist=False)
+                save_admin_economy_user(redis, admin_user)
+                econ = ensure_user_economy(admin_user, persist=False)
+                return self._send_json({
+                    "status": "purchased",
+                    "wallet": econ.get("wallet") or {"credits": 0},
+                    "owned_cosmetics": econ.get("owned_cosmetics") or {},
+                })
+
+            user = get_user_by_id(payload.get('sub', ''))
+            if not user:
+                return self._send_error("User not found", 404)
+
+            ensure_user_economy(user, persist=False)
+
+            if user_owns_cosmetic(user, category, cosmetic_id):
+                econ = ensure_user_economy(user, persist=False)
+                return self._send_json({
+                    "status": "already_owned",
+                    "wallet": econ.get("wallet") or {"credits": 0},
+                    "owned_cosmetics": econ.get("owned_cosmetics") or {},
+                })
+
+            credits = get_user_credits(user)
+            if credits < price:
+                return self._send_error("Not enough credits", 403)
+
+            add_user_credits(user, -price, persist=False)
+            grant_owned_cosmetic(user, category, cosmetic_id, persist=False)
+            save_user(user)
+            econ = ensure_user_economy(user, persist=False)
+            return self._send_json({
+                "status": "purchased",
+                "wallet": econ.get("wallet") or {"credits": 0},
+                "owned_cosmetics": econ.get("owned_cosmetics") or {},
+            })
 
         # POST /api/cosmetics/equip - Equip a cosmetic
         if path == '/api/cosmetics/equip':
