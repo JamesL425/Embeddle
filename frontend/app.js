@@ -2425,7 +2425,16 @@ function updateGame(game) {
     guessForm.querySelector('button').disabled = isSpectator || !isMyTurn;
     
     if (isMyTurn && !game.waiting_for_word_change) {
-        guessInput.focus();
+        // Only auto-focus guess input if user isn't already typing somewhere else
+        const activeEl = document.activeElement;
+        const isTypingElsewhere = activeEl && (
+            activeEl.tagName === 'INPUT' ||
+            activeEl.tagName === 'TEXTAREA' ||
+            activeEl.isContentEditable
+        );
+        if (!isTypingElsewhere) {
+            guessInput.focus();
+        }
     }
     
     updateHistory(game);

@@ -2979,11 +2979,14 @@ class handler(BaseHTTPRequestHandler):
                 redis = get_redis()
                 existing = redis.get('admin_cosmetics')
                 admin_cosmetics = json.loads(existing) if existing else DEFAULT_COSMETICS.copy()
+                admin_user = load_admin_economy_user(redis)
+                econ = ensure_user_economy(admin_user, persist=False)
                 
                 return self._send_json({
                     'is_donor': True,
                     'is_admin': True,
                     'cosmetics': admin_cosmetics,
+                    'owned_cosmetics': econ.get('owned_cosmetics') or {},
                     'paywall_enabled': COSMETICS_PAYWALL_ENABLED,
                     'unlock_all': COSMETICS_UNLOCK_ALL,
                 })
@@ -2992,10 +2995,13 @@ class handler(BaseHTTPRequestHandler):
             if not user:
                 return self._send_error("User not found", 404)
             
+            econ = ensure_user_economy(user, persist=False)
+            
             return self._send_json({
                 'is_donor': user.get('is_donor', False),
                 'is_admin': user.get('is_admin', False),
                 'cosmetics': get_user_cosmetics(user),
+                'owned_cosmetics': econ.get('owned_cosmetics') or {},
                 'paywall_enabled': COSMETICS_PAYWALL_ENABLED,
                 'unlock_all': COSMETICS_UNLOCK_ALL,
             })

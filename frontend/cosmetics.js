@@ -7,6 +7,7 @@
 let cosmeticsState = {
     catalog: null,
     userCosmetics: null,
+    ownedCosmetics: {},  // For shop-purchased cosmetics
     isDonor: false,
     isAdmin: false,
     paywallEnabled: false,
@@ -41,6 +42,7 @@ async function loadUserCosmetics() {
             cosmeticsState.userCosmetics = data.cosmetics;
             cosmeticsState.isDonor = data.is_donor;
             cosmeticsState.isAdmin = data.is_admin;
+            cosmeticsState.ownedCosmetics = data.owned_cosmetics || {};
             if (typeof data.paywall_enabled === 'boolean') {
                 cosmeticsState.paywallEnabled = data.paywall_enabled;
             }
@@ -252,13 +254,23 @@ function renderCosmeticCategory(key, catalogKey, label, equipped, hasFullAccess,
             ? { unmet: null, all: [] }
             : buildRequirementsInfo(item.requirements, userStats);
         const isReqLocked = Boolean(reqInfo.unmet);
-        const isLocked = isPremiumLocked || isReqLocked;
+        
+        // Check shop-priced cosmetics: must be owned unless admin/unlockAll
+        const price = parseInt(item.price || 0, 10);
+        const isShopItem = price > 0 && !item.premium;
+        const ownedList = (cosmeticsState.ownedCosmetics || {})[key] || [];
+        const isOwned = Array.isArray(ownedList) && ownedList.includes(id);
+        const isShopLocked = isShopItem && !isOwned && !(cosmeticsState.isAdmin || cosmeticsState.unlockAll);
+        
+        const isLocked = isPremiumLocked || isReqLocked || isShopLocked;
         const icon = item.icon || '';
 
         let lockReason = '';
         let progressHtml = '';
         if (isPremiumLocked) {
             lockReason = 'Donate to unlock premium cosmetics!';
+        } else if (isShopLocked) {
+            lockReason = `Purchase in Shop (${price} credits)`;
         } else if (isReqLocked && reqInfo.unmet) {
             lockReason = `Locked: requires ${reqInfo.unmet.min} ${reqInfo.unmet.metricLabel} (${reqInfo.unmet.have}/${reqInfo.unmet.min})`;
             progressHtml = `<span class="cosmetic-progress">${reqInfo.unmet.have}/${reqInfo.unmet.min}</span>`;
@@ -272,6 +284,13 @@ function renderCosmeticCategory(key, catalogKey, label, equipped, hasFullAccess,
             titleParts.push(`Requires ${detail}`);
         }
         if (isPremiumLocked) titleParts.push('Donate to unlock');
+        if (isShopLocked) titleParts.push(`Shop: ${price} credits`);
+        
+        // Show price badge for shop items
+        let priceHtml = '';
+        if (isShopItem && !isOwned && !(cosmeticsState.isAdmin || cosmeticsState.unlockAll)) {
+            priceHtml = `<span class="cosmetic-price">${price}¢</span>`;
+        }
         
         html += `
             <div class="cosmetic-option ${isEquipped ? 'equipped' : ''} ${isLocked ? 'locked' : ''}" 
@@ -279,6 +298,7 @@ function renderCosmeticCategory(key, catalogKey, label, equipped, hasFullAccess,
                 ${icon ? `<span class="cosmetic-icon">${icon}</span>` : ''}
                 <span class="cosmetic-name">${item.name}</span>
                 ${progressHtml}
+                ${priceHtml}
                 ${isLocked ? '<span class="lock-icon">🔒</span>' : ''}
             </div>
         `;
