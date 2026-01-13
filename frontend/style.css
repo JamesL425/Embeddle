@@ -3230,18 +3230,28 @@ body[data-background="aurora"]::before {
     color: var(--bg-primary);
 }
 
-.sp-player-badge.ai-easy {
+.sp-player-badge.ai-rookie {
     background: var(--success);
     color: var(--bg-primary);
 }
 
-.sp-player-badge.ai-medium {
+.sp-player-badge.ai-analyst {
+    background: var(--info);
+    color: var(--bg-primary);
+}
+
+.sp-player-badge.ai-field-agent {
     background: var(--warning);
     color: var(--bg-primary);
 }
 
-.sp-player-badge.ai-hard {
+.sp-player-badge.ai-spymaster {
     background: var(--danger);
+    color: var(--bg-primary);
+}
+
+.sp-player-badge.ai-ghost {
+    background: var(--text-secondary);
     color: var(--bg-primary);
 }
 
@@ -3276,7 +3286,7 @@ body[data-background="aurora"]::before {
 
 .ai-difficulty-buttons {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 0.75rem;
 }
 
@@ -3303,19 +3313,29 @@ body[data-background="aurora"]::before {
     cursor: not-allowed;
 }
 
-.btn-ai-add[data-difficulty="easy"]:hover:not(:disabled) {
+.btn-ai-add[data-difficulty="rookie"]:hover:not(:disabled) {
     border-color: var(--success);
     box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
 }
 
-.btn-ai-add[data-difficulty="medium"]:hover:not(:disabled) {
+.btn-ai-add[data-difficulty="analyst"]:hover:not(:disabled) {
+    border-color: var(--info);
+    box-shadow: 0 0 15px rgba(0, 204, 255, 0.3);
+}
+
+.btn-ai-add[data-difficulty="field-agent"]:hover:not(:disabled) {
     border-color: var(--warning);
     box-shadow: 0 0 15px rgba(255, 204, 0, 0.3);
 }
 
-.btn-ai-add[data-difficulty="hard"]:hover:not(:disabled) {
+.btn-ai-add[data-difficulty="spymaster"]:hover:not(:disabled) {
     border-color: var(--danger);
-    box-shadow: 0 0 15px rgba(255, 51, 51, 0.3);
+    box-shadow: 0 0 15px rgba(255, 51, 51, 0.25);
+}
+
+.btn-ai-add[data-difficulty="ghost"]:hover:not(:disabled) {
+    border-color: var(--text-secondary);
+    box-shadow: 0 0 15px rgba(0, 204, 51, 0.2);
 }
 
 .btn-ai-add .ai-icon {
@@ -3367,18 +3387,28 @@ body[data-background="aurora"]::before {
     letter-spacing: 0.05em;
 }
 
-.player-card .ai-difficulty-badge.easy {
+.player-card .ai-difficulty-badge.rookie {
     background: var(--success);
     color: var(--bg-primary);
 }
 
-.player-card .ai-difficulty-badge.medium {
+.player-card .ai-difficulty-badge.analyst {
+    background: var(--info);
+    color: var(--bg-primary);
+}
+
+.player-card .ai-difficulty-badge.field-agent {
     background: var(--warning);
     color: var(--bg-primary);
 }
 
-.player-card .ai-difficulty-badge.hard {
+.player-card .ai-difficulty-badge.spymaster {
     background: var(--danger);
+    color: var(--bg-primary);
+}
+
+.player-card .ai-difficulty-badge.ghost {
+    background: var(--text-secondary);
     color: var(--bg-primary);
 }
 

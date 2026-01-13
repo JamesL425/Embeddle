@@ -300,34 +300,85 @@ DEFAULT_USER_STATS = {
 # ============== AI PLAYER CONFIGURATION ==============
 
 # AI difficulty settings
+#
+# NOTE: Difficulty keys are persisted in saved game state; changing keys can affect in-flight games.
 AI_DIFFICULTY_CONFIG = {
-    "easy": {
-        "name_prefix": "Bot",
-        "strategic_chance": 0.15,  # 15% chance to make a strategic guess
-        "word_selection": "random",  # How AI picks its secret word
-        "targeting_strength": 0.2,  # How much AI focuses on high-similarity targets
-        "min_target_similarity": 0.55,  # Only follow-up when there's a strong clue
-        "delay_range": (1, 3),  # Simulated thinking time in seconds
+    # --- New 5-tier spy-themed difficulties (used by the UI) ---
+    "rookie": {
+        "name_prefix": "Rookie",
+        "strategic_chance": 0.18,        # mostly random
+        "word_selection": "random",
+        "targeting_strength": 0.25,      # weak follow-up
+        "min_target_similarity": 0.6,    # needs a very strong clue to chase
+        "delay_range": (1, 3),
         "badge": "🤖",
+        # Defense/risk knobs (used by ai_choose_guess)
+        "self_leak_soft_max": 0.92,
+        "self_leak_hard_max": 0.98,
+        "panic_danger": "critical",      # rookie basically doesn't “panic”
+        "panic_aggression_boost": 0.05,
+        "candidate_pool": 8,
+        "clue_words_per_target": 1,
     },
-    "medium": {
+    "analyst": {
+        "name_prefix": "Analyst",
+        "strategic_chance": 0.45,
+        "word_selection": "avoid_common",
+        "targeting_strength": 0.45,
+        "min_target_similarity": 0.5,
+        "delay_range": (2, 4),
+        "badge": "🤖",
+        "self_leak_soft_max": 0.85,
+        "self_leak_hard_max": 0.95,
+        "panic_danger": "high",
+        "panic_aggression_boost": 0.15,
+        "candidate_pool": 12,
+        "clue_words_per_target": 2,
+    },
+    "field-agent": {
         "name_prefix": "Agent",
-        "strategic_chance": 0.45,  # 45% chance to make a strategic guess
-        "word_selection": "avoid_common",  # Avoids most common words
-        "targeting_strength": 0.5,  # Moderate focus on targets
-        "min_target_similarity": 0.45,
+        "strategic_chance": 0.6,
+        "word_selection": "avoid_common",
+        "targeting_strength": 0.6,
+        "min_target_similarity": 0.48,
         "delay_range": (2, 5),
         "badge": "🤖",
+        "self_leak_soft_max": 0.82,
+        "self_leak_hard_max": 0.93,
+        "panic_danger": "medium",
+        "panic_aggression_boost": 0.22,
+        "candidate_pool": 15,
+        "clue_words_per_target": 2,
     },
-    "hard": {
-        "name_prefix": "Nexus",
-        # Slightly nerfed for fairness: hard shouldn't feel like all bots perfectly focus the human
-        "strategic_chance": 0.6,  # 60% chance to make a strategic guess
-        "word_selection": "obscure",  # Picks less common words
-        "targeting_strength": 0.65,  # Strong but not laser-focused
-        "min_target_similarity": 0.5,
+    "spymaster": {
+        "name_prefix": "Spymaster",
+        "strategic_chance": 0.72,
+        "word_selection": "obscure",
+        "targeting_strength": 0.72,
+        "min_target_similarity": 0.45,
+        "delay_range": (3, 6),
+        "badge": "🤖",
+        "self_leak_soft_max": 0.78,
+        "self_leak_hard_max": 0.9,
+        "panic_danger": "medium",
+        "panic_aggression_boost": 0.28,
+        "candidate_pool": 18,
+        "clue_words_per_target": 3,
+    },
+    "ghost": {
+        "name_prefix": "Ghost",
+        "strategic_chance": 0.82,
+        "word_selection": "obscure",
+        "targeting_strength": 0.82,
+        "min_target_similarity": 0.42,
         "delay_range": (3, 7),
         "badge": "🤖",
+        "self_leak_soft_max": 0.74,
+        "self_leak_hard_max": 0.88,
+        "panic_danger": "low",
+        "panic_aggression_boost": 0.35,
+        "candidate_pool": 20,
+        "clue_words_per_target": 3,
     },
 }
 
@@ -342,7 +393,8 @@ def generate_ai_player_id(difficulty: str) -> str:
 
 def create_ai_player(difficulty: str, existing_names: list) -> dict:
     """Create an AI player with the specified difficulty."""
-    config = AI_DIFFICULTY_CONFIG.get(difficulty, AI_DIFFICULTY_CONFIG["easy"])
+    default_cfg = AI_DIFFICULTY_CONFIG.get("rookie") or {}
+    config = AI_DIFFICULTY_CONFIG.get(difficulty, default_cfg)
     
     # Generate unique name
     used_suffixes = set()
@@ -356,6 +408,16 @@ def create_ai_player(difficulty: str, existing_names: list) -> dict:
     
     name = f"{config['name_prefix']}-{suffix}"
     
+    # Give different difficulties distinct “agent” vibes in the UI
+    ai_cosmetics_by_difficulty = {
+        "rookie": {"card_border": "classic", "card_background": "default", "name_color": "default"},
+        "analyst": {"card_border": "ice", "card_background": "gradient_ice", "name_color": "ice"},
+        "field-agent": {"card_border": "fire", "card_background": "matrix_code", "name_color": "fire"},
+        "spymaster": {"card_border": "gold_elite", "card_background": "circuit_board", "name_color": "gold"},
+        "ghost": {"card_border": "electric", "card_background": "starfield", "name_color": "shadow"},
+    }
+    selected_cosmetics = ai_cosmetics_by_difficulty.get(difficulty, ai_cosmetics_by_difficulty["rookie"])
+
     return {
         "id": generate_ai_player_id(difficulty),
         "name": name,
@@ -368,9 +430,9 @@ def create_ai_player(difficulty: str, existing_names: list) -> dict:
         "word_pool": [],
         "is_ready": True,  # AI is always ready
         "cosmetics": {
-            "card_border": "neon_glow" if difficulty == "hard" else "classic",
-            "card_background": "circuit_board" if difficulty == "hard" else "default",
-            "name_color": "electric" if difficulty == "hard" else ("ice" if difficulty == "medium" else "default"),
+            "card_border": selected_cosmetics["card_border"],
+            "card_background": selected_cosmetics["card_background"],
+            "name_color": selected_cosmetics["name_color"],
             "badge": config["badge"],
         },
         "ai_memory": {
@@ -384,8 +446,9 @@ def ai_select_secret_word(ai_player: dict, word_pool: list) -> str:
     """AI selects a secret word based on difficulty."""
     import random
     
-    difficulty = ai_player.get("difficulty", "easy")
-    config = AI_DIFFICULTY_CONFIG.get(difficulty, AI_DIFFICULTY_CONFIG["easy"])
+    difficulty = ai_player.get("difficulty", "rookie")
+    default_cfg = AI_DIFFICULTY_CONFIG.get("rookie") or {}
+    config = AI_DIFFICULTY_CONFIG.get(difficulty, default_cfg)
     selection_mode = config.get("word_selection", "random")
     
     if not word_pool:
@@ -505,50 +568,288 @@ def ai_find_similar_words(target_word: str, theme_words: list, guessed_words: li
         return []
 
 
+def _ai_last_word_change_index(game: dict, player_id: str) -> int:
+    """
+    Return the history index after the player's last word change. If never changed, return 0.
+    This mirrors the frontend's "ignore clues before word change" behavior.
+    """
+    try:
+        idx_after = 0
+        history = game.get("history", []) or []
+        for idx, entry in enumerate(history):
+            if entry.get("type") == "word_change" and entry.get("player_id") == player_id:
+                idx_after = idx + 1
+        return idx_after
+    except Exception:
+        return 0
+
+
+def _ai_top_guesses_since_change(game: dict, target_player_id: str, k: int = 3) -> list:
+    """Return top-k guesses (word, similarity) for a target since their last word change."""
+    history = game.get("history", []) or []
+    start = _ai_last_word_change_index(game, target_player_id)
+    scored = []
+    for idx, entry in enumerate(history):
+        if idx < start:
+            continue
+        if entry.get("type") == "word_change":
+            continue
+        sims = entry.get("similarities") or {}
+        if target_player_id not in sims:
+            continue
+        w = entry.get("word")
+        if not w:
+            continue
+        try:
+            sim = float(sims[target_player_id])
+        except Exception:
+            continue
+        scored.append((str(w), sim))
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return scored[: max(0, int(k or 0))]
+
+
+def _ai_danger_score(top_guesses: list) -> float:
+    """
+    Danger score based on top 3 public similarities since last word change.
+    Mirrors frontend: top1*0.6 + top2*0.25 + top3*0.15
+    """
+    if not top_guesses:
+        return 0.0
+    weights = [0.6, 0.25, 0.15]
+    score = 0.0
+    for i, g in enumerate(top_guesses[:3]):
+        try:
+            score += float(g[1]) * float(weights[i])
+        except Exception:
+            continue
+    return float(score)
+
+
+def _ai_danger_level(score: float) -> str:
+    # Returns: 'safe', 'low', 'medium', 'high', 'critical'
+    try:
+        s = float(score)
+    except Exception:
+        s = 0.0
+    if s < 0.3:
+        return "safe"
+    if s < 0.45:
+        return "low"
+    if s < 0.6:
+        return "medium"
+    if s < 0.75:
+        return "high"
+    return "critical"
+
+
+def _ai_is_panic(danger_level: str, panic_threshold: str) -> bool:
+    """Return True if danger_level is >= panic_threshold (ordered)."""
+    order = {"safe": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
+    return order.get(danger_level, 0) >= order.get(panic_threshold, 4)
+
+
+def _ai_self_similarity(ai_player: dict, word: str) -> Optional[float]:
+    """Cosine similarity between a candidate guess and the AI's own secret embedding."""
+    try:
+        secret_emb = ai_player.get("secret_embedding")
+        if not secret_emb:
+            return None
+        emb = get_embedding(word)
+        return float(cosine_similarity(emb, secret_emb))
+    except Exception:
+        return None
+
+
 def ai_choose_guess(ai_player: dict, game: dict) -> Optional[str]:
     """AI chooses a word to guess based on difficulty and game state."""
     import random
     
-    difficulty = ai_player.get("difficulty", "easy")
-    config = AI_DIFFICULTY_CONFIG.get(difficulty, AI_DIFFICULTY_CONFIG["easy"])
+    difficulty = ai_player.get("difficulty", "rookie")
+    default_cfg = AI_DIFFICULTY_CONFIG.get("rookie") or {}
+    config = AI_DIFFICULTY_CONFIG.get(difficulty, default_cfg)
     
     theme_words = game.get("theme", {}).get("words", [])
     memory = ai_player.get("ai_memory", {})
     guessed_words = memory.get("guessed_words", [])
+    my_secret = (ai_player.get("secret_word") or "").lower().strip()
     
     # Get all words that haven't been guessed yet
-    available_words = [w for w in theme_words if w.lower() not in [g.lower() for g in guessed_words]]
+    guessed_lower = {str(g).lower() for g in (guessed_words or [])}
+    available_words = []
+    for w in theme_words:
+        wl = str(w).lower()
+        if wl in guessed_lower:
+            continue
+        # Never guess your own secret word (huge self-leak)
+        if my_secret and wl == my_secret:
+            continue
+        available_words.append(w)
     
     if not available_words:
         return None
     
-    # Decide if this should be a strategic guess
-    strategic_chance = config.get("strategic_chance", 0.15)
-    targeting_strength = config.get("targeting_strength", 0.2)
-    min_target_similarity = config.get("min_target_similarity", 0.3)
+    # Compute self-danger (how close others are to guessing us) from public history
+    my_top = _ai_top_guesses_since_change(game, ai_player.get("id"), k=3)
+    my_danger_score = _ai_danger_score(my_top)
+    my_danger_level = _ai_danger_level(my_danger_score)
+
+    # Decide if this should be a strategic guess (and boost when threatened)
+    strategic_chance = float(config.get("strategic_chance", 0.15) or 0.15)
+    targeting_strength = float(config.get("targeting_strength", 0.2) or 0.2)
+    min_target_similarity = float(config.get("min_target_similarity", 0.3) or 0.3)
+
+    panic_threshold = str(config.get("panic_danger", "high") or "high")
+    panic = _ai_is_panic(my_danger_level, panic_threshold)
+    if panic:
+        strategic_chance = min(0.98, strategic_chance + float(config.get("panic_aggression_boost", 0.2) or 0.2))
+        targeting_strength = min(0.98, targeting_strength + float(config.get("panic_aggression_boost", 0.2) or 0.2) * 0.6)
+
+    # Self-leak controls: avoid guesses too close to our own secret unless panic forces our hand
+    soft_max = float(config.get("self_leak_soft_max", 0.85) or 0.85)
+    hard_max = float(config.get("self_leak_hard_max", 0.95) or 0.95)
+    if panic:
+        # In panic, relax leak avoidance a bit: you're willing to “bleed” to secure a word change
+        soft_max = min(0.99, soft_max + 0.05)
+        hard_max = min(0.995, hard_max + 0.03)
+
+    # Cache self-sim values for this turn (avoid repeated embedding lookups)
+    _self_sim_cache = {}
+
+    def get_self_sim(word: str) -> Optional[float]:
+        wl = str(word).lower()
+        if wl in _self_sim_cache:
+            return _self_sim_cache[wl]
+        sim = _ai_self_similarity(ai_player, wl)
+        _self_sim_cache[wl] = sim
+        return sim
+
+    # Helper: choose candidate words with low self-leak, fallback if needed
+    def pick_low_leak(candidates: list) -> Optional[str]:
+        if not candidates:
+            return None
+        # First pass: enforce hard_max
+        ok = []
+        for w in candidates:
+            sim = get_self_sim(w)
+            if sim is None:
+                ok.append(w)
+                continue
+            if sim <= hard_max:
+                ok.append(w)
+        if ok:
+            candidates = ok
+
+        # Second pass: prefer <= soft_max but don't hard-fail
+        scored = []
+        for w in candidates:
+            sim = get_self_sim(w)
+            # Lower similarity-to-self is better (less leak)
+            leak = sim if sim is not None else 0.0
+            penalty = 0.0
+            if sim is not None and sim > soft_max:
+                penalty = (sim - soft_max) * 10.0
+            scored.append((w, penalty, leak))
+        scored.sort(key=lambda x: (x[1], x[2]))
+        # Add a bit of personality noise so AIs aren't identical
+        top_n = min(len(scored), 3 if not panic else 2)
+        return str(random.choice(scored[:top_n])[0])
     
     if random.random() < strategic_chance:
         # Strategic guess: try to find words similar to high-similarity targets
-        target = ai_find_best_target(ai_player, game)
+        #
+        # If we're in danger, prioritize targets who are already “vulnerable” (high danger score)
+        target = None
+
+        def best_target_from_history(prefer_vulnerable: bool) -> Optional[dict]:
+            best = None
+            best_score = -1.0
+            for p in game.get("players", []) or []:
+                if not p or p.get("id") == ai_player.get("id"):
+                    continue
+                if not p.get("is_alive", True):
+                    continue
+                top3 = _ai_top_guesses_since_change(game, p.get("id"), k=3)
+                if not top3:
+                    continue
+                top_sim = float(top3[0][1]) if top3 else 0.0
+                avg_sim = sum(float(x[1]) for x in top3) / float(len(top3)) if top3 else 0.0
+                score = (top_sim * 0.7 + avg_sim * 0.3)
+                if prefer_vulnerable:
+                    # vulnerability is essentially the opponent's danger score
+                    score = _ai_danger_score(top3)
+                if score > best_score:
+                    best_score = score
+                    best = {
+                        "player_id": p.get("id"),
+                        "player_name": p.get("name"),
+                        "top_word": top3[0][0] if top3 else None,
+                        "top_similarity": top_sim,
+                        "score": score,
+                    }
+            return best
+
+        if panic:
+            target = best_target_from_history(prefer_vulnerable=True)
+        if target is None:
+            # Prefer word-change-aware targeting from public history
+            target = best_target_from_history(prefer_vulnerable=False) or ai_find_best_target(ai_player, game)
         
         if target and target["top_word"] and target["top_similarity"] > min_target_similarity:
-            # Find words similar to the word that got high similarity
-            similar_words = ai_find_similar_words(
-                target["top_word"], 
-                available_words, 
-                guessed_words,
-                count=5
-            )
+            # Find words similar to the word that got high similarity.
+            # We also avoid repeating globally-guessed words and avoid leaking our own secret.
+            pool_size = int(config.get("candidate_pool", 12) or 12)
+            clue_k = int(config.get("clue_words_per_target", 1) or 1)
+            target_id = target.get("player_id")
+            clues = _ai_top_guesses_since_change(game, target_id, k=max(1, min(3, clue_k))) if target_id else []
+            if not clues:
+                clues = [(target["top_word"], float(target.get("top_similarity") or 0.5))]
+
+            combined_scores = {}
+            combined_list_max = max(5, min(25, pool_size))
+            for clue_word, clue_sim in clues:
+                # Rank theme words near each clue word
+                sim_list = ai_find_similar_words(
+                    clue_word,
+                    available_words,
+                    guessed_words,
+                    count=combined_list_max,
+                )
+                if not sim_list:
+                    continue
+                try:
+                    w = float(clue_sim)
+                except Exception:
+                    w = 0.5
+                denom = float(len(sim_list)) if sim_list else 1.0
+                for rank, cand in enumerate(sim_list):
+                    # rank 0 is best; convert to [0..1] weight
+                    rscore = (denom - float(rank)) / denom
+                    combined_scores[cand] = combined_scores.get(cand, 0.0) + (w * rscore)
+
+            similar_words = [w for (w, _) in sorted(combined_scores.items(), key=lambda x: x[1], reverse=True)]
             
             if similar_words:
                 # Higher targeting strength = more likely to pick the most similar word
+                # but still apply self-leak avoidance.
                 if random.random() < targeting_strength:
-                    return similar_words[0]  # Most similar
-                else:
-                    return random.choice(similar_words[:3])  # Top 3
+                    pick = pick_low_leak(similar_words[: max(3, pool_size // 2)])
+                    if pick:
+                        return pick
+                pick = pick_low_leak(similar_words[: max(3, min(10, pool_size))])
+                if pick:
+                    return pick
     
     # Random guess from available words
-    return random.choice(available_words)
+    # Even on random guesses, avoid self-leak when possible.
+    # Don't evaluate the full theme every time; sample a reasonable set.
+    pool_size = int(config.get("candidate_pool", 12) or 12)
+    sample_n = max(8, min(len(available_words), pool_size * (2 if panic else 1)))
+    sample = random.sample(available_words, sample_n) if sample_n < len(available_words) else available_words
+    pick = pick_low_leak(sample)
+    if pick:
+        return pick
+    return str(random.choice(available_words))
 
 
 def ai_change_word(ai_player: dict, game: dict) -> Optional[str]:
@@ -634,8 +935,32 @@ def process_ai_word_change(game: dict, ai_player: dict) -> bool:
     if not ai_player.get("can_change_word"):
         return False
     
-    # 70% chance AI changes word, 30% keeps it
-    if random.random() < 0.7:
+    difficulty = ai_player.get("difficulty", "rookie")
+    config = AI_DIFFICULTY_CONFIG.get(difficulty, AI_DIFFICULTY_CONFIG.get("rookie", {}))
+
+    # Strategic word change: if we're in danger, strongly prefer changing to reset opponents' intel.
+    my_top = _ai_top_guesses_since_change(game, ai_player.get("id"), k=3)
+    my_danger_score = _ai_danger_score(my_top)
+    my_danger_level = _ai_danger_level(my_danger_score)
+    panic_threshold = str(config.get("panic_danger", "high") or "high")
+    panic = _ai_is_panic(my_danger_level, panic_threshold)
+
+    # Baseline chance (keeps some variety/fun)
+    change_prob = 0.7
+    if my_danger_level == "safe":
+        change_prob = 0.55
+    elif my_danger_level == "low":
+        change_prob = 0.65
+    elif my_danger_level == "medium":
+        change_prob = 0.78
+    elif my_danger_level == "high":
+        change_prob = 0.9
+    elif my_danger_level == "critical":
+        change_prob = 0.97
+    if panic:
+        change_prob = max(change_prob, 0.92)
+
+    if random.random() < change_prob:
         new_word = ai_change_word(ai_player, game)
         if new_word:
             try:
@@ -2359,72 +2684,76 @@ class handler(BaseHTTPRequestHandler):
 
         # GET /api/games/{code}/chat - Fetch chat messages after a message id
         if path.endswith('/chat') and path.startswith('/api/games/'):
-            # Rate limit: 60/min (general)
-            if not check_rate_limit(get_ratelimit_general(), f"chat_get:{client_ip}"):
-                return self._send_error("Too many requests. Please wait.", 429)
-
-            code = sanitize_game_code(path.split('/')[3])
-            if not code:
-                return self._send_error("Invalid game code format", 400)
-
-            # Game must exist (chat is scoped to the game)
-            game = load_game(code)
-            if not game:
-                return self._send_error("Game not found", 404)
-
-            after_raw = query.get('after', '0')
             try:
-                after_id = int(after_raw)
-            except Exception:
-                after_id = 0
-            if after_id < 0:
-                after_id = 0
+                # Rate limit: 60/min (general)
+                if not check_rate_limit(get_ratelimit_general(), f"chat_get:{client_ip}"):
+                    return self._send_error("Too many requests. Please wait.", 429)
 
-            limit_raw = query.get('limit', '50')
-            try:
-                limit = int(limit_raw)
-            except Exception:
-                limit = 50
-            limit = max(1, min(200, limit))
+                code = sanitize_game_code(path.split('/')[3])
+                if not code:
+                    return self._send_error("Invalid game code format", 400)
 
-            redis = get_redis()
-            key = f"chat:{code}"
+                # Game must exist (chat is scoped to the game)
+                game = load_game(code)
+                if not game:
+                    return self._send_error("Game not found", 404)
 
-            messages = []
-            last_id = after_id
-            try:
-                raw = redis.zrange(key, 0, -1) or []
-            except Exception:
-                raw = []
+                after_raw = query.get('after', '0')
+                try:
+                    after_id = int(after_raw)
+                except Exception:
+                    after_id = 0
+                if after_id < 0:
+                    after_id = 0
 
-            for item in raw:
-                if not item:
-                    continue
-                if isinstance(item, bytes):
+                limit_raw = query.get('limit', '50')
+                try:
+                    limit = int(limit_raw)
+                except Exception:
+                    limit = 50
+                limit = max(1, min(200, limit))
+
+                redis = get_redis()
+                key = f"chat:{code}"
+
+                messages = []
+                last_id = after_id
+                try:
+                    raw = redis.zrange(key, 0, -1) or []
+                except Exception:
+                    raw = []
+
+                for item in raw:
+                    if not item:
+                        continue
+                    if isinstance(item, bytes):
+                        try:
+                            item = item.decode()
+                        except Exception:
+                            continue
                     try:
-                        item = item.decode()
+                        msg = json.loads(item)
                     except Exception:
                         continue
-                try:
-                    msg = json.loads(item)
-                except Exception:
-                    continue
-                try:
-                    mid = int(msg.get('id', 0) or 0)
-                except Exception:
-                    mid = 0
-                if mid <= after_id:
-                    continue
-                messages.append(msg)
-                if mid > last_id:
-                    last_id = mid
-                if len(messages) >= limit:
-                    break
+                    try:
+                        mid = int(msg.get('id', 0) or 0)
+                    except Exception:
+                        mid = 0
+                    if mid <= after_id:
+                        continue
+                    messages.append(msg)
+                    if mid > last_id:
+                        last_id = mid
+                    if len(messages) >= limit:
+                        break
 
-            return self._send_json({
-                "messages": messages,
-                "last_id": last_id,
-            })
+                return self._send_json({
+                    "messages": messages,
+                    "last_id": last_id,
+                })
+            except Exception as e:
+                print(f"Chat fetch error: {e}")
+                return self._send_error("Failed to load chat. Please try again.", 500)
 
         # GET /api/games/{code}
         if path.startswith('/api/games/') and path.count('/') == 3:
@@ -2710,9 +3039,10 @@ class handler(BaseHTTPRequestHandler):
             if game['host_id'] != player_id:
                 return self._send_error("Only the host can add AI players", 403)
             
-            difficulty = body.get('difficulty', 'easy')
+            difficulty = body.get('difficulty', 'rookie')
             if difficulty not in AI_DIFFICULTY_CONFIG:
-                return self._send_error("Invalid difficulty. Choose: easy, medium, hard", 400)
+                allowed = ", ".join(["rookie", "analyst", "field-agent", "spymaster", "ghost"])
+                return self._send_error(f"Invalid difficulty. Choose: {allowed}", 400)
             
             # Create AI player
             existing_names = [p['name'] for p in game['players']]
@@ -2957,74 +3287,78 @@ class handler(BaseHTTPRequestHandler):
 
         # POST /api/games/{code}/chat - Send a chat message (lobby or in-game)
         if '/chat' in path and path.startswith('/api/games/'):
-            code = sanitize_game_code(path.split('/')[3])
-            if not code:
-                return self._send_error("Invalid game code format", 400)
-
-            # Rate limit: 20 messages/min per player (best-effort)
-            player_id = sanitize_player_id(body.get('player_id', ''))
-            if not player_id:
-                return self._send_error("Invalid player ID format", 400)
-            if not check_rate_limit(get_ratelimit_chat(), f"{code}:{player_id}"):
-                return self._send_error("Too many messages. Please wait.", 429)
-
-            game = load_game(code)
-            if not game:
-                return self._send_error("Game not found", 404)
-
-            # Must be a participant (no spectator chat for now)
-            player = next((p for p in game.get('players', []) if p.get('id') == player_id), None)
-            if not player:
-                return self._send_error("You are not in this game", 403)
-
-            message = body.get('message', body.get('text', ''))
-            if not isinstance(message, str):
-                return self._send_error("Invalid message", 400)
-            # Normalize and bound
-            message = message.strip()
-            if not message:
-                return self._send_error("Message cannot be empty", 400)
-            message = message[:200]
-            # Drop control chars
-            message = re.sub(r"[\x00-\x1F\x7F]", "", message)
-            # Profanity filter (mask)
-            message = filter_profanity(message)
-
-            redis = get_redis()
-            chat_key = f"chat:{code}"
-
-            # Monotonic message id (fallback to timestamp if INCR unavailable)
-            msg_id = None
             try:
-                msg_id = int(redis.incr(f"chat:{code}:id"))
-            except Exception:
-                msg_id = int(time.time() * 1000)
+                code = sanitize_game_code(path.split('/')[3])
+                if not code:
+                    return self._send_error("Invalid game code format", 400)
 
-            payload = {
-                "id": msg_id,
-                "ts": int(time.time() * 1000),
-                "sender_id": player_id,
-                "sender_name": player.get('name', ''),
-                "text": message,
-            }
+                # Rate limit: 20 messages/min per player (best-effort)
+                player_id = sanitize_player_id(body.get('player_id', ''))
+                if not player_id:
+                    return self._send_error("Invalid player ID format", 400)
+                if not check_rate_limit(get_ratelimit_chat(), f"{code}:{player_id}"):
+                    return self._send_error("Too many messages. Please wait.", 429)
 
-            try:
-                redis.zadd(chat_key, {json.dumps(payload): msg_id})
-                # Best-effort trim to last 200 messages
+                game = load_game(code)
+                if not game:
+                    return self._send_error("Game not found", 404)
+
+                # Must be a participant (no spectator chat for now)
+                player = next((p for p in game.get('players', []) if p.get('id') == player_id), None)
+                if not player:
+                    return self._send_error("You are not in this game", 403)
+
+                message = body.get('message', body.get('text', ''))
+                if not isinstance(message, str):
+                    return self._send_error("Invalid message", 400)
+                # Normalize and bound
+                message = message.strip()
+                if not message:
+                    return self._send_error("Message cannot be empty", 400)
+                message = message[:200]
+                # Drop control chars
+                message = re.sub(r"[\x00-\x1F\x7F]", "", message)
+                # Profanity filter (mask)
+                message = filter_profanity(message)
+
+                redis = get_redis()
+                chat_key = f"chat:{code}"
+
+                # Monotonic message id (fallback to timestamp if INCR unavailable)
+                msg_id = None
                 try:
-                    redis.zremrangebyrank(chat_key, 0, -201)
+                    msg_id = int(redis.incr(f"chat:{code}:id"))
                 except Exception:
-                    pass
-                # Best-effort keep chat aligned with game expiry
+                    msg_id = int(time.time() * 1000)
+
+                payload = {
+                    "id": msg_id,
+                    "ts": int(time.time() * 1000),
+                    "sender_id": player_id,
+                    "sender_name": player.get('name', ''),
+                    "text": message,
+                }
+
                 try:
-                    redis.expire(chat_key, GAME_EXPIRY_SECONDS)
-                except Exception:
-                    pass
+                    redis.zadd(chat_key, {json.dumps(payload): msg_id})
+                    # Best-effort trim to last 200 messages
+                    try:
+                        redis.zremrangebyrank(chat_key, 0, -201)
+                    except Exception:
+                        pass
+                    # Best-effort keep chat aligned with game expiry
+                    try:
+                        redis.expire(chat_key, GAME_EXPIRY_SECONDS)
+                    except Exception:
+                        pass
+                except Exception as e:
+                    print(f"Chat write error: {e}")
+                    return self._send_error("Failed to send message. Please try again.", 500)
+
+                return self._send_json({"message": payload})
             except Exception as e:
-                print(f"Chat write error: {e}")
+                print(f"Chat handler error: {e}")
                 return self._send_error("Failed to send message. Please try again.", 500)
-
-            return self._send_json({"message": payload})
 
         # POST /api/games/{code}/join - Join lobby (just name, no word yet)
         if '/join' in path and '/set-word' not in path:

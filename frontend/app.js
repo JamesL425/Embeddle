@@ -889,23 +889,45 @@ async function apiCall(endpoint, method = 'GET', body = null) {
         headers,
     };
     
-    if (body) {
+    if (body !== null) {
         options.body = JSON.stringify(body);
     }
     
-    const response = await fetch(`${API_BASE}${endpoint}`, options);
-    
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Server error - please try again');
+    let response;
+    try {
+        response = await fetch(`${API_BASE}${endpoint}`, options);
+    } catch (e) {
+        throw new Error('Network error - please try again');
     }
-    
-    const data = await response.json();
-    
+
+    // Don't rely on Content-Type (CDNs/proxies can mislabel errors). Try to parse JSON either way.
+    const rawText = await response.text();
+    let data = null;
+    if (rawText) {
+        try {
+            data = JSON.parse(rawText);
+        } catch (e) {
+            data = null;
+        }
+    }
+
+    if (data === null) {
+        // Keep the UI error generic, but log the real response for debugging.
+        console.error('Non-JSON API response', {
+            endpoint,
+            method,
+            status: response.status,
+            statusText: response.statusText,
+            contentType: response.headers.get('content-type'),
+            body: rawText?.slice?.(0, 1000) ?? rawText,
+        });
+        throw new Error(`Server error (${response.status || 'unknown'}) - please try again`);
+    }
+
     if (!response.ok) {
-        throw new Error(data.detail || 'An error occurred');
+        throw new Error(data.detail || data.error || data.message || 'An error occurred');
     }
-    
+
     return data;
 }
 
@@ -1354,6 +1376,19 @@ function startSingleplayerLobbyPolling() {
 let spThemeAutoVoted = false;
 let spStartInProgress = false;
 
+const AI_DIFFICULTY_INFO = {
+    rookie: { label: 'Rookie', tagline: 'Wears a wire, drops a clue.' },
+    analyst: { label: 'Desk Analyst', tagline: 'Careful scans. Minimal self-leak.' },
+    'field-agent': { label: 'Field Agent', tagline: 'Balanced ops: probes, then strikes.' },
+    spymaster: { label: 'Spymaster', tagline: 'Builds a profile. Executes cleanly.' },
+    ghost: { label: 'Ghost Protocol', tagline: 'Leaves no trace. Panics into offense.' },
+};
+
+function getAiDifficultyInfo(key) {
+    const k = (key || '').toString();
+    return AI_DIFFICULTY_INFO[k] || { label: k || 'AI', tagline: '' };
+}
+
 function updateSingleplayerThemeVoting(options, votes) {
     const container = document.getElementById('sp-theme-vote-options');
     if (!container) return;
@@ -1418,6 +1453,7 @@ async function updateSingleplayerLobby() {
             const isYou = p.id === gameState.playerId;
             const isAI = p.is_ai;
             const difficultyClass = isAI ? `ai-${p.difficulty}` : '';
+            const diffInfo = isAI ? getAiDifficultyInfo(p.difficulty) : null;
             
             return `
                 <div class="sp-player-item ${isYou ? 'is-you' : ''} ${isAI ? 'is-ai' : ''}">
@@ -1425,7 +1461,7 @@ async function updateSingleplayerLobby() {
                         <span class="sp-player-icon">${isAI ? '🤖' : '👤'}</span>
                         <span class="sp-player-name">${escapeHtml(p.name)}${isYou ? ' (you)' : ''}</span>
                         ${isYou ? '<span class="sp-player-badge host">HOST</span>' : ''}
-                        ${isAI ? `<span class="sp-player-badge ${difficultyClass}">${escapeHtml(p.difficulty)}</span>` : ''}
+                        ${isAI ? `<span class="sp-player-badge ${difficultyClass}" title="${escapeHtml(diffInfo?.tagline || '')}">${escapeHtml(diffInfo?.label || p.difficulty)}</span>` : ''}
                     </div>
                     ${isAI ? `<button class="sp-remove-ai" data-ai-id="${escapeHtml(p.id)}" title="Remove AI" aria-label="Remove AI">×</button>` : ''}
                 </div>
@@ -2292,7 +2328,8 @@ function updatePlayersGrid(game) {
         // Build AI difficulty badge HTML
         let aiDifficultyBadge = '';
         if (isAI && player.difficulty) {
-            aiDifficultyBadge = `<span class="ai-difficulty-badge ${player.difficulty}">${player.difficulty}</span>`;
+            const diffInfo = getAiDifficultyInfo(player.difficulty);
+            aiDifficultyBadge = `<span class="ai-difficulty-badge ${escapeHtml(player.difficulty)}" title="${escapeHtml(diffInfo.tagline || '')}">${escapeHtml(diffInfo.label || player.difficulty)}</span>`;
         }
         
         // Build top guesses HTML
