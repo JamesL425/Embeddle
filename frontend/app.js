@@ -173,9 +173,12 @@ function applyOptionsToUI() {
     if (clickCb) clickCb.checked = Boolean(optionsState.clickSfxEnabled);
     if (elimCb) elimCb.checked = Boolean(optionsState.eliminationSfxEnabled);
 
-    // Show/hide chat panes
-    document.getElementById('lobby-chat-section')?.classList.toggle('hidden', !optionsState.chatEnabled);
-    document.getElementById('game-chat-section')?.classList.toggle('hidden', !optionsState.chatEnabled);
+    // Show/hide chat button + close panel when disabled
+    const chatBtn = document.getElementById('chat-btn');
+    if (chatBtn) chatBtn.classList.toggle('hidden', !optionsState.chatEnabled);
+    if (!optionsState.chatEnabled) {
+        closeChatPanel?.();
+    }
 
     // Apply music state (best-effort)
     if (typeof applyMusicPreference === 'function') {
@@ -263,18 +266,35 @@ function resetChatIfNeeded() {
 }
 
 function renderChat() {
-    const lobbyLog = document.getElementById('lobby-chat-log');
-    const gameLog = document.getElementById('game-chat-log');
-    const lobbyInput = document.getElementById('lobby-chat-input');
-    const gameInput = document.getElementById('game-chat-input');
+    const log = document.getElementById('chat-log');
+    const input = document.getElementById('chat-input');
+    const hint = document.getElementById('chat-hint');
 
     const enabled = Boolean(optionsState.chatEnabled);
     const canSend = enabled && !gameState.isSpectator && Boolean(gameState.code && gameState.playerId);
 
-    if (lobbyInput) lobbyInput.disabled = !canSend;
-    if (gameInput) gameInput.disabled = !canSend;
+    if (input) input.disabled = !canSend;
 
-    if (!enabled) return;
+    if (!enabled) {
+        if (log) log.innerHTML = '';
+        if (hint) {
+            hint.textContent = 'Chat is disabled in options.';
+            hint.classList.remove('hidden');
+        }
+        return;
+    }
+
+    if (hint) {
+        if (!gameState.code) {
+            hint.textContent = 'Join a match to chat.';
+            hint.classList.remove('hidden');
+        } else if (gameState.isSpectator) {
+            hint.textContent = 'Spectators cannot send messages.';
+            hint.classList.remove('hidden');
+        } else {
+            hint.classList.add('hidden');
+        }
+    }
 
     const msgs = Array.isArray(chatState.messages) ? chatState.messages.slice(-150) : [];
     const html = msgs.length
@@ -286,14 +306,12 @@ function renderChat() {
         `).join('')
         : `<div class="chat-message"><span class="chat-text">No messages yet.</span></div>`;
 
-    [lobbyLog, gameLog].forEach(log => {
-        if (!log) return;
-        const atBottom = Math.abs((log.scrollHeight - log.scrollTop) - log.clientHeight) < 5;
-        log.innerHTML = html;
-        if (atBottom) {
-            log.scrollTop = log.scrollHeight;
-        }
-    });
+    if (!log) return;
+    const atBottom = Math.abs((log.scrollHeight - log.scrollTop) - log.clientHeight) < 5;
+    log.innerHTML = html;
+    if (atBottom) {
+        log.scrollTop = log.scrollHeight;
+    }
 }
 
 async function pollChatOnce() {
@@ -761,6 +779,41 @@ function closeOptionsPanel() {
 document.getElementById('options-btn')?.addEventListener('click', toggleOptionsPanel);
 document.getElementById('close-options-btn')?.addEventListener('click', closeOptionsPanel);
 
+// Chat panel
+let chatPanelOpen = false;
+
+function toggleChatPanel() {
+    // Respect chat toggle
+    if (!optionsState.chatEnabled) return;
+    chatPanelOpen = !chatPanelOpen;
+    const panel = document.getElementById('chat-panel');
+    if (panel) {
+        panel.classList.toggle('open', chatPanelOpen);
+    }
+    if (chatPanelOpen) {
+        renderChat();
+        pollChatOnce();
+    }
+}
+
+function closeChatPanel() {
+    chatPanelOpen = false;
+    const panel = document.getElementById('chat-panel');
+    if (panel) panel.classList.remove('open');
+}
+
+document.getElementById('chat-btn')?.addEventListener('click', toggleChatPanel);
+document.getElementById('close-chat-btn')?.addEventListener('click', closeChatPanel);
+
+document.getElementById('chat-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('chat-input');
+    if (!input) return;
+    const text = input.value;
+    input.value = '';
+    await sendChatMessage(text);
+});
+
 // Option toggle handlers
 document.getElementById('opt-chat-enabled')?.addEventListener('change', (e) => {
     optionsState.chatEnabled = Boolean(e.target.checked);
@@ -813,9 +866,11 @@ function showScreen(screenName) {
     // Start/stop lobby refresh based on screen
     if (screenName === 'home') {
         startLobbyRefresh();
+        startSpectateRefresh();
         renderRecentGames();
     } else {
         stopLobbyRefresh();
+        stopSpectateRefresh();
     }
 }
 
@@ -857,6 +912,7 @@ async function apiCall(endpoint, method = 'GET', body = null) {
 // ============ HOME SCREEN ============
 
 let lobbyRefreshInterval = null;
+let spectateRefreshInterval = null;
 
 // Load open lobbies on page load and refresh
 async function loadLobbies() {
@@ -890,6 +946,50 @@ async function loadLobbies() {
     }
 }
 
+// Load public, spectateable games (not finished)
+async function loadSpectateGames() {
+    const container = document.getElementById('spectate-games');
+    if (!container) return;
+    try {
+        const data = await apiCall('/api/spectateable');
+        const games = Array.isArray(data?.games) ? data.games : [];
+
+        if (games.length === 0) {
+            container.innerHTML = '<p class="no-lobbies">No live matches right now.</p>';
+            return;
+        }
+
+        container.innerHTML = games.map(g => {
+            const status = String(g.status || '').toUpperCase();
+            const ranked = g.is_ranked ? '• RANKED' : '• CASUAL';
+            const specs = Number(g.spectator_count || 0);
+            const specLabel = `• ${escapeHtml(Number.isFinite(specs) ? specs : 0)} spectators`;
+            return `
+                <div class="lobby-item" data-code="${escapeHtml(g.code)}">
+                    <div class="lobby-info-row">
+                        <span class="lobby-code">${escapeHtml(g.code)}</span>
+                        <span class="lobby-players">
+                            ${escapeHtml(status || 'LIVE')} • ${escapeHtml(g.player_count)}/${escapeHtml(g.max_players)} operatives ${ranked} ${specLabel}
+                        </span>
+                    </div>
+                    <button class="btn btn-small btn-secondary spectate-game-btn" data-code="${escapeHtml(g.code)}">SPECTATE</button>
+                </div>
+            `;
+        }).join('');
+
+        container.querySelectorAll('.spectate-game-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const code = btn.dataset.code;
+                if (!code) return;
+                history.pushState({ gameCode: code }, '', `/game/${code}`);
+                startSpectatePolling(code);
+            });
+        });
+    } catch (error) {
+        container.innerHTML = '<p class="error">Failed to load live matches</p>';
+    }
+}
+
 function startLobbyRefresh() {
     stopLobbyRefresh();
     loadLobbies();
@@ -900,6 +1000,19 @@ function stopLobbyRefresh() {
     if (lobbyRefreshInterval) {
         clearInterval(lobbyRefreshInterval);
         lobbyRefreshInterval = null;
+    }
+}
+
+function startSpectateRefresh() {
+    stopSpectateRefresh();
+    loadSpectateGames();
+    spectateRefreshInterval = setInterval(loadSpectateGames, 3000);
+}
+
+function stopSpectateRefresh() {
+    if (spectateRefreshInterval) {
+        clearInterval(spectateRefreshInterval);
+        spectateRefreshInterval = null;
     }
 }
 
@@ -1015,6 +1128,7 @@ joinCodeInput?.addEventListener('keydown', (e) => {
 });
 
 document.getElementById('refresh-lobbies-btn')?.addEventListener('click', loadLobbies);
+document.getElementById('refresh-spectate-btn')?.addEventListener('click', loadSpectateGames);
 
 // ============ LEADERBOARDS ============
 
@@ -1820,16 +1934,6 @@ document.getElementById('leave-lobby-btn')?.addEventListener('click', async () =
     loadLobbies();
 });
 
-// Lobby chat
-document.getElementById('lobby-chat-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const input = document.getElementById('lobby-chat-input');
-    if (!input) return;
-    const text = input.value;
-    input.value = '';
-    await sendChatMessage(text);
-});
-
 // Screen: Game
 function startGamePolling() {
     if (gameState.pollingInterval) {
@@ -2010,8 +2114,7 @@ function updateGame(game) {
 function updateSidebarMeta(game) {
     const turnEl = document.getElementById('turn-number');
     const specEl = document.getElementById('spectator-count');
-    const playedEl = document.getElementById('words-played');
-    if (!turnEl || !specEl || !playedEl) return;
+    if (!turnEl || !specEl) return;
 
     const history = Array.isArray(game?.history) ? game.history : [];
     const guessedWords = history
@@ -2024,21 +2127,6 @@ function updateSidebarMeta(game) {
 
     const spectatorCount = Number(game?.spectator_count ?? 0);
     specEl.textContent = String(Number.isFinite(spectatorCount) ? spectatorCount : 0);
-
-    // Render last N words, most recent first
-    const maxItems = 25;
-    playedEl.innerHTML = '';
-    const startIdx = Math.max(0, guessCount - maxItems);
-    for (let i = guessCount - 1; i >= startIdx; i--) {
-        const word = guessedWords[i];
-        const row = document.createElement('div');
-        row.className = 'played-word';
-        row.innerHTML = `
-            <span class="turn-num">#${escapeHtml(i + 1)}</span>
-            <span class="word-text">${escapeHtml(word)}</span>
-        `;
-        playedEl.appendChild(row);
-    }
 }
 
 function updateSidebarWordList(game) {
@@ -2368,16 +2456,6 @@ function updateHistory(game) {
     // Store history length for next update
     gameState.prevHistoryLength = currentHistoryLength;
 }
-
-// Game chat
-document.getElementById('game-chat-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const input = document.getElementById('game-chat-input');
-    if (!input) return;
-    const text = input.value;
-    input.value = '';
-    await sendChatMessage(text);
-});
 
 // Guess form - handles both button click and Enter key
 document.getElementById('guess-form').addEventListener('submit', async (e) => {

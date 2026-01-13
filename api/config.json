@@ -10,7 +10,8 @@
     "cache_expiry_seconds": 86400
   },
   "cosmetics": {
-    "paywall_enabled": false
+    "paywall_enabled": false,
+    "unlock_all": true
   },
   "oauth": {
     "state_ttl_seconds": 600

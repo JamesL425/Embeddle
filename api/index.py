@@ -203,6 +203,13 @@ COSMETICS_PAYWALL_ENABLED = env_bool(
     CONFIG.get("cosmetics", {}).get("paywall_enabled", False),
 )
 
+# Cosmetics unlock-all (feature-flagged)
+# When enabled, premium + progression gating are bypassed (useful during early development).
+COSMETICS_UNLOCK_ALL = env_bool(
+    "COSMETICS_UNLOCK_ALL",
+    CONFIG.get("cosmetics", {}).get("unlock_all", False),
+)
+
 # Ko-fi webhook verification token
 KOFI_VERIFICATION_TOKEN = os.getenv('KOFI_VERIFICATION_TOKEN', '')
 
@@ -1009,6 +1016,7 @@ def get_user_cosmetics(user: dict) -> dict:
         if (
             item
             and COSMETICS_PAYWALL_ENABLED
+            and not COSMETICS_UNLOCK_ALL
             and item.get('premium', False)
             and not (is_donor or is_admin)
         ):
@@ -1019,7 +1027,7 @@ def get_user_cosmetics(user: dict) -> dict:
             continue
 
         # Enforce progression gating (always on)
-        if item and not is_admin:
+        if item and not (is_admin or COSMETICS_UNLOCK_ALL):
             unmet = get_unmet_cosmetic_requirement(item, user_stats)
             if unmet:
                 fallback = DEFAULT_COSMETICS.get(category_key)
@@ -1068,7 +1076,7 @@ def validate_cosmetic(category: str, cosmetic_id: str, is_donor: bool, is_admin:
         return False
     item = category_items[cosmetic_id]
     # Admins can use all cosmetics, non-donors can only use non-premium cosmetics
-    if COSMETICS_PAYWALL_ENABLED and item.get('premium', False) and not is_donor and not is_admin:
+    if COSMETICS_PAYWALL_ENABLED and not COSMETICS_UNLOCK_ALL and item.get('premium', False) and not is_donor and not is_admin:
         return False
     return True
 
@@ -1706,7 +1714,7 @@ class handler(BaseHTTPRequestHandler):
         if cors_origin:
             self.send_header('Access-Control-Allow-Origin', cors_origin)
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         self.send_header('Access-Control-Allow-Credentials', 'true')
         # Security headers
         self.send_header('X-Content-Type-Options', 'nosniff')
@@ -1721,10 +1729,42 @@ class handler(BaseHTTPRequestHandler):
         self._send_json({"detail": message}, status)
 
     def _get_body(self):
-        content_length = int(self.headers.get('Content-Length', 0))
-        if content_length:
-            return json.loads(self.rfile.read(content_length))
-        return {}
+        """
+        Best-effort JSON body parser.
+
+        IMPORTANT: Always returns a dict to avoid attribute errors (many handlers do body.get(...)).
+        If parsing fails (invalid JSON / unexpected content-type), returns {} instead of crashing.
+        """
+        try:
+            content_length = int(self.headers.get('Content-Length', 0))
+        except Exception:
+            content_length = 0
+        if not content_length:
+            return {}
+
+        try:
+            raw = self.rfile.read(content_length)
+        except Exception:
+            return {}
+        if not raw:
+            return {}
+
+        content_type = (self.headers.get('Content-Type', '') or '').lower()
+
+        # Support form-encoded bodies as a fallback (prevents serverless crashes on accidental form submits)
+        if 'application/x-www-form-urlencoded' in content_type:
+            try:
+                parsed = urllib.parse.parse_qs(raw.decode('utf-8', errors='ignore'))
+                return {k: (v[0] if isinstance(v, list) and len(v) == 1 else v) for k, v in parsed.items()}
+            except Exception:
+                return {}
+
+        # Default: JSON
+        try:
+            data = json.loads(raw)
+        except Exception:
+            return {}
+        return data if isinstance(data, dict) else {}
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -1732,7 +1772,8 @@ class handler(BaseHTTPRequestHandler):
         if cors_origin:
             self.send_header('Access-Control-Allow-Origin', cors_origin)
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        # Allow Authorization so authenticated requests work cross-origin if needed.
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         self.send_header('Access-Control-Allow-Credentials', 'true')
         self.send_header('Access-Control-Max-Age', '86400')
         self.end_headers()
@@ -1966,6 +2007,7 @@ class handler(BaseHTTPRequestHandler):
             return self._send_json({
                 "catalog": COSMETICS_CATALOG,
                 "paywall_enabled": COSMETICS_PAYWALL_ENABLED,
+                "unlock_all": COSMETICS_UNLOCK_ALL,
             })
 
         # GET /api/user/cosmetics - Get current user's cosmetics
@@ -1992,6 +2034,7 @@ class handler(BaseHTTPRequestHandler):
                     'is_admin': True,
                     'cosmetics': admin_cosmetics,
                     'paywall_enabled': COSMETICS_PAYWALL_ENABLED,
+                    'unlock_all': COSMETICS_UNLOCK_ALL,
                 })
             
             user = get_user_by_id(payload['sub'])
@@ -2003,6 +2046,7 @@ class handler(BaseHTTPRequestHandler):
                 'is_admin': user.get('is_admin', False),
                 'cosmetics': get_user_cosmetics(user),
                 'paywall_enabled': COSMETICS_PAYWALL_ENABLED,
+                'unlock_all': COSMETICS_UNLOCK_ALL,
             })
 
         # GET /api/lobbies - List open lobbies
@@ -2069,6 +2113,65 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 print(f"Error loading lobbies: {e}")  # Log server-side only
                 return self._send_error("Failed to load lobbies. Please try again.", 500)
+
+        # GET /api/spectateable - List public, non-finished multiplayer games that can be spectated
+        if path == '/api/spectateable':
+            # Rate limit: 30/min for listing
+            if not check_rate_limit(get_ratelimit_general(), f"spectateable:{client_ip}"):
+                return self._send_error("Too many requests. Please wait.", 429)
+            try:
+                redis = get_redis()
+                keys = redis.keys("game:*")
+                games = []
+                now = float(time.time())
+
+                for key in keys:
+                    game_data = redis.get(key)
+                    if not game_data:
+                        continue
+                    game = json.loads(game_data)
+
+                    # Only list public multiplayer games (never leak private codes or solo games)
+                    if game.get('visibility', 'public') != 'public':
+                        continue
+                    if game.get('is_singleplayer'):
+                        continue
+
+                    status = game.get('status', '')
+                    if status == 'finished':
+                        continue
+
+                    # Apply lobby expiry to waiting games, same as /api/lobbies
+                    if status == 'waiting':
+                        created_at = float(game.get('created_at', now) or now)
+                        if now - created_at > float(LOBBY_EXPIRY_SECONDS):
+                            try:
+                                delete_game(game.get('code', ''))
+                            except Exception:
+                                pass
+                            continue
+
+                    code = game.get('code', '')
+                    if not code:
+                        continue
+
+                    games.append({
+                        "code": code,
+                        "status": status,
+                        "player_count": len(game.get('players', []) or []),
+                        "max_players": MAX_PLAYERS,
+                        "is_ranked": bool(game.get('is_ranked', False)),
+                        "spectator_count": get_spectator_count(code),
+                    })
+
+                # Sort: playing first, then word_selection, then waiting; then by player count desc
+                order = {"playing": 0, "word_selection": 1, "waiting": 2}
+                games.sort(key=lambda g: (order.get(g.get("status", ""), 9), -(g.get("player_count", 0) or 0), g.get("code", "")))
+
+                return self._send_json({"games": games[:100]})
+            except Exception as e:
+                print(f"Error loading spectateable games: {e}")
+                return self._send_error("Failed to load games. Please try again.", 500)
 
         # GET /api/leaderboard
         if path == '/api/leaderboard':
@@ -3741,11 +3844,11 @@ class handler(BaseHTTPRequestHandler):
             is_admin = user.get('is_admin', False)
 
             # Premium gating (feature-flagged)
-            if COSMETICS_PAYWALL_ENABLED and item.get('premium', False) and not is_donor and not is_admin:
+            if COSMETICS_PAYWALL_ENABLED and not COSMETICS_UNLOCK_ALL and item.get('premium', False) and not is_donor and not is_admin:
                 return self._send_error("Donate to unlock premium cosmetics!", 403)
             
             # Progression gating (always on): requirements are multiplayer-only stats (mp_*)
-            if not is_admin:
+            if not (is_admin or COSMETICS_UNLOCK_ALL):
                 unmet = get_unmet_cosmetic_requirement(item, get_user_stats(user))
                 if unmet:
                     label = COSMETIC_REQUIREMENT_LABELS.get(unmet['metric'], unmet['metric'])
