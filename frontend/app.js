@@ -2938,40 +2938,45 @@ function updateSidebarMeta(game) {
     const history = Array.isArray(game?.history) ? game.history : [];
     const guessEntries = history
         // Only count actual guess turns here (forfeit reveals include a word but are not a "turn")
-        .filter(e => e && e.word && e.type !== 'forfeit');
+        .filter(e => e && e.word && e.type !== 'forfeit' && e.type !== 'word_change');
 
-    const guessCount = guessEntries.length;
-    
-    // Calculate round number: a round completes when we return to the first player
-    // We need to track how many alive players there were at each point in the game
-    // Simplified approach: count rounds based on current alive players
-    const alivePlayers = Array.isArray(game?.players) 
-        ? game.players.filter(p => p.is_alive).length 
-        : 1;
-    
-    // Find the first alive player's ID to determine round boundaries
     const players = Array.isArray(game?.players) ? game.players : [];
-    const firstAlivePlayer = players.find(p => p.is_alive);
-    const firstAlivePlayerId = firstAlivePlayer?.id;
+    const totalPlayers = players.length;
     
-    // Count how many times we've cycled back to the first player
+    // Calculate round number properly:
+    // A round is complete when all alive players have guessed once.
+    // We need to track eliminations as they happen to know how many players
+    // were alive during each "round".
+    
     let roundNumber = 1;
-    if (guessEntries.length > 0 && firstAlivePlayerId) {
-        // Count rounds by tracking when the first alive player takes their turn
-        let roundsCompleted = 0;
-        for (let i = 0; i < guessEntries.length; i++) {
-            // A round completes after the last alive player guesses (before first player's next turn)
-            // We count a round as complete when we see the first player guess (except their first guess)
-            if (guessEntries[i].guesser_id === firstAlivePlayerId && i > 0) {
-                roundsCompleted++;
+    if (guessEntries.length > 0 && totalPlayers > 0) {
+        // Track which players have guessed in the current round
+        let playersGuessedThisRound = new Set();
+        let alivePlayerIds = new Set(players.map(p => p.id));
+        
+        for (const entry of guessEntries) {
+            const guesserId = entry.guesser_id;
+            
+            // Mark this player as having guessed this round
+            playersGuessedThisRound.add(guesserId);
+            
+            // Check for eliminations in this entry
+            if (entry.eliminations && entry.eliminations.length > 0) {
+                entry.eliminations.forEach(elimId => {
+                    alivePlayerIds.delete(elimId);
+                });
+            }
+            
+            // Check if all alive players have guessed (round complete)
+            const allAliveGuessed = [...alivePlayerIds].every(id => playersGuessedThisRound.has(id));
+            if (allAliveGuessed && alivePlayerIds.size > 0) {
+                roundNumber++;
+                playersGuessedThisRound.clear();
             }
         }
-        roundNumber = roundsCompleted + 1;
     }
     
-    // If game is finished, show the final round number
-    const displayRound = game?.status === 'finished' ? roundNumber : roundNumber;
-    turnEl.textContent = String(displayRound);
+    turnEl.textContent = String(roundNumber);
 
     const spectatorCount = Number(game?.spectator_count ?? 0);
     specEl.textContent = String(Number.isFinite(spectatorCount) ? spectatorCount : 0);
@@ -3111,6 +3116,7 @@ function updatePlayersGrid(game) {
         const isCurrentTurn = player.id === game.current_player_id;
         const isYou = player.id === gameState.playerId;
         const isAI = player.is_ai;
+        const isRankedGame = Boolean(game.is_ranked);
         
         // Get cosmetic classes
         const cosmeticClasses = typeof getPlayerCardClasses === 'function' 
@@ -3152,6 +3158,22 @@ function updatePlayersGrid(game) {
             aiDifficultyBadge = `<span class="ai-difficulty-badge ${escapeHtml(player.difficulty)}" title="${escapeHtml(diffInfo.tagline || '')}">${escapeHtml(diffInfo.label || player.difficulty)}</span>`;
         }
         
+        // Build ranked info HTML (show MMR and rank for ranked games)
+        let rankedInfoHtml = '';
+        if (isRankedGame && !isAI && player.mmr_display) {
+            const mmr = Number(player.mmr_display.mmr || 0);
+            const rankedGames = Number(player.mmr_display.ranked_games || 0);
+            const isPlacement = rankedGames < 10;
+            const tier = getRankTier(mmr);
+            
+            if (isPlacement) {
+                const gamesLeft = 10 - rankedGames;
+                rankedInfoHtml = `<div class="player-ranked-info placement"><span class="placement-badge">PLACEMENT</span><span class="placement-games">${gamesLeft} left</span></div>`;
+            } else {
+                rankedInfoHtml = `<div class="player-ranked-info">${renderRankBadge(tier)}<span class="player-mmr">${mmr}</span></div>`;
+            }
+        }
+        
         // Build top guesses HTML
         let topGuessesHtml = '';
         if (topGuesses && topGuesses.length > 0) {
@@ -3177,6 +3199,7 @@ function updatePlayersGrid(game) {
         div.innerHTML = `
             ${dangerHtml}
             <div class="name ${nameColorClass} ${nameClickable}" ${nameDataAttr}>${escapeHtml(player.name)}${aiDifficultyBadge}${badgeHtml}${isYou ? ' (you)' : ''}${titleHtml}</div>
+            ${rankedInfoHtml}
             <div class="status ${player.is_alive ? 'alive' : 'eliminated'}">
                 ${player.is_alive ? 'Alive' : 'Eliminated'}
             </div>

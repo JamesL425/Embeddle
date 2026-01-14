@@ -1090,6 +1090,7 @@ header h1 {
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
+    max-height: 100%;
 }
 
 /* Let the log fill its container and scroll internally (desktop + tablet) */
@@ -1097,15 +1098,17 @@ header h1 {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    flex: 1;
+    flex: 1 1 0;
     min-height: 0;
+    overflow: hidden;
 }
 
 .game-log .history-log {
-    max-height: none;
-    flex: 1;
+    flex: 1 1 0;
     min-height: 0;
+    max-height: 100%;
     overflow-y: auto;
+    scroll-behavior: smooth;
 }
 
 .sidebar-header {
@@ -1341,6 +1344,8 @@ header h1 {
     transition: all var(--transition);
     position: relative;
     overflow: hidden;
+    /* Ensure gradient backgrounds don't have jagged edges */
+    isolation: isolate;
 }
 
 /* Danger indicator - colored bar at top of card */
@@ -1397,6 +1402,41 @@ header h1 {
     font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
+}
+
+/* Player ranked info display */
+.player-ranked-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+}
+
+.player-ranked-info .player-mmr {
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.player-ranked-info.placement {
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.player-ranked-info .placement-badge {
+    background: var(--warning);
+    color: var(--bg-primary);
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.player-ranked-info .placement-games {
+    color: var(--text-muted);
+    font-size: 0.7rem;
 }
 
 .player-card .status {
@@ -2383,7 +2423,7 @@ body.nerd-mode .nerd-sim {
 /* Clickable profile names */
 .clickable-profile {
     cursor: pointer;
-    transition: color 0.15s ease;
+    transition: color 0.15s ease, text-decoration 0.15s ease;
 }
 
 .clickable-profile:hover {
@@ -2417,9 +2457,29 @@ body.nerd-mode .nerd-sim {
     color: var(--accent-primary);
 }
 
-/* Player card clickable names */
+/* Player card clickable names - make it obvious they're clickable */
+.player-card .name.clickable-profile {
+    cursor: pointer;
+    transition: color 0.15s ease, text-shadow 0.15s ease;
+    position: relative;
+}
+
+.player-card .name.clickable-profile::after {
+    content: '↗';
+    font-size: 0.6em;
+    opacity: 0;
+    margin-left: 0.25rem;
+    transition: opacity 0.15s ease;
+    vertical-align: super;
+}
+
 .player-card .name.clickable-profile:hover {
     color: var(--accent-primary);
+    text-shadow: 0 0 8px var(--accent-glow);
+}
+
+.player-card .name.clickable-profile:hover::after {
+    opacity: 0.7;
 }
 
 /* ============ TOAST NOTIFICATIONS ============ */
@@ -4700,19 +4760,19 @@ body.nerd-mode .nerd-sim {
 
 /* Shop: Midnight background */
 .player-card.bg-midnight {
-    background: linear-gradient(135deg, rgba(10, 20, 50, 0.8), rgba(30, 50, 100, 0.6));
+    background: linear-gradient(135deg, rgba(10, 20, 50, 0.8), rgba(30, 50, 100, 0.6), var(--bg-card));
 }
 
 .player-card.bg-gradient_fire {
-    background: linear-gradient(135deg, rgba(255, 50, 0, 0.3), rgba(255, 150, 0, 0.2));
+    background: linear-gradient(135deg, rgba(255, 50, 0, 0.3) 0%, rgba(255, 150, 0, 0.2) 60%, var(--bg-card) 100%);
 }
 
 .player-card.bg-gradient_ice {
-    background: linear-gradient(135deg, rgba(0, 100, 255, 0.3), rgba(0, 200, 255, 0.2));
+    background: linear-gradient(135deg, rgba(0, 100, 255, 0.3) 0%, rgba(0, 200, 255, 0.2) 60%, var(--bg-card) 100%);
 }
 
 .player-card.bg-gradient_toxic {
-    background: linear-gradient(135deg, rgba(0, 255, 65, 0.2), rgba(150, 0, 255, 0.2));
+    background: linear-gradient(135deg, rgba(0, 255, 65, 0.2) 0%, rgba(150, 0, 255, 0.2) 60%, var(--bg-card) 100%);
 }
 
 .player-card.bg-circuit_board {
@@ -4736,10 +4796,11 @@ body.nerd-mode .nerd-sim {
         rgba(0, 255, 0, 0.1),
         rgba(0, 255, 255, 0.1),
         rgba(0, 0, 255, 0.1),
-        rgba(255, 0, 255, 0.1)
+        rgba(255, 0, 255, 0.1),
+        var(--bg-card)
     );
     animation: holo-bg 5s linear infinite;
-    background-size: 400% 400%;
+    background-size: 600% 600%;
 }
 
 @keyframes holo-bg {

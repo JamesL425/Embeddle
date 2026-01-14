@@ -3324,6 +3324,7 @@ class handler(BaseHTTPRequestHandler):
             }
 
             ranked_mmr = game.get('ranked_mmr') if isinstance(game.get('ranked_mmr'), dict) else None
+            is_ranked_game = bool(game.get('is_ranked', False))
             
             for p in game['players']:
                 player_data = {
@@ -3338,12 +3339,26 @@ class handler(BaseHTTPRequestHandler):
                     "is_ai": p.get('is_ai', False),
                     "difficulty": p.get('difficulty'),
                 }
-                if game_finished and bool(game.get('is_ranked', False)) and ranked_mmr:
+                if game_finished and is_ranked_game and ranked_mmr:
                     mmr_entry = ranked_mmr.get(str(p.get('id')))
                     if isinstance(mmr_entry, dict):
                         player_data['mmr_before'] = mmr_entry.get('old')
                         player_data['mmr'] = mmr_entry.get('new')
                         player_data['mmr_delta'] = mmr_entry.get('delta')
+                # Include MMR display info for ranked games (during game, not just at end)
+                if is_ranked_game and not p.get('is_ai'):
+                    auth_uid = p.get('auth_user_id')
+                    if auth_uid:
+                        try:
+                            u = get_user_by_id(auth_uid)
+                            if u:
+                                u_stats = get_user_stats(u)
+                                player_data['mmr_display'] = {
+                                    'mmr': int(u_stats.get('mmr', 1000) or 1000),
+                                    'ranked_games': int(u_stats.get('ranked_games', 0) or 0),
+                                }
+                        except Exception:
+                            pass
                 if p['id'] == player_id:
                     player_data['word_pool'] = p.get('word_pool', [])
                     if p.get('word_change_options') is not None:
@@ -4374,6 +4389,7 @@ class handler(BaseHTTPRequestHandler):
 
                 # Ranked: include per-game MMR results on finished games (so clients can display deltas).
                 ranked_mmr = game.get('ranked_mmr') if isinstance(game.get('ranked_mmr'), dict) else None
+                is_ranked_game = bool(game.get('is_ranked', False))
                 
                 for p in game['players']:
                     player_data = {
@@ -4389,12 +4405,26 @@ class handler(BaseHTTPRequestHandler):
                         "is_ai": p.get('is_ai', False),  # Include AI flag
                         "difficulty": p.get('difficulty'),  # Include AI difficulty
                     }
-                    if game_finished and bool(game.get('is_ranked', False)) and ranked_mmr:
+                    if game_finished and is_ranked_game and ranked_mmr:
                         mmr_entry = ranked_mmr.get(str(p.get('id')))
                         if isinstance(mmr_entry, dict):
                             player_data['mmr_before'] = mmr_entry.get('old')
                             player_data['mmr'] = mmr_entry.get('new')
                             player_data['mmr_delta'] = mmr_entry.get('delta')
+                    # Include MMR display info for ranked games (during game, not just at end)
+                    if is_ranked_game and not p.get('is_ai'):
+                        auth_uid = p.get('auth_user_id')
+                        if auth_uid:
+                            try:
+                                u = get_user_by_id(auth_uid)
+                                if u:
+                                    u_stats = get_user_stats(u)
+                                    player_data['mmr_display'] = {
+                                        'mmr': int(u_stats.get('mmr', 1000) or 1000),
+                                        'ranked_games': int(u_stats.get('ranked_games', 0) or 0),
+                                    }
+                            except Exception:
+                                pass
                     # Include this player's word pool if it's them
                     if p['id'] == player_id:
                         player_data['word_pool'] = p.get('word_pool', [])
