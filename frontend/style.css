@@ -2560,7 +2560,7 @@ body.nerd-mode .nerd-sim {
 .profile-modal {
     position: relative;
     z-index: 1;
-    width: min(420px, 95%);
+    width: min(520px, 95%);
     background: var(--bg-card);
     border: 2px solid var(--accent-primary);
     border-radius: var(--radius);

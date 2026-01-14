@@ -31,7 +31,7 @@ export function removePendingGuess() {
  * @param {Object} game - Game state from server
  */
 export function render(game) {
-    const historyContainer = document.getElementById('history-list');
+    const historyContainer = document.getElementById('history-log');
     if (!historyContainer) return;
     
     const history = game.history || [];

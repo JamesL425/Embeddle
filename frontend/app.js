@@ -1535,6 +1535,15 @@ function showScreen(screenName) {
     // Ensure the in-game word list / log live in the correct containers for this viewport
     applyResponsiveGamePanelsLayout();
     
+    // Reset singleplayer start button state when returning to lobby
+    if (screenName === 'singleplayerLobby') {
+        spStartInProgress = false;
+        const startBtn = document.getElementById('sp-start-game-btn');
+        if (startBtn) {
+            startBtn.textContent = '> START_MISSION';
+        }
+    }
+    
     // Start/stop lobby refresh based on screen
     if (screenName === 'home') {
         startLobbyRefresh();
@@ -2386,6 +2395,11 @@ document.getElementById('sp-start-game-btn')?.addEventListener('click', async ()
         // Fetch the updated game state with word pools
         const data = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
         
+        // Reset button state on success
+        spStartInProgress = false;
+        startBtn.disabled = false;
+        startBtn.textContent = '> START_MISSION';
+        
         // Now transition to word selection with the data
         showWordSelectionScreen(data);
     } catch (error) {
@@ -3078,40 +3092,10 @@ function updateSidebarMeta(game) {
         .filter(e => e && e.word && e.type !== 'forfeit' && e.type !== 'word_change');
 
     const players = Array.isArray(game?.players) ? game.players : [];
-    const totalPlayers = players.length;
+    const totalPlayers = players.length || 1;
     
-    // Calculate round number properly:
-    // A round is complete when all alive players have guessed once.
-    // We need to track eliminations as they happen to know how many players
-    // were alive during each "round".
-    
-    let roundNumber = 1;
-    if (guessEntries.length > 0 && totalPlayers > 0) {
-        // Track which players have guessed in the current round
-        let playersGuessedThisRound = new Set();
-        let alivePlayerIds = new Set(players.map(p => p.id));
-        
-        for (const entry of guessEntries) {
-            const guesserId = entry.guesser_id;
-            
-            // Mark this player as having guessed this round
-            playersGuessedThisRound.add(guesserId);
-            
-            // Check for eliminations in this entry
-            if (entry.eliminations && entry.eliminations.length > 0) {
-                entry.eliminations.forEach(elimId => {
-                    alivePlayerIds.delete(elimId);
-                });
-            }
-            
-            // Check if all alive players have guessed (round complete)
-            const allAliveGuessed = [...alivePlayerIds].every(id => playersGuessedThisRound.has(id));
-            if (allAliveGuessed && alivePlayerIds.size > 0) {
-                roundNumber++;
-                playersGuessedThisRound.clear();
-            }
-        }
-    }
+    // Simple round calculation: floor(guesses / players) + 1
+    const roundNumber = Math.floor(guessEntries.length / totalPlayers) + 1;
     
     turnEl.textContent = String(roundNumber);
 
@@ -3837,6 +3821,17 @@ function showGameOver(game) {
         
         revealedWords.appendChild(div);
     });
+    
+    // Show/hide challenge button based on game type (only for multiplayer)
+    const challengeBtn = document.getElementById('challenge-friend-btn');
+    if (challengeBtn) {
+        const isSingleplayer = game.is_singleplayer || game.players.every(p => p.is_ai || p.id === gameState.playerId);
+        if (isSingleplayer) {
+            challengeBtn.classList.add('hidden');
+        } else {
+            challengeBtn.classList.remove('hidden');
+        }
+    }
     
     // Generate and display share results
     generateShareResults(game, isWinner);

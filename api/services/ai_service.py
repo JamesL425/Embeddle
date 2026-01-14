@@ -205,15 +205,16 @@ def ai_update_memory(ai_player: dict, guess_word: str, similarities: dict, game:
 
 
 def ai_find_similar_words(target_word: str, theme_words: List[str], guessed_words: List[str], count: int = 5) -> List[str]:
-    """Find words in theme semantically similar to target word."""
+    """Find words in theme semantically similar to target word.
+    
+    Note: guessed_words parameter is kept for API compatibility but no longer used for filtering.
+    Bots should be able to re-guess words because players may have changed their words.
+    """
     try:
         target_embedding = get_embedding(target_word)
         
         candidates = []
         for word in theme_words:
-            if word.lower() in [g.lower() for g in guessed_words]:
-                continue
-            
             word_embedding = get_embedding(word)
             sim = cosine_similarity(target_embedding, word_embedding)
             candidates.append((word, sim))
@@ -236,13 +237,12 @@ def ai_choose_guess(ai_player: dict, game: dict) -> Optional[str]:
     guessed_words = memory.get("guessed_words", [])
     my_secret = (ai_player.get("secret_word") or "").lower().strip()
     
-    # Get available words
-    guessed_lower = {str(g).lower() for g in (guessed_words or [])}
+    # Build available words - allow re-guessing words that were guessed before
+    # because players may have changed their words or new players might be vulnerable
+    # Only exclude our own secret word
     available_words = []
     for w in theme_words:
         wl = str(w).lower()
-        if wl in guessed_lower:
-            continue
         if my_secret and wl == my_secret:
             continue
         available_words.append(w)

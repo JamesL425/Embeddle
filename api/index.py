@@ -322,7 +322,10 @@ DEFAULT_COSMETICS = {
     "matrix_color": "classic",
     "particle_overlay": "none",
     "seasonal_theme": "none",
-    "alt_background": "matrix"
+    "alt_background": "matrix",
+    "profile_title": "none",
+    "profile_banner": "none",
+    "profile_accent": "default",
 }
 
 # Cosmetics schema version for stored user cosmetics payload.
@@ -342,6 +345,9 @@ COSMETIC_CATEGORY_TO_CATALOG_KEY = {
     'particle_overlay': 'particle_overlays',
     'seasonal_theme': 'seasonal_themes',
     'alt_background': 'alt_backgrounds',
+    'profile_title': 'profile_titles',
+    'profile_banner': 'profile_banners',
+    'profile_accent': 'profile_accents',
 }
 
 # Legacy cosmetic ID migrations for hard restarts.
@@ -574,9 +580,9 @@ def create_ai_player(difficulty: str, existing_names: list) -> dict:
     ai_cosmetics_by_difficulty = {
         "rookie": {"card_border": "classic", "card_background": "default", "name_color": "default"},
         "analyst": {"card_border": "ice", "card_background": "gradient_ice", "name_color": "ice"},
-        "field-agent": {"card_border": "fire", "card_background": "matrix_code", "name_color": "fire"},
+        "field-agent": {"card_border": "synthwave", "card_background": "matrix_code", "name_color": "fire"},
         "spymaster": {"card_border": "gold_elite", "card_background": "circuit_board", "name_color": "gold"},
-        "ghost": {"card_border": "electric", "card_background": "starfield", "name_color": "shadow"},
+        "ghost": {"card_border": "plasma", "card_background": "nebula", "name_color": "shadow"},
     }
     selected_cosmetics = ai_cosmetics_by_difficulty.get(difficulty, ai_cosmetics_by_difficulty["rookie"])
 
@@ -708,15 +714,16 @@ def ai_find_best_target(ai_player: dict, game: dict) -> Optional[dict]:
 
 
 def ai_find_similar_words(target_word: str, theme_words: list, guessed_words: list, count: int = 5) -> list:
-    """Find words in theme that are semantically similar to target word using embeddings."""
+    """Find words in theme that are semantically similar to target word using embeddings.
+    
+    Note: guessed_words parameter is kept for API compatibility but no longer used for filtering.
+    Bots should be able to re-guess words because players may have changed their words.
+    """
     try:
         target_embedding = get_embedding(target_word)
         
         candidates = []
         for word in theme_words:
-            if word.lower() in [g.lower() for g in guessed_words]:
-                continue
-            
             word_embedding = get_embedding(word)
             sim = cosine_similarity(target_embedding, word_embedding)
             candidates.append((word, sim))
@@ -836,13 +843,12 @@ def ai_choose_guess(ai_player: dict, game: dict) -> Optional[str]:
     guessed_words = memory.get("guessed_words", [])
     my_secret = (ai_player.get("secret_word") or "").lower().strip()
     
-    # Get all words that haven't been guessed yet
-    guessed_lower = {str(g).lower() for g in (guessed_words or [])}
+    # Build available words - allow re-guessing words that were guessed before
+    # because players may have changed their words or new players might be vulnerable
+    # Only exclude our own secret word
     available_words = []
     for w in theme_words:
         wl = str(w).lower()
-        if wl in guessed_lower:
-            continue
         # Never guess your own secret word (huge self-leak)
         if my_secret and wl == my_secret:
             continue
@@ -2583,18 +2589,14 @@ def build_word_change_options(player: dict, game: dict) -> list:
     """
     Build a random sample of words offered when a player earns a word change.
     The sample is stored in game state so it remains stable across refresh/polling.
+    Words that have already been guessed are still available for selection.
     """
     import random
 
     pool = player.get('word_pool', []) or (game.get('theme', {}) or {}).get('words', [])
 
-    guessed_words = set()
-    for entry in game.get('history', []):
-        w = entry.get('word')
-        if w:
-            guessed_words.add(str(w).lower())
-
-    available = [w for w in pool if str(w).lower() not in guessed_words]
+    # Don't filter out guessed words - allow players to pick words that have been guessed
+    available = list(pool) if pool else []
 
     if not available:
         # Fallback: allow keeping current word if nothing else is available
@@ -3910,6 +3912,11 @@ class handler(BaseHTTPRequestHandler):
                         uid = uid.decode()
                     except Exception:
                         continue
+                
+                # Skip non-Google authenticated users (bots, etc.)
+                if not uid.startswith('google_'):
+                    continue
+                
                 try:
                     mmr = int(score)
                 except Exception:
@@ -4493,6 +4500,34 @@ class handler(BaseHTTPRequestHandler):
                 'token': jwt_token,
                 'user': admin_user,
             })
+
+        # POST /api/admin/clear-leaderboard - Clear all leaderboard data (admin only)
+        if path == '/api/admin/clear-leaderboard':
+            if not self._is_admin_request():
+                return self._send_error("Admin access required", 403)
+            
+            redis = get_redis()
+            try:
+                # Clear ranked MMR leaderboard
+                redis.delete("leaderboard:mmr")
+                
+                # Clear all-time casual leaderboard
+                redis.delete("leaderboard:players")
+                redis.delete("leaderboard:alltime")
+                
+                # Clear weekly leaderboards (scan for all weekly keys)
+                cursor = 0
+                while True:
+                    cursor, keys = redis.scan(cursor, match="leaderboard:weekly:*", count=100)
+                    if keys:
+                        redis.delete(*keys)
+                    if cursor == 0:
+                        break
+                
+                return self._send_json({"status": "ok", "message": "All leaderboard data cleared"})
+            except Exception as e:
+                print(f"Clear leaderboard error: {e}")
+                return self._send_error("Failed to clear leaderboard", 500)
 
         # POST /api/games - Create lobby with theme voting
         if path == '/api/games':
@@ -6323,23 +6358,7 @@ class handler(BaseHTTPRequestHandler):
             if not category or not cosmetic_id:
                 return self._send_error("Category and cosmetic_id required", 400)
 
-            # Map category names to cosmetics keys
-            category_map = {
-                'card_border': 'card_borders',
-                'card_background': 'card_backgrounds',
-                'name_color': 'name_colors',
-                'badge': 'badges',
-                'elimination_effect': 'elimination_effects',
-                'guess_effect': 'guess_effects',
-                'turn_indicator': 'turn_indicators',
-                'victory_effect': 'victory_effects',
-                'matrix_color': 'matrix_colors',
-                'particle_overlay': 'particle_overlays',
-                'seasonal_theme': 'seasonal_themes',
-                'alt_background': 'alt_backgrounds',
-            }
-            
-            catalog_key = category_map.get(category)
+            catalog_key = COSMETIC_CATEGORY_TO_CATALOG_KEY.get(category)
             if not catalog_key:
                 return self._send_error("Invalid category", 400)
             
