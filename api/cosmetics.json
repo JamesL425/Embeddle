@@ -31,18 +31,6 @@
       "premium": false,
       "requirements": [{ "metric": "mp_eliminations", "min": 25 }]
     },
-    "electric": {
-      "name": "Electric",
-      "description": "High-voltage flicker (100 MP eliminations)",
-      "premium": false,
-      "requirements": [{ "metric": "mp_eliminations", "min": 100 }]
-    },
-    "glitch": {
-      "name": "Glitch",
-      "description": "Digital corruption (35 MP wins)",
-      "premium": false,
-      "requirements": [{ "metric": "mp_wins", "min": 35 }]
-    },
     "plasma": {
       "name": "Plasma",
       "description": "Swirling plasma (150 MP games)",
@@ -185,12 +173,6 @@
       "description": "Hot red glow (25 MP eliminations)",
       "premium": false,
       "requirements": [{ "metric": "mp_eliminations", "min": 25 }]
-    },
-    "electric": {
-      "name": "Electric",
-      "description": "Blue flicker (75 MP eliminations)",
-      "premium": false,
-      "requirements": [{ "metric": "mp_eliminations", "min": 75 }]
     },
     "shadow": {
       "name": "Shadow",
@@ -429,8 +411,7 @@
       "price": 750
     },
     "disintegrate": { "name": "Disintegrate", "description": "Dust to void (Supporter)", "premium": true },
-    "void": { "name": "Void", "description": "Sucked into the void (Supporter)", "premium": true },
-    "lightning_strike": { "name": "Lightning Strike", "description": "Struck by lightning (Supporter)", "premium": true }
+    "void": { "name": "Void", "description": "Sucked into the void (Supporter)", "premium": true }
   },
   "guess_effects": {
     "classic": { "name": "Classic", "description": "Simple submit", "premium": false },
@@ -485,12 +466,6 @@
       "premium": false,
       "requirements": [{ "metric": "mp_eliminations", "min": 50 }]
     },
-    "electric_arc": {
-      "name": "Electric Arc",
-      "description": "Electric arcs (150 MP eliminations)",
-      "premium": false,
-      "requirements": [{ "metric": "mp_eliminations", "min": 150 }]
-    },
     "target_lock": {
       "name": "Target Lock",
       "description": "Targeting reticle (Shop)",
@@ -543,8 +518,7 @@
       "description": "Green code rain victory (Shop)",
       "premium": false,
       "price": 1800
-    },
-    "lightning_storm": { "name": "Lightning Storm", "description": "Lightning storm (Supporter)", "premium": true }
+    }
   },
   "matrix_colors": {
     "classic": { "name": "Classic", "description": "Default green", "premium": false, "colors": ["#00ff41"] },
@@ -652,8 +626,7 @@
       "premium": false,
       "price": 1500
     },
-    "starfield": { "name": "Starfield", "description": "Twinkling stars (Supporter)", "premium": true },
-    "glitch": { "name": "Glitch", "description": "Glitch overlay (Supporter)", "premium": true }
+    "starfield": { "name": "Starfield", "description": "Twinkling stars (Supporter)", "premium": true }
   },
   "seasonal_themes": {
     "none": { "name": "None", "description": "No seasonal theme", "premium": false },
@@ -709,12 +682,6 @@
       "description": "Ocean gradient (50 MP games)",
       "premium": false,
       "requirements": [{ "metric": "mp_games_played", "min": 50 }]
-    },
-    "storm": {
-      "name": "Storm",
-      "description": "Storm flashes (50 MP eliminations)",
-      "premium": false,
-      "requirements": [{ "metric": "mp_eliminations", "min": 50 }]
     },
     "fireflies": {
       "name": "Fireflies",

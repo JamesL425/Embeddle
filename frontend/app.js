@@ -2749,14 +2749,42 @@ function updateSidebarMeta(game) {
     if (!turnEl || !specEl) return;
 
     const history = Array.isArray(game?.history) ? game.history : [];
-    const guessedWords = history
+    const guessEntries = history
         // Only count actual guess turns here (forfeit reveals include a word but are not a "turn")
-        .filter(e => e && e.word && e.type !== 'forfeit')
-        .map(e => String(e.word));
+        .filter(e => e && e.word && e.type !== 'forfeit');
 
-    const guessCount = guessedWords.length;
-    const turnNumber = game?.status === 'finished' ? guessCount : (guessCount + 1);
-    turnEl.textContent = String(turnNumber);
+    const guessCount = guessEntries.length;
+    
+    // Calculate round number: a round completes when we return to the first player
+    // We need to track how many alive players there were at each point in the game
+    // Simplified approach: count rounds based on current alive players
+    const alivePlayers = Array.isArray(game?.players) 
+        ? game.players.filter(p => p.is_alive).length 
+        : 1;
+    
+    // Find the first alive player's ID to determine round boundaries
+    const players = Array.isArray(game?.players) ? game.players : [];
+    const firstAlivePlayer = players.find(p => p.is_alive);
+    const firstAlivePlayerId = firstAlivePlayer?.id;
+    
+    // Count how many times we've cycled back to the first player
+    let roundNumber = 1;
+    if (guessEntries.length > 0 && firstAlivePlayerId) {
+        // Count rounds by tracking when the first alive player takes their turn
+        let roundsCompleted = 0;
+        for (let i = 0; i < guessEntries.length; i++) {
+            // A round completes after the last alive player guesses (before first player's next turn)
+            // We count a round as complete when we see the first player guess (except their first guess)
+            if (guessEntries[i].guesser_id === firstAlivePlayerId && i > 0) {
+                roundsCompleted++;
+            }
+        }
+        roundNumber = roundsCompleted + 1;
+    }
+    
+    // If game is finished, show the final round number
+    const displayRound = game?.status === 'finished' ? roundNumber : roundNumber;
+    turnEl.textContent = String(displayRound);
 
     const spectatorCount = Number(game?.spectator_count ?? 0);
     specEl.textContent = String(Number.isFinite(spectatorCount) ? spectatorCount : 0);

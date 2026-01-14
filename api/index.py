@@ -2417,6 +2417,59 @@ def apply_daily_quest_progress(user: dict, deltas: dict, persist: bool = True) -
     return state
 
 
+def apply_weekly_quest_progress(user: dict, deltas: dict, persist: bool = True) -> list:
+    """
+    Apply per-metric progress deltas to the user's weekly quests.
+    Deltas example: {\"mp_games\": 1, \"mp_elims\": 2}
+    """
+    if not isinstance(user, dict):
+        return []
+    if not isinstance(deltas, dict) or not deltas:
+        return ensure_weekly_quests(user, persist=persist)
+
+    quests = ensure_weekly_quests(user, persist=False)
+    if not isinstance(quests, list):
+        quests = []
+
+    changed = False
+    for q in quests:
+        if not isinstance(q, dict):
+            continue
+        metric = q.get('metric')
+        if not metric or metric not in deltas:
+            continue
+        try:
+            inc = int(deltas.get(metric, 0) or 0)
+        except Exception:
+            inc = 0
+        if inc <= 0:
+            continue
+        try:
+            progress = int(q.get('progress', 0) or 0)
+        except Exception:
+            progress = 0
+        try:
+            target = int(q.get('target', 0) or 0)
+        except Exception:
+            target = 0
+        if target <= 0:
+            continue
+        new_progress = progress + inc
+        if new_progress > target:
+            new_progress = target
+        if new_progress != progress:
+            q['progress'] = int(new_progress)
+            changed = True
+
+    if changed:
+        week_start = get_week_start_str()
+        user['weekly_quests'] = {"week_start": week_start, "quests": quests}
+        if persist:
+            save_user(user)
+
+    return quests
+
+
 def get_visible_cosmetics(user: dict) -> dict:
     """Get only the cosmetics that are visible to other players."""
     cosmetics = get_user_cosmetics(user)
@@ -3031,6 +3084,7 @@ def update_game_stats(game: dict):
                         if player['id'] == winner_id:
                             deltas["ranked_wins"] = 1
                     apply_daily_quest_progress(auth_user, deltas, persist=False)
+                    apply_weekly_quest_progress(auth_user, deltas, persist=False)
 
                     save_user(auth_user)
 

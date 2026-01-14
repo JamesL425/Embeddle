@@ -642,11 +642,17 @@ function playVictoryEffect(effectId, targetEl = null) {
         case 'gold_rain':
             createGoldRainEffect(container);
             break;
-        case 'lightning_storm':
-            createLightningEffect(container);
-            break;
         case 'supernova':
             createSupernovaEffect(container);
+            break;
+        case 'champion_crown':
+            createChampionCrownEffect(container);
+            break;
+        case 'nuclear':
+            createNuclearEffect(container);
+            break;
+        case 'matrix_cascade':
+            createMatrixCascadeEffect(container);
             break;
         default:
             if (typeof createConfetti === 'function') {
@@ -698,24 +704,72 @@ function createGoldRainEffect(container) {
     }, 5500);
 }
 
-function createLightningEffect(container) {
-    container.innerHTML = '';
-    for (let i = 0; i < 8; i++) {
-        setTimeout(() => {
-            const flash = document.createElement('div');
-            flash.className = 'lightning-flash';
-            container.appendChild(flash);
-            setTimeout(() => flash.remove(), 200);
-        }, i * 300);
-    }
-}
-
 function createSupernovaEffect(container) {
     container.innerHTML = '';
     const nova = document.createElement('div');
     nova.className = 'supernova';
     container.appendChild(nova);
     setTimeout(() => container.innerHTML = '', 2000);
+}
+
+function createChampionCrownEffect(container) {
+    container.innerHTML = '';
+    
+    // Create crown emoji that descends
+    const crown = document.createElement('div');
+    crown.className = 'champion-crown';
+    crown.textContent = '👑';
+    container.appendChild(crown);
+    
+    // Also add some confetti
+    if (typeof createConfetti === 'function') {
+        setTimeout(() => createConfetti(container), 500);
+    }
+    
+    setTimeout(() => container.innerHTML = '', 4000);
+}
+
+function createNuclearEffect(container) {
+    container.innerHTML = '';
+    
+    // Create mushroom cloud stem
+    const stem = document.createElement('div');
+    stem.className = 'nuclear-stem';
+    container.appendChild(stem);
+    
+    // Create mushroom cloud top
+    const cloud = document.createElement('div');
+    cloud.className = 'nuclear-cloud';
+    container.appendChild(cloud);
+    
+    setTimeout(() => container.innerHTML = '', 2500);
+}
+
+function createMatrixCascadeEffect(container) {
+    container.innerHTML = '';
+    const height = container.clientHeight || window.innerHeight || 800;
+    const fallDistance = (height + 40) + 'px';
+    const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+    
+    for (let i = 0; i < 100; i++) {
+        const char = document.createElement('div');
+        char.className = 'matrix-cascade-char';
+        char.textContent = chars[Math.floor(Math.random() * chars.length)];
+        
+        const duration = (1.5 + Math.random() * 2).toFixed(2);
+        const opacity = (0.5 + Math.random() * 0.5).toFixed(2);
+        const delay = (Math.random() * 1).toFixed(2);
+        
+        char.style.left = Math.random() * 100 + '%';
+        char.style.setProperty('--dur', `${duration}s`);
+        char.style.setProperty('--opacity', opacity);
+        char.style.setProperty('--fall-distance', fallDistance);
+        char.style.animationDelay = `${delay}s`;
+        
+        container.appendChild(char);
+    }
+    
+    setTimeout(() => container.innerHTML = '', 4000);
 }
 
 // Initialize cosmetics
