@@ -3755,6 +3755,12 @@ body.nerd-mode .nerd-sim {
     color: var(--accent-primary);
     font-size: 0.85rem;
     text-shadow: 0 0 10px var(--accent-glow);
+    cursor: pointer;
+    transition: text-shadow 0.15s ease;
+}
+
+.logged-in-box #logged-in-name:hover {
+    text-shadow: 0 0 15px var(--accent-primary), 0 0 25px var(--accent-glow);
 }
 
 .logged-in-box.hidden {

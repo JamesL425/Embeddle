@@ -16,6 +16,17 @@ let chatSendInFlight = false;
 let lastChatSendTime = 0;
 const CHAT_SEND_DEBOUNCE_MS = 150;
 
+// Profile click callback
+let onProfileClick = null;
+
+/**
+ * Set profile click callback
+ * @param {Function} callback
+ */
+export function setProfileCallback(callback) {
+    onProfileClick = callback;
+}
+
 /**
  * Initialize chat UI
  */
@@ -148,18 +159,33 @@ export function render() {
 
     const msgs = chatState.getMessages(150);
     const html = msgs.length
-        ? msgs.map(m => `
+        ? msgs.map(m => {
+            const senderName = m.sender_name || '???';
+            const senderClass = onProfileClick ? 'chat-sender clickable-profile' : 'chat-sender';
+            return `
             <div class="chat-message">
                 ${formatChatTime(m.ts) ? `<span class="chat-time" title="${escapeHtml(formatChatTimeTitle(m.ts))}">${escapeHtml(formatChatTime(m.ts))}</span>` : ''}
-                <span class="chat-sender">${escapeHtml(m.sender_name || '???')}</span>
+                <span class="${senderClass}" data-player-name="${escapeHtml(senderName)}">${escapeHtml(senderName)}</span>
                 <span class="chat-text">: ${escapeHtml(m.text || '')}</span>
             </div>
-        `).join('')
+        `;
+        }).join('')
         : `<div class="chat-message"><span class="chat-text">No messages yet.</span></div>`;
 
     if (!log) return;
     const atBottom = Math.abs((log.scrollHeight - log.scrollTop) - log.clientHeight) < 5;
     log.innerHTML = html;
+    
+    // Attach profile click handlers
+    if (onProfileClick) {
+        log.querySelectorAll('.clickable-profile').forEach(el => {
+            el.addEventListener('click', () => {
+                const name = el.dataset.playerName;
+                if (name && name !== '???') onProfileClick(name);
+            });
+        });
+    }
+    
     if (atBottom) {
         log.scrollTop = log.scrollHeight;
     }
@@ -243,5 +269,6 @@ export default {
     render,
     sendMessage,
     updateVisibility,
+    setProfileCallback,
 };
 

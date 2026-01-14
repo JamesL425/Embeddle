@@ -356,18 +356,30 @@ function renderChat() {
 
     const msgs = Array.isArray(chatState.messages) ? chatState.messages.slice(-150) : [];
     const html = msgs.length
-        ? msgs.map(m => `
+        ? msgs.map(m => {
+            const senderName = m.sender_name || '???';
+            return `
             <div class="chat-message">
                 ${formatChatTime(m.ts) ? `<span class="chat-time" title="${escapeHtml(formatChatTimeTitle(m.ts))}">${escapeHtml(formatChatTime(m.ts))}</span>` : ''}
-                <span class="chat-sender">${escapeHtml(m.sender_name || '???')}</span>
+                <span class="chat-sender clickable-profile" data-player-name="${escapeHtml(senderName)}">${escapeHtml(senderName)}</span>
                 <span class="chat-text">: ${escapeHtml(m.text || '')}</span>
             </div>
-        `).join('')
+        `;
+        }).join('')
         : `<div class="chat-message"><span class="chat-text">No messages yet.</span></div>`;
 
     if (!log) return;
     const atBottom = Math.abs((log.scrollHeight - log.scrollTop) - log.clientHeight) < 5;
     log.innerHTML = html;
+    
+    // Attach profile click handlers to chat sender names
+    log.querySelectorAll('.chat-sender.clickable-profile').forEach(el => {
+        el.addEventListener('click', () => {
+            const name = el.dataset.playerName;
+            if (name && name !== '???') openProfileModal(name);
+        });
+    });
+    
     if (atBottom) {
         log.scrollTop = log.scrollHeight;
     }
@@ -1289,6 +1301,13 @@ function closeProfileModal() {
 
 // Profile modal close button
 document.getElementById('close-profile-btn')?.addEventListener('click', closeProfileModal);
+
+// Click on logged-in username to open own profile
+document.getElementById('logged-in-name')?.addEventListener('click', () => {
+    if (gameState.playerName) {
+        openProfileModal(gameState.playerName);
+    }
+});
 
 // Global button click SFX (placeholder)
 document.addEventListener('click', (e) => {
@@ -3710,7 +3729,7 @@ function generateShareResults(game, isWinner) {
     const sharePreview = document.getElementById('share-preview');
     if (!sharePreview) return;
     
-    const theme = game.theme?.name || 'Unknown';
+    const theme = typeof game.theme === 'string' ? game.theme : (game.theme?.name || 'Unknown');
     const turnCount = game.history ? game.history.filter(h => h.type !== 'word_change' && h.type !== 'forfeit').length : 0;
     const totalElimCount = game.history ? game.history.reduce((acc, h) => acc + (h.eliminations?.length || 0), 0) : 0;
     const isRanked = Boolean(game.is_ranked);
@@ -3784,7 +3803,6 @@ function generateShareResults(game, isWinner) {
     });
     
     previewHtml += `</div>`;
-    previewHtml += `<div class="share-url">embeddle.io</div>`;
     
     sharePreview.innerHTML = previewHtml;
 }
@@ -3815,50 +3833,6 @@ document.getElementById('share-twitter-btn')?.addEventListener('click', () => {
     const tweetText = encodeURIComponent(gameState.shareText);
     const twitterUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
     window.open(twitterUrl, '_blank', 'width=550,height=420');
-});
-
-// Challenge friend button
-document.getElementById('challenge-friend-btn')?.addEventListener('click', async () => {
-    const btn = document.getElementById('challenge-friend-btn');
-    if (!btn) return;
-    
-    btn.disabled = true;
-    btn.textContent = 'CREATING...';
-    
-    try {
-        const challengerName = gameState.user?.name || localStorage.getItem('embeddle_name') || 'Anonymous';
-        
-        const response = await fetch(`${API_BASE}/api/challenge/create`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                ...(gameState.authToken ? { 'Authorization': `Bearer ${gameState.authToken}` } : {})
-            },
-            body: JSON.stringify({ challenger_name: challengerName })
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to create challenge');
-        }
-        
-        const data = await response.json();
-        const challengeUrl = `${window.location.origin}/challenge/${data.challenge_id}`;
-        
-        await navigator.clipboard.writeText(`⚔️ ${challengerName} challenges you to EMBEDDLE!\n\n${challengeUrl}`);
-        
-        btn.textContent = '✓ COPIED!';
-        showSuccess('Challenge link copied!');
-        
-        setTimeout(() => {
-            btn.textContent = '⚔️ CHALLENGE';
-            btn.disabled = false;
-        }, 1000);
-    } catch (e) {
-        console.error('Failed to create challenge:', e);
-        showError('Failed to create challenge link');
-        btn.textContent = '⚔️ CHALLENGE';
-        btn.disabled = false;
-    }
 });
 
 // ============ REPLAY VIEWER ============
@@ -4068,6 +4042,227 @@ document.getElementById('close-replay-btn')?.addEventListener('click', () => {
     replayState.isPlaying = false;
     document.getElementById('replay-play').textContent = '▶ PLAY';
 });
+
+// ============ REPLAY ENCODING/DECODING ============
+
+/**
+ * Compress a string using deflate (via CompressionStream or fallback)
+ * @param {string} str - The string to compress
+ * @returns {Promise<Uint8Array>} - Compressed bytes
+ */
+async function compressString(str) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    
+    // Use native CompressionStream if available
+    if (typeof CompressionStream !== 'undefined') {
+        const cs = new CompressionStream('deflate');
+        const writer = cs.writable.getWriter();
+        writer.write(data);
+        writer.close();
+        
+        const chunks = [];
+        const reader = cs.readable.getReader();
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+        }
+        
+        const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+        const result = new Uint8Array(totalLength);
+        let offset = 0;
+        for (const chunk of chunks) {
+            result.set(chunk, offset);
+            offset += chunk.length;
+        }
+        return result;
+    }
+    
+    // Fallback: simple base64 without compression
+    return data;
+}
+
+/**
+ * Decompress bytes using inflate (via DecompressionStream or fallback)
+ * @param {Uint8Array} data - The compressed bytes
+ * @returns {Promise<string>} - Decompressed string
+ */
+async function decompressBytes(data) {
+    // Use native DecompressionStream if available
+    if (typeof DecompressionStream !== 'undefined') {
+        try {
+            const ds = new DecompressionStream('deflate');
+            const writer = ds.writable.getWriter();
+            writer.write(data);
+            writer.close();
+            
+            const chunks = [];
+            const reader = ds.readable.getReader();
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                chunks.push(value);
+            }
+            
+            const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+            const result = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const chunk of chunks) {
+                result.set(chunk, offset);
+                offset += chunk.length;
+            }
+            
+            const decoder = new TextDecoder();
+            return decoder.decode(result);
+        } catch (e) {
+            // Fall through to uncompressed fallback
+        }
+    }
+    
+    // Fallback: assume uncompressed
+    const decoder = new TextDecoder();
+    return decoder.decode(data);
+}
+
+/**
+ * Encode bytes to base64url (URL-safe base64)
+ * @param {Uint8Array} bytes
+ * @returns {string}
+ */
+function bytesToBase64url(bytes) {
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    // Convert to base64url: replace + with -, / with _, remove padding =
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/**
+ * Decode base64url to bytes
+ * @param {string} str
+ * @returns {Uint8Array}
+ */
+function base64urlToBytes(str) {
+    // Convert from base64url: replace - with +, _ with /
+    let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    // Add padding if needed
+    while (base64.length % 4) {
+        base64 += '=';
+    }
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
+
+/**
+ * Encode replay data to a shareable code
+ * @param {Object} replayData - The replay data object
+ * @returns {Promise<string>} - The encoded replay code
+ */
+async function encodeReplayData(replayData) {
+    // Minimize the data structure for smaller codes
+    const minimal = {
+        t: replayData.theme?.name || '', // theme name
+        p: (replayData.players || []).map(p => ({
+            i: p.id,
+            n: p.name,
+            w: p.secret_word,
+            a: p.is_ai ? 1 : 0,
+            c: p.cosmetics || {},
+        })),
+        h: (replayData.history || []).map(h => {
+            if (h.type === 'word_change') return { x: 'c', p: h.player_id };
+            if (h.type === 'forfeit') return { x: 'f', p: h.player_id, w: h.word };
+            return {
+                g: h.guesser_id,
+                w: h.word,
+                s: h.similarities || {},
+                e: h.eliminations || [],
+            };
+        }),
+        w: replayData.winner, // winner id
+        r: replayData.is_ranked ? 1 : 0,
+    };
+    
+    const json = JSON.stringify(minimal);
+    const compressed = await compressString(json);
+    return bytesToBase64url(compressed);
+}
+
+/**
+ * Decode a replay code back to replay data
+ * @param {string} code - The encoded replay code
+ * @returns {Promise<Object|null>} - The decoded replay data, or null if invalid
+ */
+async function decodeReplayData(code) {
+    try {
+        const bytes = base64urlToBytes(code);
+        const json = await decompressBytes(bytes);
+        const minimal = JSON.parse(json);
+        
+        // Build player map for name lookups
+        const playerMap = {};
+        const players = (minimal.p || []).map(p => {
+            const player = {
+                id: p.i,
+                name: p.n,
+                secret_word: p.w,
+                is_ai: p.a === 1,
+                cosmetics: p.c || {},
+            };
+            playerMap[p.i] = player;
+            return player;
+        });
+        
+        // Reconstruct history
+        const history = (minimal.h || []).map(h => {
+            if (h.x === 'c') return { type: 'word_change', player_id: h.p };
+            if (h.x === 'f') return { type: 'forfeit', player_id: h.p, word: h.w };
+            return {
+                guesser_id: h.g,
+                guesser_name: playerMap[h.g]?.name || 'Unknown',
+                word: h.w,
+                similarities: h.s || {},
+                eliminations: h.e || [],
+            };
+        });
+        
+        return {
+            theme: { name: minimal.t },
+            players,
+            history,
+            winner: minimal.w,
+            is_ranked: minimal.r === 1,
+        };
+    } catch (e) {
+        console.error('Failed to decode replay:', e);
+        return null;
+    }
+}
+
+/**
+ * Generate a shareable replay link
+ * @param {string} replayCode
+ * @returns {string}
+ */
+function getReplayLink(replayCode) {
+    return `${window.location.origin}/replay/${replayCode}`;
+}
+
+/**
+ * Get replay code from URL if on a /replay/ route
+ * @returns {string|null}
+ */
+function getReplayCodeFromURL() {
+    const match = window.location.pathname.match(/^\/replay\/(.+)$/);
+    return match ? match[1] : null;
+}
 
 function createConfetti(targetEl = null) {
     const container = targetEl || document.getElementById('confetti-container');
