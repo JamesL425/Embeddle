@@ -301,3 +301,26 @@ input:disabled {
     margin-top: var(--space-xl);
 }
 
+/* ============ MODE BADGE ============ */
+
+.mode-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.mode-badge.casual {
+    background: rgba(0, 255, 65, 0.15);
+    color: var(--accent-primary);
+    border: 1px solid var(--accent-primary);
+}
+
+.mode-badge.ranked {
+    background: rgba(255, 204, 0, 0.15);
+    color: var(--warning);
+    border: 1px solid var(--warning);
+}
+

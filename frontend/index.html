@@ -188,42 +188,56 @@
     <div id="profile-modal" class="modal-overlay closable-modal">
         <div class="modal-backdrop" data-close="true"></div>
         <div class="modal profile-modal">
+            <div class="profile-banner">
+                <div class="profile-banner-overlay"></div>
+                <button id="close-profile-btn" class="btn btn-ghost btn-tiny profile-close-btn">×</button>
+            </div>
             <div class="profile-header">
                 <div class="profile-avatar-wrapper">
                     <img id="profile-avatar" class="profile-avatar hidden" src="" alt="">
                     <span id="profile-avatar-placeholder" class="profile-avatar-placeholder">👤</span>
                 </div>
                 <div class="profile-title-wrapper">
-                    <h2 id="profile-name">Player</h2>
+                    <div class="profile-name-row">
+                        <h2 id="profile-name">Player</h2>
+                        <span id="profile-badge" class="profile-badge"></span>
+                    </div>
                     <span id="profile-joined" class="profile-joined"></span>
                 </div>
-                <button id="close-profile-btn" class="btn btn-ghost btn-tiny">×</button>
             </div>
             <div class="profile-content">
-                <div class="profile-stats-grid">
-                    <div class="profile-stat">
-                        <span class="profile-stat-value" id="profile-wins">0</span>
-                        <span class="profile-stat-label">Wins</span>
-                    </div>
-                    <div class="profile-stat">
-                        <span class="profile-stat-value" id="profile-games">0</span>
-                        <span class="profile-stat-label">Games</span>
-                    </div>
-                    <div class="profile-stat">
-                        <span class="profile-stat-value" id="profile-winrate">0%</span>
-                        <span class="profile-stat-label">Win Rate</span>
-                    </div>
-                    <div class="profile-stat">
-                        <span class="profile-stat-value" id="profile-elims">0</span>
-                        <span class="profile-stat-label">Eliminations</span>
-                    </div>
-                    <div class="profile-stat">
-                        <span class="profile-stat-value" id="profile-streak">0</span>
-                        <span class="profile-stat-label">Best Streak</span>
+                <div class="profile-section">
+                    <h3 class="profile-section-title">// CASUAL STATS</h3>
+                    <div class="profile-stats-grid">
+                        <div class="profile-stat">
+                            <span class="profile-stat-value" id="profile-wins">0</span>
+                            <span class="profile-stat-label">Wins</span>
+                        </div>
+                        <div class="profile-stat">
+                            <span class="profile-stat-value" id="profile-games">0</span>
+                            <span class="profile-stat-label">Games</span>
+                        </div>
+                        <div class="profile-stat">
+                            <span class="profile-stat-value" id="profile-winrate">0%</span>
+                            <span class="profile-stat-label">Win Rate</span>
+                        </div>
+                        <div class="profile-stat">
+                            <span class="profile-stat-value" id="profile-elims">0</span>
+                            <span class="profile-stat-label">Eliminations</span>
+                        </div>
+                        <div class="profile-stat">
+                            <span class="profile-stat-value" id="profile-times-eliminated">0</span>
+                            <span class="profile-stat-label">Deaths</span>
+                        </div>
+                        <div class="profile-stat">
+                            <span class="profile-stat-value" id="profile-streak">0</span>
+                            <span class="profile-stat-label">Best Streak</span>
+                        </div>
                     </div>
                 </div>
-                <div id="profile-ranked-section" class="profile-ranked-section hidden">
-                    <h3>// RANKED</h3>
+                <div id="profile-ranked-section" class="profile-section profile-ranked-section hidden">
+                    <h3 class="profile-section-title">// RANKED</h3>
+                    <div id="profile-rank-tier" class="profile-rank-tier"></div>
                     <div class="profile-stats-grid profile-ranked-grid">
                         <div class="profile-stat">
                             <span class="profile-stat-value" id="profile-mmr">1000</span>
@@ -238,6 +252,11 @@
                             <span class="profile-stat-label">W-L</span>
                         </div>
                     </div>
+                </div>
+                <div class="profile-actions">
+                    <button id="share-profile-btn" class="btn btn-secondary btn-small">
+                        <span class="share-icon">🔗</span> SHARE PROFILE
+                    </button>
                 </div>
                 <div id="profile-loading" class="profile-loading">Loading...</div>
             </div>
@@ -306,6 +325,10 @@
                     <div class="home-join-row">
                         <input type="text" id="join-code-input" maxlength="6" placeholder="SERVER_ID">
                         <button id="join-code-btn" class="btn btn-small btn-secondary">JOIN</button>
+                    </div>
+                    <div class="home-replay-row">
+                        <input type="text" id="home-replay-input" placeholder="Paste replay code..." class="replay-code-input">
+                        <button id="home-replay-btn" class="btn btn-small btn-secondary">🎬 WATCH</button>
                     </div>
                     <div class="home-links-row">
                         <button id="open-leaderboard-btn" class="btn btn-ghost btn-small">VIEW_LEADERBOARD</button>
@@ -488,6 +511,7 @@
                     <span>ACCESS_CODE:</span>
                     <span id="lobby-code" class="code">------</span>
                     <button id="copy-code-btn" class="btn btn-small">COPY</button>
+                    <span id="lobby-mode-badge" class="mode-badge casual">CASUAL</span>
                 </div>
                 
                 <!-- Theme Voting Section -->
@@ -624,6 +648,7 @@
                         <span class="legend-item"><span class="dot eliminated"></span> Breached</span>
                     </div>
                     <div class="sidebar-meta">
+                        <div class="meta-row"><span>MODE</span><span id="game-mode-badge" class="mode-badge casual">CASUAL</span></div>
                         <div class="meta-row"><span>TURN</span><span id="turn-number">-</span></div>
                         <div class="meta-row"><span>SPECTATORS</span><span id="spectator-count">0</span></div>
                     </div>
@@ -732,14 +757,71 @@
                     <div class="share-buttons">
                         <button id="copy-results-btn" class="btn btn-secondary btn-small">📋 COPY</button>
                         <button id="share-twitter-btn" class="btn btn-secondary btn-small">𝕏 SHARE</button>
+                        <button id="challenge-friend-btn" class="btn btn-primary btn-small">⚔️ CHALLENGE</button>
                     </div>
                     <div class="share-buttons" style="margin-top: 0.75rem;">
                         <button id="watch-replay-btn" class="btn btn-secondary btn-small">🎬 WATCH REPLAY</button>
+                        <button id="share-replay-btn" class="btn btn-secondary btn-small">🔗 SHARE REPLAY</button>
                     </div>
                 </div>
                 
                 <div class="gameover-buttons">
                     <button id="back-to-lobby-btn" class="btn btn-primary">&gt; RETURN_TO_BASE</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Replay Screen (Full Screen Viewer) -->
+        <div id="replay-screen" class="screen replay-screen">
+            <div class="replay-layout">
+                <!-- Replay Header -->
+                <div class="replay-screen-header">
+                    <div class="replay-title-section">
+                        <h2>🎬 REPLAY VIEWER</h2>
+                        <span id="replay-screen-theme" class="replay-screen-theme">Theme: —</span>
+                    </div>
+                    <button id="replay-back-btn" class="btn btn-ghost btn-small">← BACK</button>
+                </div>
+
+                <!-- Main Replay Content -->
+                <div class="replay-main">
+                    <!-- Player Cards Grid -->
+                    <div id="replay-screen-players" class="replay-screen-players">
+                        <!-- Player cards will be rendered here -->
+                    </div>
+
+                    <!-- Current Turn Display -->
+                    <div class="replay-screen-turn-display">
+                        <div id="replay-screen-turn-counter" class="replay-screen-turn-counter">Turn 0 / 0</div>
+                        <div id="replay-screen-current-turn" class="replay-screen-current-turn">
+                            <div class="replay-turn-info">Game start</div>
+                        </div>
+                    </div>
+
+                    <!-- Playback Controls -->
+                    <div class="replay-screen-controls">
+                        <button id="replay-screen-prev" class="btn btn-secondary btn-small">⏮ PREV</button>
+                        <button id="replay-screen-play" class="btn btn-primary">▶ PLAY</button>
+                        <button id="replay-screen-next" class="btn btn-secondary btn-small">NEXT ⏭</button>
+                    </div>
+
+                    <!-- Timeline Slider -->
+                    <div class="replay-screen-timeline">
+                        <input type="range" id="replay-screen-slider" min="0" max="0" value="0">
+                    </div>
+                </div>
+
+                <!-- Share Section -->
+                <div class="replay-share-section">
+                    <h3>// SHARE_REPLAY</h3>
+                    <div class="replay-share-buttons">
+                        <button id="replay-copy-link-btn" class="btn btn-secondary btn-small">🔗 COPY LINK</button>
+                        <button id="replay-copy-code-btn" class="btn btn-secondary btn-small">📋 COPY CODE</button>
+                    </div>
+                    <div class="replay-load-section">
+                        <input type="text" id="replay-load-input" placeholder="Paste replay code..." class="replay-code-input">
+                        <button id="replay-load-btn" class="btn btn-small btn-secondary">LOAD</button>
+                    </div>
                 </div>
             </div>
         </div>

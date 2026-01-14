@@ -3990,6 +3990,12 @@ class handler(BaseHTTPRequestHandler):
             wins = stats.get('wins', 0)
             win_rate = round((wins / games * 100), 1) if games > 0 else 0
             
+            # Get badge from user cosmetics if available
+            badge = None
+            if user_data:
+                cosmetics = user_data.get('cosmetics', {})
+                badge = cosmetics.get('badge') if cosmetics.get('badge') != 'none' else None
+            
             return self._send_json({
                 "name": stats.get('name', player_name),
                 "wins": wins,
@@ -4001,6 +4007,7 @@ class handler(BaseHTTPRequestHandler):
                 "created_at": created_at,  # None if not a Google user
                 "has_google_account": user_data is not None,
                 "avatar": user_data.get('avatar', '') if user_data else None,
+                "badge": badge,
                 "ranked": ranked_stats,
             })
 

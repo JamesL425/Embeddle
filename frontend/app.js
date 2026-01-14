@@ -736,8 +736,12 @@ function showChallengeModal(challenge) {
 window.addEventListener('popstate', async (event) => {
     const urlCode = getGameCodeFromURL();
     const challengeId = getChallengeIdFromURL();
+    const replayCode = getReplayCodeFromURL();
     
-    if (challengeId) {
+    if (replayCode) {
+        // Navigated to a replay URL
+        await loadAndShowReplay(replayCode);
+    } else if (challengeId) {
         // Navigated to a challenge URL
         handleChallengeURL();
     } else if (urlCode) {
@@ -749,6 +753,7 @@ window.addEventListener('popstate', async (event) => {
     } else {
         // Navigated away from game
         stopPolling();
+        stopReplayPlayback();
         gameState.code = null;
         gameState.playerId = null;
         showScreen('home');
@@ -779,6 +784,16 @@ function initLogin() {
     const authErrorDescription = urlParams.get('auth_error_description') || urlParams.get('google_error_description') || '';
     const googleError = urlParams.get('google_error') || '';
     const authErrorStatus = urlParams.get('auth_error_status') || '';
+    
+    // Check for profile URL parameter
+    const profileParam = urlParams.get('profile');
+    if (profileParam) {
+        // Clean URL first, then open profile after a short delay to allow app to initialize
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setTimeout(() => {
+            openProfileModal(profileParam);
+        }, 100);
+    }
     
     if (authError) {
         let msg = 'Login failed: ' + authError;
@@ -1052,8 +1067,8 @@ document.getElementById('cosmetics-btn')?.addEventListener('click', toggleCosmet
 document.getElementById('close-cosmetics-btn')?.addEventListener('click', closeCosmeticsPanel);
 
 // Daily Ops button
-document.getElementById('daily-btn')?.addEventListener('click', toggleDailyPanel);
-document.getElementById('close-daily-btn')?.addEventListener('click', closeDailyPanel);
+document.getElementById('daily-btn')?.addEventListener('click', window.toggleDailyPanel);
+document.getElementById('close-daily-btn')?.addEventListener('click', window.closeDailyPanel);
 
 // Options panel
 let optionsPanelOpen = false;
@@ -1195,6 +1210,29 @@ document.addEventListener('keydown', (e) => {
 // ============ PLAYER PROFILE MODAL ============
 
 let profileModalInFlight = false;
+let currentProfileName = null;
+
+// Badge emoji mapping
+const BADGE_EMOJIS = {
+    coffee: '☕', diamond: '💎', star: '⭐', rookie: '🔰',
+    hunter: '⚔️', assassin: '🗡️', executioner: '☠️', victor: '🎖️',
+    champion: '🏆', legend: '👑', veteran: '🎗️', rank_bronze: '🥉',
+    rank_silver: '🥈', rank_gold: '🥇', rank_platinum: '💠',
+    rank_diamond: '🔷', skull: '💀', ghost: '👻', rocket: '🚀',
+    hacker: '💻', ghost_protocol: '🕵️', overlord: '🦅', dragon: '🐉',
+    alien: '👽', heart: '❤️', crown: '👑', lightning: '⚡', flame: '🔥'
+};
+
+// Get rank tier from MMR
+function getProfileRankTier(mmr) {
+    const v = Number(mmr || 0);
+    if (v >= 1700) return { key: 'diamond', name: 'DIAMOND' };
+    if (v >= 1550) return { key: 'platinum', name: 'PLATINUM' };
+    if (v >= 1400) return { key: 'gold', name: 'GOLD' };
+    if (v >= 1250) return { key: 'silver', name: 'SILVER' };
+    if (v >= 1100) return { key: 'bronze', name: 'BRONZE' };
+    return { key: 'unranked', name: 'UNRANKED' };
+}
 
 async function openProfileModal(playerName) {
     if (!playerName || profileModalInFlight) return;
@@ -1202,9 +1240,10 @@ async function openProfileModal(playerName) {
     const modal = document.getElementById('profile-modal');
     if (!modal) return;
     
+    currentProfileName = playerName;
+    
     // Show modal immediately with loading state
     const loadingEl = document.getElementById('profile-loading');
-    const statsGrid = modal.querySelector('.profile-stats-grid');
     const rankedSection = document.getElementById('profile-ranked-section');
     
     // Reset to loading state
@@ -1216,6 +1255,7 @@ async function openProfileModal(playerName) {
     document.getElementById('profile-joined').textContent = '';
     document.getElementById('profile-avatar').classList.add('hidden');
     document.getElementById('profile-avatar-placeholder').classList.remove('hidden');
+    document.getElementById('profile-badge').textContent = '';
     
     modal.classList.add('show');
     
@@ -1223,8 +1263,18 @@ async function openProfileModal(playerName) {
     try {
         const data = await apiCall(`/api/profile/${encodeURIComponent(playerName)}`);
         
+        currentProfileName = data.name || playerName;
+        
         // Update name (might be different case)
         document.getElementById('profile-name').textContent = data.name || playerName;
+        
+        // Update badge if available
+        const badgeEl = document.getElementById('profile-badge');
+        if (badgeEl && data.badge && BADGE_EMOJIS[data.badge]) {
+            badgeEl.textContent = BADGE_EMOJIS[data.badge];
+        } else if (badgeEl) {
+            badgeEl.textContent = '';
+        }
         
         // Update avatar
         const avatarEl = document.getElementById('profile-avatar');
@@ -1269,14 +1319,24 @@ async function openProfileModal(playerName) {
         document.getElementById('profile-games').textContent = data.games_played || 0;
         document.getElementById('profile-winrate').textContent = `${data.win_rate || 0}%`;
         document.getElementById('profile-elims').textContent = data.eliminations || 0;
+        document.getElementById('profile-times-eliminated').textContent = data.times_eliminated || 0;
         document.getElementById('profile-streak').textContent = data.best_streak || 0;
         
         // Update ranked section
         if (data.ranked) {
-            document.getElementById('profile-mmr').textContent = data.ranked.mmr || 1000;
+            const mmr = data.ranked.mmr || 1000;
+            document.getElementById('profile-mmr').textContent = mmr;
             document.getElementById('profile-peak-mmr').textContent = data.ranked.peak_mmr || 1000;
             document.getElementById('profile-ranked-record').textContent = 
                 `${data.ranked.ranked_wins || 0}-${data.ranked.ranked_losses || 0}`;
+            
+            // Update rank tier badge
+            const rankTierEl = document.getElementById('profile-rank-tier');
+            if (rankTierEl) {
+                const tier = getProfileRankTier(mmr);
+                rankTierEl.innerHTML = `<span class="rank-badge rank-${escapeHtml(tier.key)}">${escapeHtml(tier.name)}</span>`;
+            }
+            
             rankedSection.classList.remove('hidden');
         } else {
             rankedSection.classList.add('hidden');
@@ -1309,6 +1369,47 @@ document.getElementById('logged-in-name')?.addEventListener('click', () => {
     }
 });
 
+// Share profile button
+document.getElementById('share-profile-btn')?.addEventListener('click', async () => {
+    if (!currentProfileName) return;
+    
+    const shareUrl = `${window.location.origin}/?profile=${encodeURIComponent(currentProfileName)}`;
+    const shareText = `Check out ${currentProfileName}'s profile on Embeddle!`;
+    const btn = document.getElementById('share-profile-btn');
+    
+    // Try Web Share API first (mobile)
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: `${currentProfileName} - Embeddle Profile`,
+                text: shareText,
+                url: shareUrl
+            });
+            return;
+        } catch (e) {
+            // User cancelled or share failed, fall through to clipboard
+            if (e.name === 'AbortError') return;
+        }
+    }
+    
+    // Fall back to clipboard
+    try {
+        await navigator.clipboard.writeText(shareUrl);
+        if (btn) {
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<span class="share-icon">✓</span> COPIED!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.classList.remove('copied');
+            }, 2000);
+        }
+    } catch (e) {
+        console.error('Failed to copy profile URL:', e);
+        showError('Failed to copy link');
+    }
+});
+
 // Global button click SFX (placeholder)
 document.addEventListener('click', (e) => {
     const btn = e.target?.closest?.('button.btn');
@@ -1327,6 +1428,7 @@ const screens = {
     wordselect: document.getElementById('wordselect-screen'),
     game: document.getElementById('game-screen'),
     gameover: document.getElementById('gameover-screen'),
+    replay: document.getElementById('replay-screen'),
 };
 
 // Utility functions
@@ -2358,6 +2460,14 @@ async function updateLobby() {
     try {
         const data = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
         
+        // Update mode badge (ranked/casual)
+        const modeBadge = document.getElementById('lobby-mode-badge');
+        if (modeBadge) {
+            const isRanked = Boolean(data.is_ranked);
+            modeBadge.textContent = isRanked ? 'RANKED' : 'CASUAL';
+            modeBadge.className = `mode-badge ${isRanked ? 'ranked' : 'casual'}`;
+        }
+        
         // Update players list
         const playersList = document.getElementById('lobby-players');
         playersList.innerHTML = data.players.map(p => {
@@ -2952,7 +3062,15 @@ function updateGame(game) {
 function updateSidebarMeta(game) {
     const turnEl = document.getElementById('turn-number');
     const specEl = document.getElementById('spectator-count');
+    const modeBadge = document.getElementById('game-mode-badge');
     if (!turnEl || !specEl) return;
+
+    // Update mode badge (ranked/casual)
+    if (modeBadge) {
+        const isRanked = Boolean(game?.is_ranked);
+        modeBadge.textContent = isRanked ? 'RANKED' : 'CASUAL';
+        modeBadge.className = `mode-badge ${isRanked ? 'ranked' : 'casual'}`;
+    }
 
     const history = Array.isArray(game?.history) ? game.history : [];
     const guessEntries = history
@@ -3858,11 +3976,11 @@ document.getElementById('watch-replay-btn')?.addEventListener('click', async () 
         }
         
         const data = await response.json();
-        replayState.data = data;
-        replayState.currentTurn = 0;
-        replayState.isPlaying = false;
         
-        showReplayModal();
+        // Encode the replay data and navigate to replay screen
+        const replayCode = await encodeReplayData(data);
+        history.pushState({}, '', `/replay/${replayCode}`);
+        await loadAndShowReplay(replayCode);
     } catch (e) {
         console.error('Failed to load replay:', e);
         showError('Failed to load replay');
@@ -4041,6 +4159,71 @@ document.getElementById('close-replay-btn')?.addEventListener('click', () => {
     }
     replayState.isPlaying = false;
     document.getElementById('replay-play').textContent = '▶ PLAY';
+});
+
+// Share replay button (game over screen)
+document.getElementById('share-replay-btn')?.addEventListener('click', async () => {
+    if (!gameState.code) return;
+    
+    const btn = document.getElementById('share-replay-btn');
+    btn.disabled = true;
+    btn.textContent = 'GENERATING...';
+    
+    try {
+        // Fetch replay data from API
+        const response = await fetch(`${API_BASE}/api/games/${gameState.code}/replay`);
+        if (!response.ok) {
+            throw new Error('Failed to load replay');
+        }
+        
+        const data = await response.json();
+        
+        // Encode the replay data
+        const replayCode = await encodeReplayData(data);
+        const replayLink = getReplayLink(replayCode);
+        
+        // Copy to clipboard
+        try {
+            await navigator.clipboard.writeText(replayLink);
+            showToast('Replay link copied!');
+        } catch (e) {
+            // Fallback
+            const input = document.createElement('input');
+            input.value = replayLink;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            showToast('Replay link copied!');
+        }
+    } catch (e) {
+        console.error('Failed to share replay:', e);
+        showError('Failed to generate replay link');
+    } finally {
+        btn.textContent = '🔗 SHARE REPLAY';
+        btn.disabled = false;
+    }
+});
+
+// Home screen replay input
+document.getElementById('home-replay-btn')?.addEventListener('click', async () => {
+    const input = document.getElementById('home-replay-input');
+    const code = input?.value?.trim();
+    if (!code) {
+        showError('Please enter a replay code');
+        return;
+    }
+    
+    history.pushState({}, '', `/replay/${code}`);
+    await loadAndShowReplay(code);
+});
+
+// Allow pressing Enter in the home replay input
+document.getElementById('home-replay-input')?.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('home-replay-btn')?.click();
+    }
 });
 
 // ============ REPLAY ENCODING/DECODING ============
@@ -4263,6 +4446,271 @@ function getReplayCodeFromURL() {
     const match = window.location.pathname.match(/^\/replay\/(.+)$/);
     return match ? match[1] : null;
 }
+
+// ============ REPLAY SCREEN ============
+
+let replayScreenState = {
+    data: null,
+    code: null,
+    currentTurn: 0,
+    isPlaying: false,
+    playInterval: null,
+};
+
+/**
+ * Stop replay playback
+ */
+function stopReplayPlayback() {
+    if (replayScreenState.playInterval) {
+        clearInterval(replayScreenState.playInterval);
+        replayScreenState.playInterval = null;
+    }
+    replayScreenState.isPlaying = false;
+    const playBtn = document.getElementById('replay-screen-play');
+    if (playBtn) playBtn.textContent = '▶ PLAY';
+}
+
+/**
+ * Load and show replay from a code
+ * @param {string} code - The encoded replay code
+ */
+async function loadAndShowReplay(code) {
+    try {
+        const data = await decodeReplayData(code);
+        if (!data) {
+            showError('Invalid replay code');
+            history.replaceState({}, '', '/');
+            showScreen('home');
+            return;
+        }
+        
+        replayScreenState.data = data;
+        replayScreenState.code = code;
+        replayScreenState.currentTurn = 0;
+        stopReplayPlayback();
+        
+        showScreen('replay');
+        renderReplayScreen(0);
+    } catch (e) {
+        console.error('Failed to load replay:', e);
+        showError('Failed to load replay');
+        history.replaceState({}, '', '/');
+        showScreen('home');
+    }
+}
+
+/**
+ * Render the replay screen at a specific turn
+ * @param {number} turnIndex
+ */
+function renderReplayScreen(turnIndex) {
+    const data = replayScreenState.data;
+    if (!data) return;
+    
+    const history = data.history.filter(h => h.type !== 'word_change' && h.type !== 'forfeit');
+    
+    // Update theme
+    const themeEl = document.getElementById('replay-screen-theme');
+    if (themeEl) themeEl.textContent = `Theme: ${data.theme?.name || 'Unknown'}`;
+    
+    // Update turn counter
+    const turnCounter = document.getElementById('replay-screen-turn-counter');
+    if (turnCounter) turnCounter.textContent = `Turn ${turnIndex} / ${history.length}`;
+    
+    // Update slider
+    const slider = document.getElementById('replay-screen-slider');
+    if (slider) {
+        slider.max = history.length;
+        slider.value = turnIndex;
+    }
+    
+    // Calculate player states at this point
+    const playerStates = {};
+    data.players.forEach(p => {
+        playerStates[p.id] = {
+            ...p,
+            isAlive: true,
+            maxSimilarity: 0,
+            lastSimilarity: 0,
+        };
+    });
+    
+    // Process history up to current turn
+    for (let i = 0; i < turnIndex && i < history.length; i++) {
+        const entry = history[i];
+        
+        // Update similarities
+        if (entry.similarities) {
+            Object.entries(entry.similarities).forEach(([pid, sim]) => {
+                if (playerStates[pid]) {
+                    playerStates[pid].maxSimilarity = Math.max(playerStates[pid].maxSimilarity, sim);
+                    playerStates[pid].lastSimilarity = sim;
+                }
+            });
+        }
+        
+        // Mark eliminations
+        if (entry.eliminations) {
+            entry.eliminations.forEach(pid => {
+                if (playerStates[pid]) {
+                    playerStates[pid].isAlive = false;
+                }
+            });
+        }
+    }
+    
+    // Render player cards
+    const playersContainer = document.getElementById('replay-screen-players');
+    if (playersContainer) {
+        let playersHtml = '';
+        Object.values(playerStates).forEach(p => {
+            const simClass = getSimilarityClass(p.maxSimilarity);
+            const isWinner = p.id === data.winner;
+            
+            playersHtml += `
+                <div class="replay-screen-player ${p.isAlive ? '' : 'eliminated'} ${isWinner ? 'winner' : ''}">
+                    <div class="replay-screen-player-name">
+                        ${escapeHtml(p.name)}${isWinner ? ' 🏆' : ''}${!p.isAlive ? ' ☠️' : ''}
+                        ${p.is_ai ? ' 🤖' : ''}
+                    </div>
+                    <div class="replay-screen-player-word">${escapeHtml(p.secret_word || '???')}</div>
+                    <div class="replay-screen-player-danger ${simClass}">${Math.round(p.maxSimilarity * 100)}%</div>
+                </div>
+            `;
+        });
+        playersContainer.innerHTML = playersHtml;
+    }
+    
+    // Show current turn info
+    const currentTurnEl = document.getElementById('replay-screen-current-turn');
+    if (currentTurnEl) {
+        if (turnIndex > 0 && turnIndex <= history.length) {
+            const entry = history[turnIndex - 1];
+            let turnHtml = `
+                <div class="replay-turn-info">
+                    <span class="replay-guesser">${escapeHtml(entry.guesser_name || 'Unknown')}</span>
+                    <span class="replay-word">"${escapeHtml(entry.word)}"</span>
+                </div>
+            `;
+            
+            if (entry.eliminations && entry.eliminations.length > 0) {
+                const elimNames = entry.eliminations.map(id => {
+                    const p = data.players.find(pl => pl.id === id);
+                    return p ? escapeHtml(p.name) : 'Unknown';
+                });
+                turnHtml += `<div class="replay-elimination">💥 Eliminated: ${elimNames.join(', ')}</div>`;
+            }
+            
+            currentTurnEl.innerHTML = turnHtml;
+        } else {
+            currentTurnEl.innerHTML = '<div class="replay-turn-info">Game start</div>';
+        }
+    }
+    
+    replayScreenState.currentTurn = turnIndex;
+}
+
+// Replay screen event listeners
+document.getElementById('replay-screen-prev')?.addEventListener('click', () => {
+    if (replayScreenState.currentTurn > 0) {
+        replayScreenState.currentTurn--;
+        renderReplayScreen(replayScreenState.currentTurn);
+    }
+});
+
+document.getElementById('replay-screen-next')?.addEventListener('click', () => {
+    const history = replayScreenState.data?.history.filter(h => h.type !== 'word_change' && h.type !== 'forfeit') || [];
+    if (replayScreenState.currentTurn < history.length) {
+        replayScreenState.currentTurn++;
+        renderReplayScreen(replayScreenState.currentTurn);
+    }
+});
+
+document.getElementById('replay-screen-play')?.addEventListener('click', () => {
+    const btn = document.getElementById('replay-screen-play');
+    
+    if (replayScreenState.isPlaying) {
+        stopReplayPlayback();
+    } else {
+        replayScreenState.isPlaying = true;
+        btn.textContent = '⏸ PAUSE';
+        
+        replayScreenState.playInterval = setInterval(() => {
+            const history = replayScreenState.data?.history.filter(h => h.type !== 'word_change' && h.type !== 'forfeit') || [];
+            if (replayScreenState.currentTurn < history.length) {
+                replayScreenState.currentTurn++;
+                renderReplayScreen(replayScreenState.currentTurn);
+            } else {
+                stopReplayPlayback();
+            }
+        }, 1500);
+    }
+});
+
+document.getElementById('replay-screen-slider')?.addEventListener('input', (e) => {
+    replayScreenState.currentTurn = parseInt(e.target.value, 10);
+    renderReplayScreen(replayScreenState.currentTurn);
+});
+
+document.getElementById('replay-back-btn')?.addEventListener('click', () => {
+    stopReplayPlayback();
+    history.pushState({}, '', '/');
+    showScreen('home');
+});
+
+// Copy replay link
+document.getElementById('replay-copy-link-btn')?.addEventListener('click', async () => {
+    const code = replayScreenState.code;
+    if (!code) return;
+    
+    const link = getReplayLink(code);
+    try {
+        await navigator.clipboard.writeText(link);
+        showToast('Replay link copied!');
+    } catch (e) {
+        // Fallback
+        const input = document.createElement('input');
+        input.value = link;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        showToast('Replay link copied!');
+    }
+});
+
+// Copy replay code
+document.getElementById('replay-copy-code-btn')?.addEventListener('click', async () => {
+    const code = replayScreenState.code;
+    if (!code) return;
+    
+    try {
+        await navigator.clipboard.writeText(code);
+        showToast('Replay code copied!');
+    } catch (e) {
+        // Fallback
+        const input = document.createElement('input');
+        input.value = code;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        showToast('Replay code copied!');
+    }
+});
+
+// Load replay from input
+document.getElementById('replay-load-btn')?.addEventListener('click', async () => {
+    const input = document.getElementById('replay-load-input');
+    const code = input?.value?.trim();
+    if (!code) {
+        showError('Please enter a replay code');
+        return;
+    }
+    
+    history.pushState({}, '', `/replay/${code}`);
+    await loadAndShowReplay(code);
+});
 
 function createConfetti(targetEl = null) {
     const container = targetEl || document.getElementById('confetti-container');
@@ -4675,6 +5123,13 @@ startBackgroundMusic();
 
 // Check for challenge URL first, then try to rejoin existing game
 async function initializeApp() {
+    // Check for replay URL first
+    const replayCode = getReplayCodeFromURL();
+    if (replayCode) {
+        await loadAndShowReplay(replayCode);
+        return;
+    }
+    
     // Check for challenge URL
     const challengeId = getChallengeIdFromURL();
     if (challengeId) {

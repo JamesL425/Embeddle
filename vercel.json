@@ -13,6 +13,8 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.py" },
     { "source": "/game/(.*)", "destination": "/frontend/index.html" },
+    { "source": "/replay/(.*)", "destination": "/frontend/index.html" },
+    { "source": "/challenge/(.*)", "destination": "/frontend/index.html" },
     { "source": "/privacy", "destination": "/frontend/privacy.html" },
     { "source": "/privacy/", "destination": "/frontend/privacy.html" },
     { "source": "/terms", "destination": "/frontend/terms.html" },
