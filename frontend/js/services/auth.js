@@ -7,8 +7,7 @@ import { apiCall, getApiBase } from './api.js';
 import * as gameState from '../state/gameState.js';
 import { 
     getAuthToken, setAuthToken, removeAuthToken,
-    getSavedName, setSavedName, removeSavedName,
-    getAdminToken, setAdminToken, removeAdminToken
+    getSavedName, setSavedName, removeSavedName
 } from '../utils/storage.js';
 
 /**
@@ -45,20 +44,7 @@ export async function initAuth() {
     // Check for existing auth token
     const savedToken = getAuthToken();
     if (savedToken) {
-        // Decode JWT to check if it's an admin token (don't auto-restore admin sessions)
-        try {
-            const payload = JSON.parse(atob(savedToken.split('.')[1]));
-            if (payload.sub === 'admin_local') {
-                // Don't auto-restore admin sessions - clear it
-                removeAuthToken();
-                return null;
-            }
-            return await loadAuthenticatedUser(savedToken);
-        } catch (e) {
-            // Invalid token, clear it
-            removeAuthToken();
-            return null;
-        }
+        return await loadAuthenticatedUser(savedToken);
     }
     
     // Fall back to simple name-based login
@@ -111,7 +97,7 @@ export function loginAsGuest(name) {
     
     // Check for admin callsign
     if (sanitizedName.toLowerCase() === 'admin') {
-        throw new Error('ADMIN_LOGIN_REQUIRED');
+        throw new Error('This callsign is reserved. Please choose another.');
     }
     
     gameState.set('playerName', sanitizedName);
@@ -121,32 +107,13 @@ export function loginAsGuest(name) {
 }
 
 /**
- * Login as admin with password
- * @param {string} password
- * @returns {Promise<Object>}
- */
-export async function loginAsAdmin(password) {
-    const response = await apiCall('/api/auth/admin', 'POST', { password });
-    
-    // Store admin token in sessionStorage (not localStorage)
-    setAdminToken(response.token);
-    gameState.setAuth(response.token, { name: 'ADMIN', is_admin: true });
-    gameState.set('isAdminSession', true);
-    
-    // Also load full user data
-    return await loadAuthenticatedUser(response.token);
-}
-
-/**
  * Logout current user
  */
 export function logout() {
     gameState.clearAuth();
     gameState.set('playerName', null);
-    gameState.set('isAdminSession', false);
     removeSavedName();
     removeAuthToken();
-    removeAdminToken();
 }
 
 /**
@@ -195,7 +162,6 @@ export default {
     loadAuthenticatedUser,
     loginWithGoogle,
     loginAsGuest,
-    loginAsAdmin,
     logout,
     isAuthenticated,
     isAdmin,

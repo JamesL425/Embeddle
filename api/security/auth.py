@@ -228,17 +228,27 @@ def revoke_token(jti: str, ttl_seconds: Optional[int] = None) -> bool:
         return False
 
 
-def is_token_revoked(jti: str) -> bool:
-    """Check if a token has been revoked."""
+def is_token_revoked(jti: str, fail_closed: bool = False) -> bool:
+    """
+    Check if a token has been revoked.
+    
+    Args:
+        jti: JWT ID to check
+        fail_closed: If True, return True (revoked) when Redis is unavailable.
+                    Use True for security-critical operations.
+    """
     redis = _get_redis()
     if not redis:
-        # If Redis is unavailable, we can't check revocation
-        # This is a security tradeoff - we allow the token
+        # If Redis is unavailable, fail based on security requirements
+        if fail_closed:
+            return True  # Assume revoked for security
         return False
     
     try:
         return redis.exists(f"revoked_token:{jti}") > 0
     except Exception:
+        if fail_closed:
+            return True
         return False
 
 
@@ -278,11 +288,8 @@ def get_current_user(headers: Dict[str, str]) -> Optional[AuthenticatedUser]:
     user_id = payload.get('sub', '')
     email = payload.get('email', '').lower()
     
-    # Check admin status
-    is_admin = (
-        user_id == 'admin_local' or
-        email in _get_admin_emails()
-    )
+    # Check admin status (email-based only)
+    is_admin = email in _get_admin_emails()
     
     return AuthenticatedUser(
         id=user_id,

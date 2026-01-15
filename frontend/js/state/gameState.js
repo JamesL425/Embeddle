@@ -21,7 +21,6 @@ const gameState = {
     isSpectator: false,
     spectatorId: null,
     isSingleplayer: false,
-    isAdminSession: false,
     pendingChallenge: null,
     userData: null,
 };
@@ -127,7 +126,6 @@ export function clearAll() {
     gameState.isHost = false;
     gameState.isSpectator = false;
     gameState.isSingleplayer = false;
-    gameState.isAdminSession = false;
     clearGameSession();
     notify('clearAll', null);
 }
@@ -150,9 +148,6 @@ export function setAuth(token, user) {
     if (user?.name) {
         gameState.playerName = user.name;
     }
-    if (user?.is_admin) {
-        gameState.isAdminSession = true;
-    }
     notify('auth', { token, user });
 }
 
@@ -162,7 +157,6 @@ export function setAuth(token, user) {
 export function clearAuth() {
     gameState.authToken = null;
     gameState.authUser = null;
-    gameState.isAdminSession = false;
     notify('auth', null);
 }
 
@@ -175,11 +169,11 @@ export function isAuthenticated() {
 }
 
 /**
- * Check if user has admin privileges
+ * Check if user has admin privileges (email-based only now)
  * @returns {boolean}
  */
 export function isAdmin() {
-    return gameState.isAdminSession || gameState.authUser?.is_admin;
+    return gameState.authUser?.is_admin;
 }
 
 // Export the raw state for legacy compatibility (read-only access recommended)

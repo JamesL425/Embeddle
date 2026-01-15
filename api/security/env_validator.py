@@ -73,12 +73,6 @@ OPTIONAL_ENV_VARS: List[EnvVarConfig] = [
         sensitive=True,
     ),
     EnvVarConfig(
-        name="ADMIN_PASSWORD",
-        required=False,
-        description="Password for admin login",
-        sensitive=True,
-    ),
-    EnvVarConfig(
         name="ADMIN_EMAILS",
         required=False,
         description="Comma-separated list of admin email addresses",

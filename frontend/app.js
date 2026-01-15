@@ -966,23 +966,11 @@ function initLogin() {
         return;
     }
     
-    // Check for existing auth token (regular Google auth only, not admin)
+    // Check for existing auth token
     const savedToken = localStorage.getItem('embeddle_auth_token');
     if (savedToken) {
-        // Decode JWT to check if it's an admin token (don't auto-restore admin sessions)
-        try {
-            const payload = JSON.parse(atob(savedToken.split('.')[1]));
-            if (payload.sub === 'admin_local') {
-                // Don't auto-restore admin sessions - clear it
-                localStorage.removeItem('embeddle_auth_token');
-            } else {
-                loadAuthenticatedUser(savedToken);
-                return;
-            }
-        } catch (e) {
-            // Invalid token, clear it
-            localStorage.removeItem('embeddle_auth_token');
-        }
+        loadAuthenticatedUser(savedToken);
+        return;
     }
     
     // Fall back to simple name-based login
@@ -1026,11 +1014,6 @@ async function loadAuthenticatedUser(token) {
 function setLoggedInWithAuth(user) {
     gameState.playerName = user.name;
     gameState.authUser = user;
-    
-    // Set admin session flag if user is admin
-    if (user.is_admin) {
-        gameState.isAdminSession = true;
-    }
     
     document.getElementById('login-box').classList.add('hidden');
     document.getElementById('logged-in-box').classList.remove('hidden');
@@ -1143,9 +1126,9 @@ function setLoggedIn(name) {
         return;
     }
     
-    // Check for admin callsign (case-insensitive)
+    // Block reserved name "admin"
     if (sanitizedName.toLowerCase() === 'admin') {
-        promptAdminPassword();
+        showError('This callsign is reserved. Please choose another.');
         return;
     }
     
@@ -1158,47 +1141,12 @@ function setLoggedIn(name) {
     updateRankedUi();
 }
 
-async function promptAdminPassword() {
-    const password = prompt('Enter admin password:');
-    if (!password) {
-        document.getElementById('login-name').value = '';
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE}/api/auth/admin`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: password })
-        });
-        
-        if (!response.ok) {
-            const err = await response.json();
-            showError(err.detail || 'Invalid admin password');
-            document.getElementById('login-name').value = '';
-            return;
-        }
-        
-        const data = await response.json();
-        // Store admin token in sessionStorage (not localStorage) so it doesn't persist
-        sessionStorage.setItem('embeddle_admin_token', data.token);
-        gameState.authToken = data.token;
-        gameState.isAdminSession = true;
-        loadAuthenticatedUser(data.token);
-    } catch (error) {
-        showError('Admin login failed');
-        document.getElementById('login-name').value = '';
-    }
-}
-
 function logout() {
     gameState.playerName = null;
     gameState.authToken = null;
     gameState.authUser = null;
-    gameState.isAdminSession = false;
     localStorage.removeItem('embeddle_name');
     localStorage.removeItem('embeddle_auth_token');
-    sessionStorage.removeItem('embeddle_admin_token');
     
     // Clear daily state to prevent stale data showing
     if (typeof dailyState !== 'undefined') {
@@ -3044,9 +2992,8 @@ async function updateLobby() {
         const hostControls = document.getElementById('host-controls');
         if (gameState.isHost) {
             hostControls.classList.remove('hidden');
-            // Admin can start with 1 player, others need at least 2
-            const isAdmin = gameState.isAdminSession || (gameState.authUser && gameState.authUser.is_admin);
-            const minPlayers = isAdmin ? 1 : 2;
+            // Need at least 2 players to start
+            const minPlayers = 2;
             document.getElementById('start-game-btn').disabled = data.players.length < minPlayers;
         } else {
             hostControls.classList.add('hidden');

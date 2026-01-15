@@ -106,6 +106,8 @@ GAME_CODE_PATTERN = re.compile(r'^[A-Z0-9]{6}$')
 PLAYER_ID_PATTERN = re.compile(r'^[a-f0-9]{16}$')
 PLAYER_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9_ ]{1,20}$')
 WORD_PATTERN = re.compile(r'^[a-zA-Z]{2,30}$')
+# AI player IDs: ai_{difficulty}_{8-char-hex} - e.g., ai_rookie_a1b2c3d4
+AI_PLAYER_ID_PATTERN = re.compile(r'^ai_[a-z0-9-]+_[a-f0-9]{8}$')
 
 
 def sanitize_game_code(code: str) -> Optional[str]:
@@ -128,15 +130,25 @@ def sanitize_player_id(player_id: str) -> Optional[str]:
     return player_id
 
 
-def sanitize_player_name(name: str, allow_admin: bool = False) -> Optional[str]:
+def sanitize_ai_player_id(player_id: str) -> Optional[str]:
+    """Validate AI player ID format. Returns None if invalid."""
+    if not player_id:
+        return None
+    player_id = player_id.lower().strip()
+    if not AI_PLAYER_ID_PATTERN.match(player_id):
+        return None
+    return player_id
+
+
+def sanitize_player_name(name: str) -> Optional[str]:
     """Sanitize player name. Returns None if invalid."""
     if not name:
         return None
     name = name.strip()
     if not PLAYER_NAME_PATTERN.match(name):
         return None
-    # Prevent non-admin users from using reserved names
-    if not allow_admin and name.lower() == 'admin':
+    # Block reserved name "admin"
+    if name.lower() == 'admin':
         return None
     # HTML escape to prevent XSS when displayed
     return html.escape(name)
@@ -494,11 +506,6 @@ DEFAULT_DAILY_QUESTS = {
 def new_daily_quests_state() -> dict:
     """Return a fresh default daily-quests payload (avoid shared list references)."""
     return {"date": "", "quests": []}
-
-# Admin sessions (admin_local) are not stored as normal users, but we keep best-effort
-# economy state in Redis so admin can test daily quests and the shop.
-ADMIN_ECONOMY_KEY = "admin_economy"
-ADMIN_ECONOMY_TTL_SECONDS = 3600
 
 # ============== AI PLAYER CONFIGURATION ==============
 
@@ -2716,7 +2723,6 @@ def get_theme_words(category: str) -> dict:
 
 # OAuth Configuration
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', '')
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', '')
 GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '')
 
 # JWT Configuration - SECURITY: Require JWT_SECRET in production
@@ -3240,54 +3246,6 @@ def grant_owned_cosmetic(user: dict, category_key: str, cosmetic_id: str, persis
     if persist:
         save_user(user)
     return True
-
-
-def load_admin_economy_user(redis: "Redis") -> dict:
-    """Load admin_local economy state from Redis and return a user-like dict (not stored as user:{id})."""
-    state = {}
-    try:
-        raw = redis.get(ADMIN_ECONOMY_KEY)
-        if raw:
-            loaded = json.loads(raw)
-            if isinstance(loaded, dict):
-                state = loaded
-    except Exception:
-        state = {}
-
-    admin_user = {
-        "id": "admin_local",
-        "is_admin": True,
-        "is_donor": True,
-        "stats": DEFAULT_USER_STATS.copy(),
-        "wallet": state.get("wallet"),
-        "owned_cosmetics": state.get("owned_cosmetics"),
-        "daily_quests": state.get("daily_quests"),
-    }
-
-    ensure_user_economy(admin_user, persist=False)
-    # Default admin wallet: generous balance for testing
-    if get_user_credits(admin_user) <= 0:
-        admin_user["wallet"] = {"credits": 999999}
-    return admin_user
-
-
-def save_admin_economy_user(redis: "Redis", admin_user: dict):
-    """Persist admin_local economy state to Redis (best-effort)."""
-    if not isinstance(admin_user, dict):
-        return
-    econ = ensure_user_economy(admin_user, persist=False)
-    payload = {
-        "wallet": econ.get("wallet") or {"credits": 0},
-        "owned_cosmetics": econ.get("owned_cosmetics") or {},
-        "daily_quests": econ.get("daily_quests") or new_daily_quests_state(),
-    }
-    try:
-        redis.set(ADMIN_ECONOMY_KEY, json.dumps(payload), ex=ADMIN_ECONOMY_TTL_SECONDS)
-    except Exception:
-        try:
-            redis.set(ADMIN_ECONOMY_KEY, json.dumps(payload))
-        except Exception:
-            pass
 
 
 def utc_today_str() -> str:
@@ -4252,7 +4210,7 @@ def apply_ranked_mmr_updates(game: dict):
     players = snapshot if isinstance(snapshot, list) and snapshot else (game.get('players', []) or [])
     winner_pid = game.get('winner')
 
-    # Ranked participants: authenticated humans only (skip admin_local and AIs)
+    # Ranked participants: authenticated humans only (skip AIs)
     participants = []
     for p in players:
         if not isinstance(p, dict):
@@ -4260,7 +4218,7 @@ def apply_ranked_mmr_updates(game: dict):
         if p.get('is_ai'):
             continue
         uid = p.get('auth_user_id')
-        if not uid or uid == 'admin_local':
+        if not uid:
             continue
         participants.append(p)
 
@@ -4493,7 +4451,7 @@ def update_game_stats(game: dict):
         # Multiplayer-only: also update authenticated user's mp_* stats for cosmetics unlocks.
         if is_multiplayer:
             auth_user_id = player.get('auth_user_id')
-            if auth_user_id and auth_user_id != 'admin_local':
+            if auth_user_id:
                 auth_user = get_user_by_id(auth_user_id)
                 if auth_user:
                     u_stats = get_user_stats(auth_user)
@@ -4618,14 +4576,11 @@ class handler(BaseHTTPRequestHandler):
         return None
 
     def _is_admin_request(self) -> bool:
-        """Best-effort check if the request is from an admin user."""
+        """Best-effort check if the request is from an admin user (by email)."""
         try:
             payload = self._get_auth_payload()
             if not payload or not isinstance(payload, dict):
                 return False
-            sub = str(payload.get('sub') or '')
-            if sub == 'admin_local':
-                return True
             email = str(payload.get('email') or '').strip().lower()
             if not email:
                 return False
@@ -5080,19 +5035,6 @@ class handler(BaseHTTPRequestHandler):
             if not payload:
                 return self._send_error("Invalid or expired token", 401)
             
-            # Handle admin user specially (not stored in Redis)
-            if payload['sub'] == 'admin_local':
-                return self._send_json({
-                    'id': 'admin_local',
-                    'name': 'Admin',
-                    'email': 'admin@embeddle.io',
-                    'avatar': '',
-                    'stats': DEFAULT_USER_STATS.copy(),
-                    'is_donor': True,
-                    'is_admin': True,
-                    'cosmetics': DEFAULT_COSMETICS.copy(),
-                })
-            
             user = get_user_by_id(payload['sub'])
             if not user:
                 return self._send_error("User not found", 404)
@@ -5128,24 +5070,6 @@ class handler(BaseHTTPRequestHandler):
             if not payload:
                 return self._send_error("Invalid or expired token", 401)
             
-            # Handle admin user specially (not stored in Redis)
-            if payload['sub'] == 'admin_local':
-                # Get admin cosmetics from Redis if they exist
-                redis = get_redis()
-                existing = redis.get('admin_cosmetics')
-                admin_cosmetics = json.loads(existing) if existing else DEFAULT_COSMETICS.copy()
-                admin_user = load_admin_economy_user(redis)
-                econ = ensure_user_economy(admin_user, persist=False)
-                
-                return self._send_json({
-                    'is_donor': True,
-                    'is_admin': True,
-                    'cosmetics': admin_cosmetics,
-                    'owned_cosmetics': econ.get('owned_cosmetics') or {},
-                    'paywall_enabled': COSMETICS_PAYWALL_ENABLED,
-                    'unlock_all': COSMETICS_UNLOCK_ALL,
-                })
-            
             user = get_user_by_id(payload['sub'])
             if not user:
                 return self._send_error("User not found", 404)
@@ -5172,31 +5096,6 @@ class handler(BaseHTTPRequestHandler):
 
             if not payload:
                 return self._send_error("Invalid or expired token", 401)
-
-            # Handle admin user specially (not stored in Redis as user:{id})
-            if payload.get('sub') == 'admin_local':
-                redis = get_redis()
-                admin_user = load_admin_economy_user(redis)
-                daily_state = ensure_daily_quests_today(admin_user, persist=False)
-                admin_user['daily_quests'] = daily_state
-                weekly_quests = ensure_weekly_quests(admin_user, persist=False)
-                # Check/update streak for admin
-                streak_result = check_and_update_streak(admin_user, persist=False)
-                save_admin_economy_user(redis, admin_user)
-                econ = ensure_user_economy(admin_user, persist=False)
-                streak_info = get_next_streak_info(streak_result['streak'].get('streak_count', 0))
-                return self._send_json({
-                    "date": daily_state.get("date", ""),
-                    "quests": daily_state.get("quests", []),
-                    "weekly_quests": weekly_quests,
-                    "wallet": econ.get("wallet") or {"credits": 0},
-                    "owned_cosmetics": econ.get("owned_cosmetics") or {},
-                    "streak": streak_result['streak'],
-                    "streak_credits_earned": streak_result['credits_earned'],
-                    "streak_milestone_bonus": streak_result['milestone_bonus'],
-                    "streak_broken": streak_result['streak_broken'],
-                    "streak_info": streak_info,
-                })
 
             user = get_user_by_id(payload.get('sub', ''))
             if not user:
@@ -6015,75 +5914,6 @@ class handler(BaseHTTPRequestHandler):
         # Get client IP for rate limiting
         client_ip = get_client_ip(self.headers)
 
-        # POST /api/auth/admin - Admin login with password
-        if path == '/api/auth/admin':
-            if not ADMIN_PASSWORD:
-                return self._send_error("Admin login not configured", 500)
-            
-            # Sanitize and validate password
-            password = body.get('password', '')
-            if not isinstance(password, str):
-                return self._send_error("Invalid password format", 400)
-            
-            # Limit password length to prevent DoS
-            password = password[:100]
-            
-            # Rate limit admin login attempts: 5/min per IP
-            if not check_rate_limit(get_ratelimit_game_create(), client_ip):
-                return self._send_error("Too many login attempts. Please wait.", 429)
-            
-            # Use constant-time comparison to prevent timing attacks
-            import hmac
-            if not hmac.compare_digest(password, ADMIN_PASSWORD):
-                return self._send_error("Invalid password", 401)
-            
-            # Create admin user data
-            admin_user = {
-                'id': 'admin_local',
-                'email': 'admin@embeddle.io',
-                'name': 'Admin',
-                'avatar': '',
-                'is_admin': True,
-                'is_donor': True,
-                'cosmetics': DEFAULT_COSMETICS.copy(),
-            }
-            
-            # Create JWT token
-            jwt_token = create_jwt_token(admin_user)
-            
-            return self._send_json({
-                'token': jwt_token,
-                'user': admin_user,
-            })
-
-        # POST /api/admin/clear-leaderboard - Clear all leaderboard data (admin only)
-        if path == '/api/admin/clear-leaderboard':
-            if not self._is_admin_request():
-                return self._send_error("Admin access required", 403)
-            
-            redis = get_redis()
-            try:
-                # Clear ranked MMR leaderboard
-                redis.delete("leaderboard:mmr")
-                
-                # Clear all-time casual leaderboard
-                redis.delete("leaderboard:players")
-                redis.delete("leaderboard:alltime")
-                
-                # Clear weekly leaderboards (scan for all weekly keys)
-                cursor = 0
-                while True:
-                    cursor, keys = redis.scan(cursor, match="leaderboard:weekly:*", count=100)
-                    if keys:
-                        redis.delete(*keys)
-                    if cursor == 0:
-                        break
-                
-                return self._send_json({"status": "ok", "message": "All leaderboard data cleared"})
-            except Exception as e:
-                print(f"Clear leaderboard error: {e}")
-                return self._send_error("Failed to clear leaderboard", 500)
-
         # POST /api/games - Create lobby with theme voting
         if path == '/api/games':
             # Rate limit: 5 games/min per IP
@@ -6334,8 +6164,10 @@ class handler(BaseHTTPRequestHandler):
                 return self._send_error("Game is full", 400)
             
             player_id = body.get('player_id', '')
-            # Allow AI player IDs or sanitized human player IDs
-            if not player_id.startswith('ai_'):
+            # Validate player ID (human or AI format)
+            if player_id.startswith('ai_'):
+                player_id = sanitize_ai_player_id(player_id)
+            else:
                 player_id = sanitize_player_id(player_id)
             if not player_id:
                 return self._send_error("Invalid player ID format", 400)
@@ -6382,8 +6214,10 @@ class handler(BaseHTTPRequestHandler):
                 return self._send_error("Game has already started", 400)
             
             player_id = body.get('player_id', '')
-            # Allow AI player IDs or sanitized human player IDs
-            if not player_id.startswith('ai_'):
+            # Validate player ID (human or AI format)
+            if player_id.startswith('ai_'):
+                player_id = sanitize_ai_player_id(player_id)
+            else:
                 player_id = sanitize_player_id(player_id)
             if not player_id:
                 return self._send_error("Invalid player ID format", 400)
@@ -6392,8 +6226,8 @@ class handler(BaseHTTPRequestHandler):
             if game['host_id'] != player_id:
                 return self._send_error("Only the host can remove AI players", 403)
             
-            ai_id = body.get('ai_id', '')
-            if not ai_id or not ai_id.startswith('ai_'):
+            ai_id = sanitize_ai_player_id(body.get('ai_id', ''))
+            if not ai_id:
                 return self._send_error("Invalid AI player ID", 400)
             
             # Find and remove AI player
@@ -6839,26 +6673,16 @@ class handler(BaseHTTPRequestHandler):
             if is_ranked:
                 auth_user_id = token_user_id  # Never trust body for ranked
             
-            # Check if user is admin (allow "admin" name for actual admin)
-            is_admin_user = auth_user_id == 'admin_local'
-            
-            name = sanitize_player_name(body.get('name', ''), allow_admin=is_admin_user)
+            name = sanitize_player_name(body.get('name', ''))
             if not name:
                 return self._send_error("Invalid name. Use only letters, numbers, underscores, and spaces (1-20 chars)", 400)
             
             # Get user cosmetics if authenticated
             user_cosmetics = None
             if auth_user_id:
-                if is_admin_user:
-                    # Get admin cosmetics from Redis
-                    redis = get_redis()
-                    existing = redis.get('admin_cosmetics')
-                    admin_cosmetics = json.loads(existing) if existing else DEFAULT_COSMETICS.copy()
-                    user_cosmetics = admin_cosmetics
-                else:
-                    auth_user = get_user_by_id(auth_user_id)
-                    if auth_user:
-                        user_cosmetics = get_visible_cosmetics(auth_user)
+                auth_user = get_user_by_id(auth_user_id)
+                if auth_user:
+                    user_cosmetics = get_visible_cosmetics(auth_user)
             
             # Check if player is trying to rejoin
             existing_player = None
@@ -7035,16 +6859,14 @@ class handler(BaseHTTPRequestHandler):
             if game['status'] != 'waiting':
                 return self._send_error("Game already started", 400)
             
-            # Check if host is admin (can bypass min players) or if it's singleplayer
-            host_player = next((p for p in game['players'] if p['id'] == player_id), None)
-            is_admin_host = host_player and host_player.get('auth_user_id') == 'admin_local'
+            # Check if it's singleplayer
             is_singleplayer = game.get('is_singleplayer', False)
             
             # Singleplayer needs at least 2 players (1 human + 1 AI)
             if is_singleplayer:
                 if len(game['players']) < 2:
                     return self._send_error("Add at least 1 AI opponent", 400)
-            elif len(game['players']) < MIN_PLAYERS and not is_admin_host:
+            elif len(game['players']) < MIN_PLAYERS:
                 return self._send_error(f"Need at least {MIN_PLAYERS} players", 400)
 
             # Ranked: snapshot participants at match start so later forfeits/leaves don't shrink the rating pool.
@@ -7060,7 +6882,7 @@ class handler(BaseHTTPRequestHandler):
                             if p.get('is_ai'):
                                 continue
                             uid = p.get('auth_user_id')
-                            if not uid or uid == 'admin_local':
+                            if not uid:
                                 continue
                             rp.append({
                                 "id": p.get('id'),
@@ -7874,53 +7696,6 @@ class handler(BaseHTTPRequestHandler):
             if quest_type not in ('daily', 'weekly'):
                 quest_type = 'daily'
 
-            # Admin user: store economy separately
-            if payload.get('sub') == 'admin_local':
-                redis = get_redis()
-                admin_user = load_admin_economy_user(redis)
-                
-                if quest_type == 'weekly':
-                    weekly_quests = ensure_weekly_quests(admin_user, persist=False)
-                    quests = weekly_quests
-                else:
-                    daily_state = ensure_daily_quests_today(admin_user, persist=False)
-                    quests = daily_state.get('quests', [])
-                
-                if not isinstance(quests, list):
-                    quests = []
-
-                quest = next((q for q in quests if isinstance(q, dict) and q.get('id') == quest_id), None)
-                if not quest:
-                    return self._send_error("Quest not found", 404)
-
-                try:
-                    progress = int(quest.get('progress', 0) or 0)
-                    target = int(quest.get('target', 0) or 0)
-                    reward = int(quest.get('reward_credits', 0) or 0)
-                except Exception:
-                    progress, target, reward = 0, 0, 0
-
-                if target <= 0 or progress < target:
-                    return self._send_error("Quest not completed yet", 400)
-                if bool(quest.get('claimed', False)):
-                    return self._send_error("Quest already claimed", 400)
-
-                quest['claimed'] = True
-                add_user_credits(admin_user, reward, persist=False)
-                
-                if quest_type == 'weekly':
-                    admin_user['weekly_quests'] = {"week_start": get_week_start_str(), "quests": quests}
-                else:
-                    admin_user['daily_quests'] = daily_state
-                    
-                save_admin_economy_user(redis, admin_user)
-                econ = ensure_user_economy(admin_user, persist=False)
-                return self._send_json({
-                    "status": "claimed",
-                    "reward_credits": reward,
-                    "wallet": econ.get("wallet") or {"credits": 0},
-                })
-
             user = get_user_by_id(payload.get('sub', ''))
             if not user:
                 return self._send_error("User not found", 404)
@@ -8008,33 +7783,6 @@ class handler(BaseHTTPRequestHandler):
             if price <= 0:
                 return self._send_error("This item is not for sale", 400)
 
-            # Admin user: store economy separately
-            if payload.get('sub') == 'admin_local':
-                redis = get_redis()
-                admin_user = load_admin_economy_user(redis)
-
-                if user_owns_cosmetic(admin_user, category, cosmetic_id):
-                    econ = ensure_user_economy(admin_user, persist=False)
-                    return self._send_json({
-                        "status": "already_owned",
-                        "wallet": econ.get("wallet") or {"credits": 0},
-                        "owned_cosmetics": econ.get("owned_cosmetics") or {},
-                    })
-
-                credits = get_user_credits(admin_user)
-                if credits < price:
-                    return self._send_error("Not enough credits", 403)
-
-                add_user_credits(admin_user, -price, persist=False)
-                grant_owned_cosmetic(admin_user, category, cosmetic_id, persist=False)
-                save_admin_economy_user(redis, admin_user)
-                econ = ensure_user_economy(admin_user, persist=False)
-                return self._send_json({
-                    "status": "purchased",
-                    "wallet": econ.get("wallet") or {"credits": 0},
-                    "owned_cosmetics": econ.get("owned_cosmetics") or {},
-                })
-
             user = get_user_by_id(payload.get('sub', ''))
             if not user:
                 return self._send_error("User not found", 404)
@@ -8096,30 +7844,6 @@ class handler(BaseHTTPRequestHandler):
             if not contents:
                 return self._send_error("Bundle has no contents", 400)
 
-            # Admin user: store economy separately
-            if payload.get('sub') == 'admin_local':
-                redis = get_redis()
-                admin_user = load_admin_economy_user(redis)
-
-                credits = get_user_credits(admin_user)
-                if credits < price:
-                    return self._send_error("Not enough credits", 403)
-
-                # Grant all items in bundle
-                for cat_key, cosmetic_id in contents.items():
-                    if not user_owns_cosmetic(admin_user, cat_key, cosmetic_id):
-                        grant_owned_cosmetic(admin_user, cat_key, cosmetic_id, persist=False)
-
-                add_user_credits(admin_user, -price, persist=False)
-                save_admin_economy_user(redis, admin_user)
-                econ = ensure_user_economy(admin_user, persist=False)
-                return self._send_json({
-                    "status": "purchased",
-                    "bundle_id": bundle_id,
-                    "wallet": econ.get("wallet") or {"credits": 0},
-                    "owned_cosmetics": econ.get("owned_cosmetics") or {},
-                })
-
             user = get_user_by_id(payload.get('sub', ''))
             if not user:
                 return self._send_error("User not found", 404)
@@ -8170,29 +7894,6 @@ class handler(BaseHTTPRequestHandler):
             item = get_cosmetic_item(catalog_key, cosmetic_id)
             if not item:
                 return self._send_error("Invalid cosmetic", 400)
-            
-            # Handle admin user specially - store cosmetics in Redis with short expiry
-            if payload['sub'] == 'admin_local':
-                redis = get_redis()
-                admin_cosmetics_key = 'admin_cosmetics'
-                
-                # Get existing admin cosmetics or start fresh
-                existing = redis.get(admin_cosmetics_key)
-                if existing:
-                    admin_cosmetics = json.loads(existing)
-                else:
-                    admin_cosmetics = DEFAULT_COSMETICS.copy()
-                
-                # Update the selected category
-                admin_cosmetics[category] = cosmetic_id
-                
-                # Save with 1 hour expiry
-                redis.set(admin_cosmetics_key, json.dumps(admin_cosmetics), ex=3600)
-                
-                return self._send_json({
-                    "status": "equipped",
-                    "cosmetics": admin_cosmetics,
-                })
             
             user = get_user_by_id(payload['sub'])
             if not user:

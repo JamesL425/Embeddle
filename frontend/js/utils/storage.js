@@ -215,26 +215,3 @@ export function removeSavedName() {
     localStorage.removeItem('embeddle_name');
 }
 
-/**
- * Get admin token from sessionStorage
- * @returns {string|null}
- */
-export function getAdminToken() {
-    return sessionStorage.getItem('embeddle_admin_token');
-}
-
-/**
- * Save admin token to sessionStorage
- * @param {string} token
- */
-export function setAdminToken(token) {
-    sessionStorage.setItem('embeddle_admin_token', token);
-}
-
-/**
- * Remove admin token
- */
-export function removeAdminToken() {
-    sessionStorage.removeItem('embeddle_admin_token');
-}
-
