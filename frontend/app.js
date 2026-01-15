@@ -3002,6 +3002,9 @@ async function updateLobby() {
         // Update theme voting with voter names
         updateThemeVoting(data.theme_options, data.theme_votes);
         
+        // Update host status from server (in case host changed or initial state was wrong)
+        gameState.isHost = data.host_id === gameState.playerId;
+        
         // Show/hide host controls
         const hostControls = document.getElementById('host-controls');
         if (gameState.isHost) {
