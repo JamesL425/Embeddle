@@ -4168,7 +4168,8 @@ async function submitGuess() {
             word,
         });
 
-        // Update with real server state (removes pending entry)
+        // Update with real server state
+        removePendingGuessFromHistory();
         updateGame(game);
 
         // Then let AIs take their turns

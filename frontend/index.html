@@ -174,18 +174,18 @@
                 
                 <div class="ml-formula">
                     <code>display(s) = s<sup>n</sup> / (s<sup>n</sup> + (c·(1-s))<sup>n</sup>)</code>
-                    <br><small>where c = m/(1-m), n = 3, m = 0.37</small>
+                    <br><small>where c = m/(1-m), n = 3, m = 0.36</small>
                 </div>
                 
-                <p>This makes low similarities appear lower and high similarities appear higher, while keeping the midpoint around 37% raw = 50% displayed.</p>
+                <p>This makes low similarities appear lower and high similarities appear higher, while keeping the midpoint around 36% raw = 50% displayed.</p>
                 
                 <p><strong>Nerd mode</strong> (in options) shows the original raw cosine similarity alongside the transformed display value.</p>
                 
                 <h3>The Game</h3>
-                <p>Each guess reveals how similar it is to each player's secret word. High similarity (>90% raw) eliminates that player!</p>
+                <p>Each guess reveals how similar it is to each player's secret word. <strong>Guessing a player's exact word eliminates them!</strong></p>
                 
                 <ul class="ml-tips">
-                    <li><strong>Strategy:</strong> Use words semantically close to opponents' likely words</li>
+                    <li><strong>Strategy:</strong> Use words semantically close to opponents' likely words to deduce their secret</li>
                     <li><strong>Defense:</strong> Choose obscure words with few semantic neighbors</li>
                     <li><strong>Pro tip:</strong> Related words often have 30-50% raw similarity (displayed as ~20-60%)</li>
                 </ul>
