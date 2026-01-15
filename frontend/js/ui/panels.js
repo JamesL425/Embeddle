@@ -40,6 +40,11 @@ export function init() {
         saveOptions(optionsState);
         applyOptions();
     });
+    document.getElementById('opt-turn-notifications')?.addEventListener('change', (e) => {
+        optionsState.turnNotificationsEnabled = Boolean(e.target.checked);
+        saveOptions(optionsState);
+        applyOptions();
+    });
     document.getElementById('opt-nerd-mode')?.addEventListener('change', (e) => {
         optionsState.nerdMode = Boolean(e.target.checked);
         saveOptions(optionsState);
@@ -88,12 +93,14 @@ export function applyOptionsToUI() {
     const musicCb = document.getElementById('opt-music-enabled');
     const clickCb = document.getElementById('opt-click-sfx-enabled');
     const elimCb = document.getElementById('opt-elim-sfx-enabled');
+    const turnNotifCb = document.getElementById('opt-turn-notifications');
     const nerdCb = document.getElementById('opt-nerd-mode');
 
     if (chatCb) chatCb.checked = Boolean(optionsState.chatEnabled);
     if (musicCb) musicCb.checked = Boolean(optionsState.musicEnabled);
     if (clickCb) clickCb.checked = Boolean(optionsState.clickSfxEnabled);
     if (elimCb) elimCb.checked = Boolean(optionsState.eliminationSfxEnabled);
+    if (turnNotifCb) turnNotifCb.checked = Boolean(optionsState.turnNotificationsEnabled);
     if (nerdCb) nerdCb.checked = Boolean(optionsState.nerdMode);
 }
 

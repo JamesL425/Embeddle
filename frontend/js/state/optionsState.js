@@ -11,6 +11,7 @@ const DEFAULT_OPTIONS = {
     musicEnabled: true,
     clickSfxEnabled: false,
     eliminationSfxEnabled: true,
+    turnNotificationsEnabled: true,
     nerdMode: false,
 };
 

@@ -6,11 +6,106 @@
 import { escapeHtml } from '../utils/dom.js';
 import { games } from '../services/api.js';
 import { gameState } from '../state/gameState.js';
-import { showError, showSuccess } from '../ui/toast.js';
+import { optionsState } from '../state/optionsState.js';
+import { showError, showSuccess, showInfo } from '../ui/toast.js';
 import * as screens from '../ui/screens.js';
 import * as playerCards from './playerCards.js';
 import * as history from './history.js';
 import * as singleplayer from './singleplayer.js';
+
+// Track previous turn state for notifications
+let previousCurrentPlayerId = null;
+let notificationPermissionRequested = false;
+
+/**
+ * Request notification permission if needed
+ */
+async function requestNotificationPermission() {
+    if (notificationPermissionRequested) return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted' || Notification.permission === 'denied') return;
+    
+    notificationPermissionRequested = true;
+    try {
+        await Notification.requestPermission();
+    } catch (e) {
+        console.warn('Notification permission request failed:', e);
+    }
+}
+
+/**
+ * Show turn notification
+ */
+function showTurnNotification() {
+    if (!optionsState.turnNotificationsEnabled) return;
+    
+    // Show toast notification (always, for in-tab feedback)
+    showInfo("🎯 It's your turn!");
+    
+    // Show browser notification if tab is not focused
+    if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+        try {
+            const notification = new Notification('Embeddle', {
+                body: "It's your turn to guess!",
+                icon: '/favicon-32.png',
+                tag: 'turn-notification', // Prevents duplicate notifications
+            });
+            
+            // Auto-close after 5 seconds
+            setTimeout(() => notification.close(), 5000);
+            
+            // Focus window when clicked
+            notification.onclick = () => {
+                window.focus();
+                notification.close();
+            };
+        } catch (e) {
+            console.warn('Browser notification failed:', e);
+        }
+    }
+}
+
+/**
+ * Check for turn change and notify if it's now my turn
+ * @param {Object} game - Game state
+ */
+function checkTurnNotification(game) {
+    const isSpectator = Boolean(gameState.isSpectator);
+    if (isSpectator) return;
+    
+    const currentPlayerId = game.current_player_id;
+    const myPlayerId = gameState.playerId;
+    const myPlayer = game.players?.find(p => p.id === myPlayerId);
+    
+    // Only notify if:
+    // 1. Turn changed from someone else to me
+    // 2. I'm alive
+    // 3. Game is actively playing (not waiting for word change)
+    // 4. All words are set
+    const turnChangedToMe = previousCurrentPlayerId !== null &&
+                            previousCurrentPlayerId !== myPlayerId &&
+                            currentPlayerId === myPlayerId;
+    
+    const shouldNotify = turnChangedToMe &&
+                         myPlayer?.is_alive &&
+                         !game.waiting_for_word_change &&
+                         game.all_words_set &&
+                         game.status === 'playing';
+    
+    if (shouldNotify) {
+        showTurnNotification();
+    }
+    
+    // Update previous state
+    previousCurrentPlayerId = currentPlayerId;
+}
+
+/**
+ * Reset turn tracking (call when leaving/joining games)
+ */
+export function resetTurnTracking() {
+    previousCurrentPlayerId = null;
+}
 
 /**
  * Update turn indicator
@@ -116,6 +211,11 @@ export async function submitGuess() {
             const names = result.eliminations.map(e => e.name).join(', ');
             showSuccess(`💀 Eliminated: ${names}`);
         }
+        
+        // Use the full game state from API response immediately (avoids waiting for next poll)
+        if (result.players) {
+            updateGame(result);
+        }
     } catch (error) {
         history.removePendingGuess();
         showError(error.message);
@@ -166,6 +266,9 @@ export function updateGame(game) {
     const myPlayer = game.players?.find(p => p.id === gameState.playerId);
 
     updateSidebarMeta(game);
+    
+    // Check for turn notifications before updating UI
+    checkTurnNotification(game);
     
     // Check if waiting for word selection
     if (!game.all_words_set) {
@@ -262,6 +365,13 @@ export function init() {
     // Word change
     document.getElementById('change-word-btn')?.addEventListener('click', submitWordChange);
     document.getElementById('skip-word-change-btn')?.addEventListener('click', skipWordChange);
+    
+    // Request notification permission on first user interaction
+    document.addEventListener('click', () => {
+        if (optionsState.turnNotificationsEnabled) {
+            requestNotificationPermission();
+        }
+    }, { once: true });
 }
 
 export default {
@@ -271,6 +381,7 @@ export default {
     submitWordChange,
     skipWordChange,
     updateGame,
+    resetTurnTracking,
     init,
 };
 
