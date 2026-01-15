@@ -53,6 +53,28 @@ export function render(game) {
         }
     });
     
+    // Track when each player was eliminated (history index where they were eliminated)
+    const eliminatedAtIndex = {};
+    history.forEach((entry, idx) => {
+        if (entry.type === 'forfeit' && entry.player_id) {
+            if (!(entry.player_id in eliminatedAtIndex)) {
+                eliminatedAtIndex[entry.player_id] = idx;
+            }
+        }
+        if (entry.type === 'timeout' && entry.penalty === 'eliminate' && entry.player_id) {
+            if (!(entry.player_id in eliminatedAtIndex)) {
+                eliminatedAtIndex[entry.player_id] = idx;
+            }
+        }
+        if (entry.eliminations && entry.eliminations.length > 0) {
+            for (const pid of entry.eliminations) {
+                if (!(pid in eliminatedAtIndex)) {
+                    eliminatedAtIndex[pid] = idx;
+                }
+            }
+        }
+    });
+    
     let html = '';
     
     // Add pending guess if exists
@@ -113,6 +135,13 @@ export function render(game) {
             // Check if this entry is before player's last word change
             const playerLastChange = lastWordChangeIndex[player.id];
             const isStale = playerLastChange !== undefined && i < playerLastChange;
+            
+            // Check if this player was already eliminated before this entry
+            const playerElimIdx = eliminatedAtIndex[player.id];
+            const wasAlreadyEliminated = playerElimIdx !== undefined && i > playerElimIdx;
+            
+            // Don't show similarity for players who were already eliminated
+            if (wasAlreadyEliminated) continue;
             
             const transformedSim = transformSimilarity(sim);
             const simPercent = Math.round(transformedSim * 100);

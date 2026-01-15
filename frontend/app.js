@@ -185,6 +185,9 @@ let gameState = {
     wordSelectionTime: null,
     wordSelectionTimeRemaining: null,
     wordSelectionStartedAt: null,
+    // Word change timer state (after elimination)
+    wordChangeTimerInterval: null,
+    wordChangeTimeRemaining: null,
 };
 
 // ============ OPTIONS ============
@@ -3598,6 +3601,9 @@ function updateGame(game) {
         if (myPlayer.can_change_word) {
             changeWordContainer.classList.remove('hidden');
             
+            // Start/update word change timer if we have time remaining from server
+            updateWordChangeTimer(game.word_change_time_remaining);
+            
             // Show word pool options (excluding guessed words)
             const guessedWords = new Set(game.history
                 .filter(e => e.word)
@@ -3690,6 +3696,8 @@ function updateGame(game) {
             if (wordPoolOptions) {
                 wordPoolOptions.dataset.optionsKey = '';
             }
+            // Stop word change timer
+            stopWordChangeTimer();
         }
         
         // Store word pool for change word feature
@@ -4213,6 +4221,105 @@ function hideTimer() {
     }
 }
 
+// ============ WORD CHANGE TIMER (15 seconds after elimination) ============
+
+function updateWordChangeTimer(serverTimeRemaining) {
+    const timerEl = document.getElementById('word-change-timer');
+    const countdownEl = document.getElementById('word-change-countdown');
+    if (!timerEl || !countdownEl) return;
+    
+    // If server gives us time remaining, sync to it
+    if (serverTimeRemaining !== null && serverTimeRemaining !== undefined) {
+        gameState.wordChangeTimeRemaining = serverTimeRemaining;
+    }
+    
+    // Show timer
+    timerEl.classList.remove('hidden');
+    
+    // Start interval if not already running
+    if (!gameState.wordChangeTimerInterval) {
+        gameState.wordChangeTimerInterval = setInterval(() => {
+            updateWordChangeTimerDisplay();
+        }, 100);
+    }
+    
+    // Update display immediately
+    updateWordChangeTimerDisplay();
+}
+
+function updateWordChangeTimerDisplay() {
+    const timerEl = document.getElementById('word-change-timer');
+    const countdownEl = document.getElementById('word-change-countdown');
+    if (!timerEl || !countdownEl) return;
+    
+    // Decrement time
+    if (gameState.wordChangeTimeRemaining !== null) {
+        gameState.wordChangeTimeRemaining = Math.max(0, gameState.wordChangeTimeRemaining - 0.1);
+    }
+    
+    const remaining = gameState.wordChangeTimeRemaining || 0;
+    countdownEl.textContent = Math.ceil(remaining);
+    
+    // Add urgency class when low
+    if (remaining <= 5) {
+        timerEl.classList.add('urgent');
+    } else {
+        timerEl.classList.remove('urgent');
+    }
+    
+    // Check for timeout
+    if (remaining <= 0) {
+        handleWordChangeTimeout();
+    }
+}
+
+function stopWordChangeTimer() {
+    const timerEl = document.getElementById('word-change-timer');
+    if (timerEl) {
+        timerEl.classList.add('hidden');
+        timerEl.classList.remove('urgent');
+    }
+    if (gameState.wordChangeTimerInterval) {
+        clearInterval(gameState.wordChangeTimerInterval);
+        gameState.wordChangeTimerInterval = null;
+    }
+    gameState.wordChangeTimeRemaining = null;
+}
+
+async function handleWordChangeTimeout() {
+    // Stop the timer to prevent multiple calls
+    stopWordChangeTimer();
+    
+    // Only trigger timeout if we're in the game (not spectating) and we have a word change pending
+    if (gameState.isSpectator || !gameState.code) {
+        return;
+    }
+    
+    try {
+        const result = await apiCall(`/api/games/${gameState.code}/word-change-timeout`, 'POST', {
+            player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
+        });
+        
+        if (result.timeout) {
+            showSuccess('Time expired! A random word was selected for you.');
+        }
+        
+        // Refresh game state
+        const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+        updateGame(game);
+    } catch (error) {
+        console.error('Word change timeout error:', error);
+        // Try to refresh game state anyway
+        try {
+            const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+            updateGame(game);
+        } catch (e) {
+            // Ignore secondary error
+        }
+    }
+}
+
 async function handleTurnTimeout() {
     // Stop the timer to prevent multiple calls
     if (gameState.turnTimerInterval) {
@@ -4265,6 +4372,28 @@ function updateHistory(game) {
     // Track previous history length to detect new eliminations
     const prevHistoryLength = gameState.prevHistoryLength || 0;
     const currentHistoryLength = game.history.length;
+    
+    // Build elimination index: player_id -> history index where they were eliminated
+    const eliminatedAtIndex = {};
+    game.history.forEach((entry, idx) => {
+        if (entry.type === 'forfeit' && entry.player_id) {
+            if (!(entry.player_id in eliminatedAtIndex)) {
+                eliminatedAtIndex[entry.player_id] = idx;
+            }
+        }
+        if (entry.type === 'timeout' && entry.penalty === 'eliminate' && entry.player_id) {
+            if (!(entry.player_id in eliminatedAtIndex)) {
+                eliminatedAtIndex[entry.player_id] = idx;
+            }
+        }
+        if (entry.eliminations && entry.eliminations.length > 0) {
+            for (const pid of entry.eliminations) {
+                if (!(pid in eliminatedAtIndex)) {
+                    eliminatedAtIndex[pid] = idx;
+                }
+            }
+        }
+    });
     
     [...game.history].reverse().forEach((entry, reverseIdx) => {
         const originalIdx = game.history.length - 1 - reverseIdx;
@@ -4350,6 +4479,13 @@ function updateHistory(game) {
         game.players.forEach(player => {
             const sim = entry.similarities?.[player.id];
             if (sim !== undefined) {
+                // Check if this player was already eliminated before this entry
+                const playerElimIdx = eliminatedAtIndex[player.id];
+                const wasAlreadyEliminated = playerElimIdx !== undefined && originalIdx > playerElimIdx;
+                
+                // Don't show similarity for players who were already eliminated
+                if (wasAlreadyEliminated) return;
+                
                 const transformedSim = transformSimilarity(sim);
                 const simColor = getSimilarityColor(transformedSim);
                 // Show raw cosine similarity in nerd mode

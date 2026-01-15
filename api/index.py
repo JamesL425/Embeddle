@@ -4837,6 +4837,14 @@ class handler(BaseHTTPRequestHandler):
                 elapsed = time.time() - word_selection_started_at
                 word_selection_time_remaining = max(0, word_selection_time - elapsed)
             
+            # Calculate word change time remaining (15 seconds to pick a new word after elimination)
+            WORD_CHANGE_TIME_LIMIT = 15
+            word_change_time_remaining = None
+            word_change_started_at = game.get('word_change_started_at')
+            if game.get('waiting_for_word_change') and word_change_started_at:
+                elapsed = time.time() - word_change_started_at
+                word_change_time_remaining = max(0, WORD_CHANGE_TIME_LIMIT - elapsed)
+            
             response = {
                 "code": game['code'],
                 "host_id": game['host_id'],
@@ -4867,6 +4875,7 @@ class handler(BaseHTTPRequestHandler):
                 "turn_started_at": turn_started_at,
                 "word_selection_time": word_selection_time,
                 "word_selection_time_remaining": word_selection_time_remaining,
+                "word_change_time_remaining": word_change_time_remaining,
             }
 
             ranked_mmr = game.get('ranked_mmr') if isinstance(game.get('ranked_mmr'), dict) else None
@@ -5639,6 +5648,14 @@ class handler(BaseHTTPRequestHandler):
                     elapsed = time.time() - word_selection_started_at
                     word_selection_time_remaining = max(0, word_selection_time - elapsed)
                 
+                # Calculate word change time remaining (15 seconds to pick a new word after elimination)
+                WORD_CHANGE_TIME_LIMIT = 15
+                word_change_time_remaining = None
+                word_change_started_at = game.get('word_change_started_at')
+                if game.get('waiting_for_word_change') and word_change_started_at:
+                    elapsed = time.time() - word_change_started_at
+                    word_change_time_remaining = max(0, WORD_CHANGE_TIME_LIMIT - elapsed)
+                
                 response = {
                     "code": game['code'],
                     "host_id": game.get('host_id', ''),
@@ -5670,6 +5687,7 @@ class handler(BaseHTTPRequestHandler):
                     "turn_started_at": turn_started_at,
                     "word_selection_time": word_selection_time,
                     "word_selection_time_remaining": word_selection_time_remaining,
+                    "word_change_time_remaining": word_change_time_remaining,
                 }
                 
                 for p in game.get('players', []):
@@ -5962,6 +5980,14 @@ class handler(BaseHTTPRequestHandler):
                     elapsed = time.time() - word_selection_started_at
                     word_selection_time_remaining = max(0, word_selection_time - elapsed)
                 
+                # Calculate word change time remaining (15 seconds to pick a new word after elimination)
+                WORD_CHANGE_TIME_LIMIT = 15
+                word_change_time_remaining = None
+                word_change_started_at = game.get('word_change_started_at')
+                if game.get('waiting_for_word_change') and word_change_started_at:
+                    elapsed = time.time() - word_change_started_at
+                    word_change_time_remaining = max(0, WORD_CHANGE_TIME_LIMIT - elapsed)
+                
                 # Build response with hidden words
                 response = {
                     "code": game['code'],
@@ -5993,6 +6019,7 @@ class handler(BaseHTTPRequestHandler):
                     "turn_started_at": turn_started_at,
                     "word_selection_time": word_selection_time,
                     "word_selection_time_remaining": word_selection_time_remaining,
+                    "word_change_time_remaining": word_change_time_remaining,
                 }
 
                 # Ranked: include per-game MMR results on finished games (so clients can display deltas).
@@ -7484,6 +7511,7 @@ class handler(BaseHTTPRequestHandler):
             if eliminations:
                 player['can_change_word'] = True
                 game['waiting_for_word_change'] = player_id  # Pause game until word is changed
+                game['word_change_started_at'] = time.time()  # Start 15-second word change timer
             
             # Record history
             history_entry = {
@@ -7625,17 +7653,17 @@ class handler(BaseHTTPRequestHandler):
             if not is_valid_word(new_word):
                 return self._send_error("Please enter a valid English word", 400)
             
-            # Check if word is in this player's word pool
-            player_pool = player.get('word_pool', [])
-            if player_pool and new_word.lower() not in [w.lower() for w in player_pool]:
-                return self._send_error("Please choose a word from your word pool", 400)
-
-            # If we offered a random sample for this word change, enforce it.
+            # If we offered a random sample for this word change, enforce it (takes priority over word pool).
             offered = player.get('word_change_options')
             if offered:
                 offered_lower = [str(w).lower() for w in offered]
                 if new_word.lower() not in offered_lower:
                     return self._send_error("Please choose a word from the offered sample", 400)
+            else:
+                # No word_change_options - fall back to checking the player's word pool
+                player_pool = player.get('word_pool', [])
+                if player_pool and new_word.lower() not in [w.lower() for w in player_pool]:
+                    return self._send_error("Please choose a word from your word pool", 400)
             
             # Check if word has been guessed before
             guessed_words = set()
@@ -7657,6 +7685,7 @@ class handler(BaseHTTPRequestHandler):
             
             # Clear the waiting state - game can continue
             game['waiting_for_word_change'] = None
+            game.pop('word_change_started_at', None)  # Clear word change timer
             # Reset turn timer since the game was paused for word change
             game['turn_started_at'] = time.time()
             
@@ -7717,6 +7746,7 @@ class handler(BaseHTTPRequestHandler):
             player['can_change_word'] = False
             game['waiting_for_word_change'] = None
             player.pop('word_change_options', None)
+            game.pop('word_change_started_at', None)  # Clear word change timer
             # Reset turn timer since the game was paused for word change
             game['turn_started_at'] = time.time()
 
@@ -7734,6 +7764,111 @@ class handler(BaseHTTPRequestHandler):
             if game_response:
                 return self._send_json(game_response)
             return self._send_json({"status": "skipped"})
+
+        # POST /api/games/{code}/word-change-timeout - Auto-select random word when 15 seconds expires
+        if '/word-change-timeout' in path and path.startswith('/api/games/'):
+            code = sanitize_game_code(path.split('/')[3])
+            if not code:
+                return self._send_error("Invalid game code format", 400)
+            
+            game = load_game(code)
+            
+            if not game:
+                return self._send_error("Game not found", 404)
+            if game['status'] != 'playing':
+                return self._send_error("Game not in progress", 400)
+            
+            waiting_player_id = game.get('waiting_for_word_change')
+            if not waiting_player_id:
+                return self._send_error("No word change in progress", 400)
+            
+            # Verify the word change time has actually expired (server-authoritative)
+            WORD_CHANGE_TIME_LIMIT = 15
+            word_change_started_at = game.get('word_change_started_at')
+            
+            if not word_change_started_at:
+                return self._send_error("No word change timer for this game", 400)
+            
+            elapsed = time.time() - word_change_started_at
+            # Allow 2 second grace period for network latency
+            if elapsed < WORD_CHANGE_TIME_LIMIT - 2:
+                return self._send_json({
+                    "timeout": False,
+                    "time_remaining": WORD_CHANGE_TIME_LIMIT - elapsed,
+                    "message": "Word change time has not expired yet",
+                })
+            
+            import random
+            
+            # Find the player who needs to change their word
+            player = None
+            for p in game['players']:
+                if p['id'] == waiting_player_id:
+                    player = p
+                    break
+            
+            if not player:
+                return self._send_error("Waiting player not found", 400)
+            
+            if not player.get('can_change_word'):
+                # Already changed or skipped - clear state and continue
+                game['waiting_for_word_change'] = None
+                game.pop('word_change_started_at', None)
+                game['turn_started_at'] = time.time()
+                save_game(code, game)
+                return self._send_json({"status": "already_changed"})
+            
+            # Get the offered options (or fall back to word pool)
+            offered = player.get('word_change_options')
+            if offered:
+                available = [str(w) for w in offered]
+            else:
+                available = player.get('word_pool', [])
+            
+            # Filter out guessed words
+            guessed_words = set()
+            for entry in game.get('history', []):
+                guessed_words.add(entry.get('word', '').lower())
+            available = [w for w in available if w.lower() not in guessed_words]
+            
+            if not available:
+                # Fallback: keep current word
+                new_word = player.get('secret_word', '')
+            else:
+                new_word = random.choice(available)
+            
+            # Update the player's word
+            if new_word and new_word.lower() != (player.get('secret_word') or '').lower():
+                try:
+                    embedding = get_embedding(new_word)
+                    player['secret_word'] = new_word.lower()
+                    player['secret_embedding'] = embedding
+                except Exception as e:
+                    print(f"Embedding error for word-change-timeout: {e}")
+                    # Keep current word on error
+            
+            player['can_change_word'] = False
+            player.pop('word_change_options', None)
+            
+            # Clear the waiting state - game can continue
+            game['waiting_for_word_change'] = None
+            game.pop('word_change_started_at', None)
+            game['turn_started_at'] = time.time()
+            
+            # Record a word-change event
+            game['history'].append({
+                "type": "word_change",
+                "player_id": player['id'],
+                "player_name": player['name'],
+                "auto_selected": True,  # Mark as auto-selected due to timeout
+            })
+            
+            save_game(code, game)
+            
+            return self._send_json({
+                "status": "auto_selected",
+                "timeout": True,
+            })
 
         # POST /api/games/{code}/timeout - Handle turn timeout (chess clock - always eliminates)
         if '/timeout' in path and path.startswith('/api/games/'):
