@@ -4312,6 +4312,25 @@ def apply_ranked_mmr_updates(game: dict):
         participants.append(p)
 
     if len(participants) < 2:
+        # Even if we can't do MMR calculations (not enough human players),
+        # still increment ranked_games for the solo human participant
+        # so placement progress (0/5) is tracked correctly.
+        for p in participants:
+            uid = p.get('auth_user_id')
+            if not uid:
+                continue
+            user = get_user_by_id(uid)
+            if not user:
+                continue
+            u_stats = get_user_stats(user)
+            u_stats['ranked_games'] = int(u_stats.get('ranked_games', 0) or 0) + 1
+            pid = p.get('id')
+            if pid and pid == winner_pid:
+                u_stats['ranked_wins'] = int(u_stats.get('ranked_wins', 0) or 0) + 1
+            else:
+                u_stats['ranked_losses'] = int(u_stats.get('ranked_losses', 0) or 0) + 1
+            user['stats'] = u_stats
+            save_user(user)
         game['ranked_processed'] = True
         return
 
@@ -4349,8 +4368,24 @@ def apply_ranked_mmr_updates(game: dict):
         except Exception:
             pre_game_ranked_games[uid] = 0
 
-    # If we couldn't load at least 2 users, skip
+    # If we couldn't load at least 2 users, still update stats for loaded users
     if len(rating) < 2:
+        # Update ranked_games for any users we did load
+        for uid, user in user_map.items():
+            u_stats = get_user_stats(user)
+            u_stats['ranked_games'] = int(u_stats.get('ranked_games', 0) or 0) + 1
+            # Find pid from participants
+            pid = None
+            for p in participants:
+                if p.get('auth_user_id') == uid:
+                    pid = p.get('id')
+                    break
+            if pid and pid == winner_pid:
+                u_stats['ranked_wins'] = int(u_stats.get('ranked_wins', 0) or 0) + 1
+            else:
+                u_stats['ranked_losses'] = int(u_stats.get('ranked_losses', 0) or 0) + 1
+            user['stats'] = u_stats
+            save_user(user)
         game['ranked_processed'] = True
         return
 
