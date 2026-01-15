@@ -4558,6 +4558,20 @@ function showGameOver(game) {
         }
     }
     
+    // Pre-generate replay code for sharing (so clipboard write is synchronous on click)
+    gameState.cachedReplayCode = null;
+    (async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/games/${gameState.code}/replay`);
+            if (response.ok) {
+                const data = await response.json();
+                gameState.cachedReplayCode = await encodeReplayData(data);
+            }
+        } catch (e) {
+            console.error('Failed to pre-generate replay code:', e);
+        }
+    })();
+    
     // Generate and display share results
     generateShareResults(game, isWinner);
 }
@@ -4884,9 +4898,30 @@ document.getElementById('close-replay-btn')?.addEventListener('click', () => {
 
 // Share replay button (game over screen)
 document.getElementById('share-replay-btn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('share-replay-btn');
+    
+    // Use cached code if available (synchronous clipboard write preserves user activation)
+    if (gameState.cachedReplayCode) {
+        const replayLink = getReplayLink(gameState.cachedReplayCode);
+        try {
+            await navigator.clipboard.writeText(replayLink);
+            showToast('Replay link copied!');
+        } catch (e) {
+            // Fallback
+            const input = document.createElement('input');
+            input.value = replayLink;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            showToast('Replay link copied!');
+        }
+        return;
+    }
+    
+    // Fallback to fetching if not cached (existing behavior)
     if (!gameState.code) return;
     
-    const btn = document.getElementById('share-replay-btn');
     btn.disabled = true;
     btn.textContent = 'GENERATING...';
     
@@ -5466,6 +5501,7 @@ document.getElementById('back-to-lobby-btn')?.addEventListener('click', () => {
     clearGameSession();
     gameState.code = null;
     gameState.playerId = null;
+    gameState.cachedReplayCode = null;
     showScreen('home');
     loadLobbies();
 });
