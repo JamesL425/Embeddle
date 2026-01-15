@@ -566,6 +566,7 @@ async function sendChatMessage(text) {
         resetChatIfNeeded();
         const res = await apiCall(`/api/games/${gameState.code}/chat`, 'POST', {
             player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
             message,
         });
         if (res?.message) {
@@ -603,6 +604,7 @@ function saveGameSession() {
             code: gameState.code,
             playerId: gameState.playerId,
             playerName: gameState.playerName,
+            sessionToken: gameState.sessionToken,  // SECURITY: Save session token
             isSingleplayer: gameState.isSingleplayer || false,
         };
         localStorage.setItem('embeddle_session', JSON.stringify(session));
@@ -657,6 +659,7 @@ function upsertRecentGame(session) {
         code: session.code,
         playerId: session.playerId || null,
         playerName: session.playerName || null,
+        sessionToken: session.sessionToken || null,  // SECURITY: Save session token
         isSingleplayer: Boolean(session.isSingleplayer),
         lastSeen: now,
     };
@@ -2852,6 +2855,7 @@ document.getElementById('sp-start-game-btn')?.addEventListener('click', async ()
         // Call the API (AI word selection happens server-side)
         const response = await apiCall(`/api/games/${gameState.code}/start`, 'POST', {
             player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
         });
         
         // Fetch the updated game state with word pools
@@ -2876,7 +2880,10 @@ document.getElementById('sp-start-game-btn')?.addEventListener('click', async ()
 document.getElementById('sp-leave-lobby-btn')?.addEventListener('click', async () => {
     try {
         if (gameState.code && gameState.playerId) {
-            await apiCall(`/api/games/${gameState.code}/leave`, 'POST', { player_id: gameState.playerId });
+            await apiCall(`/api/games/${gameState.code}/leave`, 'POST', {
+                player_id: gameState.playerId,
+                session_token: gameState.sessionToken,
+            });
         }
     } catch (e) {
         // best-effort
@@ -3045,6 +3052,7 @@ async function voteForTheme(theme) {
     try {
         await apiCall(`/api/games/${gameState.code}/vote`, 'POST', {
             player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
             theme,
         });
         gameState.myVote = theme;
@@ -3272,6 +3280,7 @@ async function handleWordSelectionTimeout() {
     try {
         const result = await apiCall(`/api/games/${gameState.code}/word-selection-timeout`, 'POST', {
             player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
         });
         
         if (result.timeout) {
@@ -3333,6 +3342,7 @@ document.getElementById('lock-word-btn')?.addEventListener('click', async () => 
     try {
         await apiCall(`/api/games/${gameState.code}/set-word`, 'POST', {
             player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
             secret_word: word,
         });
         
@@ -3358,6 +3368,7 @@ document.getElementById('begin-game-btn')?.addEventListener('click', async () =>
     try {
         await apiCall(`/api/games/${gameState.code}/begin`, 'POST', {
             player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
         });
         // Polling will detect status change
     } catch (error) {
@@ -3401,6 +3412,7 @@ document.getElementById('join-form').addEventListener('submit', async (e) => {
     try {
         await apiCall(`/api/games/${gameState.code}/set-word`, 'POST', {
             player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
             secret_word: secretWord,
         });
         
@@ -3462,6 +3474,7 @@ document.getElementById('start-game-btn').addEventListener('click', async () => 
         // Call the API
         await apiCall(`/api/games/${gameState.code}/start`, 'POST', {
             player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
         });
         
         // Fetch the updated game state with word pools
@@ -3483,7 +3496,10 @@ document.getElementById('start-game-btn').addEventListener('click', async () => 
 document.getElementById('leave-lobby-btn')?.addEventListener('click', async () => {
     try {
         if (gameState.code && gameState.playerId) {
-            await apiCall(`/api/games/${gameState.code}/leave`, 'POST', { player_id: gameState.playerId });
+            await apiCall(`/api/games/${gameState.code}/leave`, 'POST', {
+                player_id: gameState.playerId,
+                session_token: gameState.sessionToken,
+            });
         }
     } catch (e) {
         // best-effort
@@ -4212,6 +4228,7 @@ async function handleTurnTimeout() {
     try {
         const result = await apiCall(`/api/games/${gameState.code}/timeout`, 'POST', {
             player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
         });
         
         if (result.timeout) {
@@ -4417,6 +4434,7 @@ async function submitGuess() {
         // Submit guess - server returns updated game state
         const game = await apiCall(`/api/games/${gameState.code}/guess`, 'POST', {
             player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
             word,
         });
 
@@ -4509,6 +4527,7 @@ function maybeTriggerSingleplayerAiWordPick(game) {
     // Fire-and-forget: let AIs pick words while the human chooses theirs
     apiCall(`/api/games/${gameState.code}/ai-pick-words`, 'POST', {
         player_id: gameState.playerId,
+        session_token: gameState.sessionToken,
     }).catch(err => {
         console.error('AI pick-words error:', err);
     }).finally(() => {
@@ -4546,6 +4565,7 @@ async function runSingleplayerAiTurns() {
             // Process AI move - server returns updated game state with think_time_ms
             const updated = await apiCall(`/api/games/${gameState.code}/ai-step`, 'POST', {
                 player_id: gameState.playerId,
+                session_token: gameState.sessionToken,
             });
             
             // Use dynamic thinking time from server (or fallback to 350ms)
@@ -4622,6 +4642,7 @@ document.getElementById('skip-word-change-btn').addEventListener('click', async 
     try {
         const game = await apiCall(`/api/games/${gameState.code}/skip-word-change`, 'POST', {
             player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
         });
         updateGame(game);
         maybeRunSingleplayerAiTurns(game);
@@ -4660,6 +4681,7 @@ async function submitWordChange() {
     try {
         const game = await apiCall(`/api/games/${gameState.code}/change-word`, 'POST', {
             player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
             new_word: newWord,
         });
         updateGame(game);
