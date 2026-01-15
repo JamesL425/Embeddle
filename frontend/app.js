@@ -1990,7 +1990,6 @@ async function createLobby({ visibility = 'private', isRanked = false } = {}) {
         if (!isRanked && timeControlSelect) {
             timeControl = timeControlSelect.value || 'default';
         }
-        console.log('[createLobby] time_control:', timeControl, 'isRanked:', isRanked);
         
         const data = await apiCall('/api/games', 'POST', {
             visibility,
@@ -2036,7 +2035,6 @@ async function quickPlay({ ranked = false } = {}) {
         if (!ranked && timeControlSelect) {
             timeControl = timeControlSelect.value || 'default';
         }
-        console.log('[quickPlay] time_control:', timeControl, 'ranked:', ranked);
         
         const createData = await apiCall('/api/games', 'POST', {
             visibility: 'public',
@@ -2918,7 +2916,6 @@ async function updateLobby() {
             const timeControl = data.time_control;
             const turnTime = timeControl?.turn_time || 0;
             const increment = timeControl?.increment || 0;
-            console.log('[updateLobby] time_control:', timeControl, 'turnTime:', turnTime, 'increment:', increment);
             
             if (turnTime > 0) {
                 timeBadge.textContent = `⏱ ${turnTime}s +${increment}s`;

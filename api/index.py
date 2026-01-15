@@ -4633,10 +4633,7 @@ class handler(BaseHTTPRequestHandler):
             
             # Time control preset for casual games (ignored for ranked)
             time_control_preset = str(body.get('time_control', 'default') or 'default').lower()
-            print(f"[CREATE_GAME] Received time_control: {body.get('time_control')!r} -> preset: {time_control_preset!r}")
-            print(f"[CREATE_GAME] Available presets: {list(CASUAL_TIME_PRESETS.keys())}")
             if time_control_preset not in CASUAL_TIME_PRESETS:
-                print(f"[CREATE_GAME] Preset not found, defaulting to 'default'")
                 time_control_preset = 'default'
 
             # Ranked requires Google auth; also force public visibility
