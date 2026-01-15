@@ -2815,6 +2815,7 @@ document.querySelectorAll('.btn-ai-add').forEach(btn => {
         try {
             await apiCall(`/api/games/${gameState.code}/add-ai`, 'POST', {
                 player_id: gameState.playerId,
+                session_token: gameState.sessionToken,
                 difficulty: difficulty,
             });
             updateSingleplayerLobby();
@@ -2828,6 +2829,7 @@ async function removeAI(aiId) {
     try {
         await apiCall(`/api/games/${gameState.code}/remove-ai`, 'POST', {
             player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
             ai_id: aiId,
         });
         updateSingleplayerLobby();
