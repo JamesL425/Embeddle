@@ -1356,40 +1356,21 @@ header h1 {
     isolation: isolate;
 }
 
-/* Danger indicator - colored bar at top of card */
+/* Danger indicator - fill bar at top of card showing max similarity */
 .danger-indicator {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     height: 4px;
-    transition: background-color 0.15s ease;
+    background: rgba(0, 0, 0, 0.3);
+    overflow: hidden;
 }
 
-.danger-safe {
-    background: var(--success);
-}
-
-.danger-low {
-    background: linear-gradient(90deg, var(--success), var(--warning));
-}
-
-.danger-medium {
-    background: var(--warning);
-}
-
-.danger-high {
-    background: linear-gradient(90deg, var(--warning), var(--danger));
-}
-
-.danger-critical {
-    background: var(--danger);
-    animation: pulse-danger 1s infinite;
-}
-
-@keyframes pulse-danger {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+.danger-fill {
+    height: 100%;
+    transition: width 0.3s ease, background 0.3s ease;
+    box-shadow: 0 0 8px currentColor;
 }
 
 .player-card.current-turn {

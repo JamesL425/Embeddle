@@ -27,6 +27,17 @@ export function transformSimilarity(s) {
     return sn / (sn + cn);
 }
 
+/**
+ * Get color for similarity value on green-to-red spectrum
+ * @param {number} sim - Transformed similarity (0-1)
+ * @returns {string} - HSL color string
+ */
+export function getSimilarityColor(sim) {
+    // Map 0-1 to hue 120 (green) to 0 (red)
+    const hue = Math.round((1 - sim) * 120);
+    return `hsl(${hue}, 100%, 50%)`;
+}
+
 // Profile click callback
 let onProfileClick = null;
 
@@ -154,10 +165,10 @@ export function render(game) {
         } else if (lastEntry && lastEntry.similarities && lastEntry.similarities[player.id] !== undefined) {
             simValue = lastEntry.similarities[player.id];
             const transformedSim = transformSimilarity(simValue);
-            const simClass = getSimilarityClass(transformedSim);
+            const simColor = getSimilarityColor(transformedSim);
             const simPercent = Math.round(transformedSim * 100);
             statusHtml = `<div class="status alive">ACTIVE</div>
-                          <div class="similarity ${simClass}">${simPercent}%</div>`;
+                          <div class="similarity" style="color: ${simColor}">${simPercent}%</div>`;
         } else {
             statusHtml = `<div class="status alive">ACTIVE</div>`;
         }
@@ -197,6 +208,7 @@ export default {
     getNameColorClass,
     getBadgeHtml,
     getSimilarityClass,
+    getSimilarityColor,
     transformSimilarity,
     render,
 };

@@ -39,6 +39,17 @@ function transformSimilarity(s) {
     return sn / (sn + cn);
 }
 
+/**
+ * Get color for similarity value on green-to-red spectrum
+ * @param {number} sim - Transformed similarity (0-1)
+ * @returns {string} - HSL color string
+ */
+function getSimilarityColor(sim) {
+    // Map 0-1 to hue 120 (green) to 0 (red)
+    const hue = Math.round((1 - sim) * 120);
+    return `hsl(${hue}, 100%, 50%)`;
+}
+
 // ============ BACKGROUND MUSIC ============
 
 const DEFAULT_BGM_CONFIG = {
@@ -3624,26 +3635,12 @@ function updatePlayersGrid(game) {
         topGuessesPerPlayer[playerId] = topGuessesPerPlayer[playerId].slice(0, 3);
     });
     
-    // Calculate danger score for each player
-    // Formula: top1 * 0.6 + top2 * 0.25 + top3 * 0.15
-    // This weights the highest similarity most, but multiple high ones add up
-    function calculateDangerScore(topGuesses) {
+    // Get max transformed similarity for danger indicator
+    function getMaxTransformedSimilarity(topGuesses) {
         if (!topGuesses || topGuesses.length === 0) return 0;
-        const weights = [0.6, 0.25, 0.15];
-        let score = 0;
-        topGuesses.forEach((guess, i) => {
-            score += guess.similarity * (weights[i] || 0);
-        });
-        return score;
-    }
-    
-    function getDangerLevel(score) {
-        // Returns: 'safe', 'low', 'medium', 'high', 'critical'
-        if (score < 0.3) return 'safe';
-        if (score < 0.45) return 'low';
-        if (score < 0.6) return 'medium';
-        if (score < 0.75) return 'high';
-        return 'critical';
+        // Get the highest raw similarity and transform it
+        const maxRaw = topGuesses[0].similarity;
+        return transformSimilarity(maxRaw);
     }
     
     game.players.forEach(player => {
@@ -3674,15 +3671,19 @@ function updatePlayersGrid(game) {
         // Check if this player recently changed their word
         const hasChangedWord = wordChangeAfterIndex[player.id] !== undefined;
         
-        // Calculate danger score
+        // Calculate max transformed similarity for danger indicator
         const topGuesses = topGuessesPerPlayer[player.id];
-        const dangerScore = calculateDangerScore(topGuesses);
-        const dangerLevel = getDangerLevel(dangerScore);
+        const maxTransformedSim = getMaxTransformedSimilarity(topGuesses);
         
         // Build danger indicator HTML (only for alive players with guesses)
+        // Uses a fill bar that grows with danger, colored on green-to-red spectrum
         let dangerHtml = '';
         if (player.is_alive && topGuesses && topGuesses.length > 0) {
-            dangerHtml = `<div class="danger-indicator danger-${dangerLevel}" title="Risk: ${(dangerScore * 100).toFixed(0)}%"></div>`;
+            const dangerColor = getSimilarityColor(maxTransformedSim);
+            const dangerPercent = Math.round(maxTransformedSim * 100);
+            dangerHtml = `<div class="danger-indicator" title="Max similarity: ${dangerPercent}%">
+                <div class="danger-fill" style="width: ${dangerPercent}%; background: ${dangerColor}"></div>
+            </div>`;
         }
         
         // Build AI difficulty badge HTML
@@ -3714,11 +3715,11 @@ function updatePlayersGrid(game) {
             topGuessesHtml = '<div class="top-guesses">';
             topGuesses.forEach(guess => {
                 const transformedSim = transformSimilarity(guess.similarity);
-                const simClass = getSimilarityClass(transformedSim);
+                const simColor = getSimilarityColor(transformedSim);
                 topGuessesHtml += `
                     <div class="top-guess">
                         <span class="guess-word">${escapeHtml(guess.word)}</span>
-                        <span class="guess-sim ${simClass}">${escapeHtml((transformedSim * 100).toFixed(0))}%</span>
+                        <span class="guess-sim" style="color: ${simColor}">${escapeHtml((transformedSim * 100).toFixed(0))}%</span>
                     </div>
                 `;
             });
@@ -3853,7 +3854,7 @@ function updateHistory(game) {
             const sim = entry.similarities?.[player.id];
             if (sim !== undefined) {
                 const transformedSim = transformSimilarity(sim);
-                const simClass = getSimilarityClass(transformedSim);
+                const simColor = getSimilarityColor(transformedSim);
                 // Show raw cosine similarity in nerd mode
                 const nerdInfo = optionsState.nerdMode 
                     ? `<span class="nerd-sim" title="Raw cosine similarity">(${sim.toFixed(4)})</span>` 
@@ -3861,7 +3862,7 @@ function updateHistory(game) {
                 simsHtml += `
                     <div class="sim-badge">
                         <span>${escapeHtml(player.name)}</span>
-                        <span class="score ${simClass}">${escapeHtml((transformedSim * 100).toFixed(0))}%${nerdInfo}</span>
+                        <span class="score" style="color: ${simColor}">${escapeHtml((transformedSim * 100).toFixed(0))}%${nerdInfo}</span>
                     </div>
                 `;
             }
@@ -4551,14 +4552,14 @@ function renderReplayState(turnIndex) {
     let playersHtml = '';
     Object.values(playerStates).forEach(p => {
         const transformedSim = transformSimilarity(p.maxSimilarity);
-        const simClass = getSimilarityClass(transformedSim);
+        const simColor = getSimilarityColor(transformedSim);
         const isWinner = p.id === data.winner;
         
         playersHtml += `
             <div class="replay-player ${p.isAlive ? '' : 'eliminated'} ${isWinner ? 'winner' : ''}">
                 <div class="replay-player-name">${escapeHtml(p.name)}${isWinner ? ' 🏆' : ''}${!p.isAlive ? ' ☠️' : ''}</div>
                 <div class="replay-player-word">${escapeHtml(p.secret_word || '???')}</div>
-                <div class="replay-player-danger ${simClass}">${Math.round(transformedSim * 100)}%</div>
+                <div class="replay-player-danger" style="color: ${simColor}">${Math.round(transformedSim * 100)}%</div>
             </div>
         `;
     });
@@ -5056,7 +5057,7 @@ function renderReplayScreen(turnIndex) {
         let playersHtml = '';
         Object.values(playerStates).forEach(p => {
             const transformedSim = transformSimilarity(p.maxSimilarity);
-            const simClass = getSimilarityClass(transformedSim);
+            const simColor = getSimilarityColor(transformedSim);
             const isWinner = p.id === data.winner;
             
             playersHtml += `
@@ -5066,7 +5067,7 @@ function renderReplayScreen(turnIndex) {
                         ${p.is_ai ? ' 🤖' : ''}
                     </div>
                     <div class="replay-screen-player-word">${escapeHtml(p.secret_word || '???')}</div>
-                    <div class="replay-screen-player-danger ${simClass}">${Math.round(transformedSim * 100)}%</div>
+                    <div class="replay-screen-player-danger" style="color: ${simColor}">${Math.round(transformedSim * 100)}%</div>
                 </div>
             `;
         });
