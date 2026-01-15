@@ -163,23 +163,35 @@
                 <p>EMBEDDLE uses <strong>word embeddings</strong> - vectors in high-dimensional space that capture semantic meaning. Words with similar meanings are closer together in this space.</p>
                 
                 <h3>Cosine Similarity</h3>
-                <p>We measure how "close" two words are using <strong>cosine similarity</strong> - the cosine of the angle between their vectors. Values range from -1 (opposite) to 1 (identical).</p>
+                <p>We measure how "close" two words are using <strong>cosine similarity</strong> - the cosine of the angle between their vectors. Raw values range from -1 (opposite) to 1 (identical).</p>
                 
                 <div class="ml-formula">
-                    <code>similarity(A, B) = (A · B) / (||A|| × ||B||)</code>
+                    <code>cosine(A, B) = (A · B) / (||A|| × ||B||)</code>
                 </div>
                 
+                <h3>Display Transformation</h3>
+                <p>Raw cosine similarity values tend to cluster between 20-60%, making them hard to interpret. We apply a <strong>sigmoid-like transformation</strong> to spread values more intuitively across the 0-100% range:</p>
+                
+                <div class="ml-formula">
+                    <code>display(s) = s<sup>n</sup> / (s<sup>n</sup> + (c·(1-s))<sup>n</sup>)</code>
+                    <br><small>where c = m/(1-m), n = 3, m = 0.37</small>
+                </div>
+                
+                <p>This makes low similarities appear lower and high similarities appear higher, while keeping the midpoint around 37% raw = 50% displayed.</p>
+                
+                <p><strong>Nerd mode</strong> (in options) shows the original raw cosine similarity alongside the transformed display value.</p>
+                
                 <h3>The Game</h3>
-                <p>Each guess reveals how similar it is to each player's secret word. High similarity (>90%) eliminates that player!</p>
+                <p>Each guess reveals how similar it is to each player's secret word. High similarity (>90% raw) eliminates that player!</p>
                 
                 <ul class="ml-tips">
                     <li><strong>Strategy:</strong> Use words semantically close to opponents' likely words</li>
                     <li><strong>Defense:</strong> Choose obscure words with few semantic neighbors</li>
-                    <li><strong>Pro tip:</strong> Related words often have 40-60% similarity</li>
+                    <li><strong>Pro tip:</strong> Related words often have 30-50% raw similarity (displayed as ~20-60%)</li>
                 </ul>
                 
                 <h3>Model</h3>
-                <p>We use <strong>GloVe embeddings</strong> (Global Vectors for Word Representation) trained on large text corpora, providing 300-dimensional vectors for ~400k words.</p>
+                <p>We use OpenAI's <strong>text-embedding-3-large</strong> model, providing high-quality semantic embeddings for robust word similarity comparisons.</p>
             </div>
         </div>
     </div>

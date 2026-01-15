@@ -51,6 +51,10 @@
       "diamond": 1700
     }
   },
+  "similarity_transform": {
+    "n": 3,
+    "m": 0.37
+  },
   "theme_categories": [
     "Crime & Mystery",
     "Fantasy & Magic",

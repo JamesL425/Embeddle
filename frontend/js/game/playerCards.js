@@ -6,6 +6,27 @@
 import { escapeHtml } from '../utils/dom.js';
 import { gameState } from '../state/gameState.js';
 
+// ============ SIMILARITY TRANSFORM ============
+// Transform raw cosine similarity to more intuitive display values
+// Uses sigmoid-like function: t(s) = s^n / (s^n + (c*(1-s))^n) where c = m/(1-m)
+const SIMILARITY_TRANSFORM = {
+    n: 3,      // Exponent - controls curve steepness
+    m: 0.37    // Midpoint - raw value that maps to 50% transformed
+};
+
+/**
+ * Transform raw cosine similarity to display value
+ * @param {number} s - Raw cosine similarity (0-1)
+ * @returns {number} - Transformed similarity (0-1)
+ */
+export function transformSimilarity(s) {
+    const { n, m } = SIMILARITY_TRANSFORM;
+    const c = m / (1 - m);
+    const sn = Math.pow(s, n);
+    const cn = Math.pow(c * (1 - s), n);
+    return sn / (sn + cn);
+}
+
 // Profile click callback
 let onProfileClick = null;
 
@@ -82,13 +103,14 @@ export function getBadgeHtml(cosmetics) {
 
 /**
  * Get similarity display class
- * @param {number} sim
+ * @param {number} sim - TRANSFORMED similarity value (0-1)
  * @returns {string}
  */
 export function getSimilarityClass(sim) {
-    if (sim >= 0.9) return 'sim-danger';
-    if (sim >= 0.7) return 'sim-high';
-    if (sim >= 0.5) return 'sim-medium';
+    // Thresholds for TRANSFORMED similarity values
+    if (sim >= 0.95) return 'sim-danger';  // Very close to elimination (~88%+ raw)
+    if (sim >= 0.75) return 'sim-high';    // High danger zone (~55%+ raw)
+    if (sim >= 0.50) return 'sim-medium';  // Moderate similarity (~37%+ raw)
     return 'sim-low';
 }
 
@@ -131,8 +153,9 @@ export function render(game) {
                           <div class="revealed-word">${escapeHtml(revealedWord)}</div>`;
         } else if (lastEntry && lastEntry.similarities && lastEntry.similarities[player.id] !== undefined) {
             simValue = lastEntry.similarities[player.id];
-            const simClass = getSimilarityClass(simValue);
-            const simPercent = Math.round(simValue * 100);
+            const transformedSim = transformSimilarity(simValue);
+            const simClass = getSimilarityClass(transformedSim);
+            const simPercent = Math.round(transformedSim * 100);
             statusHtml = `<div class="status alive">ACTIVE</div>
                           <div class="similarity ${simClass}">${simPercent}%</div>`;
         } else {
@@ -174,6 +197,7 @@ export default {
     getNameColorClass,
     getBadgeHtml,
     getSimilarityClass,
+    transformSimilarity,
     render,
 };
 

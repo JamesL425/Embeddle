@@ -18,6 +18,27 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// ============ SIMILARITY TRANSFORM ============
+// Transform raw cosine similarity to more intuitive display values
+// Uses sigmoid-like function: t(s) = s^n / (s^n + (c*(1-s))^n) where c = m/(1-m)
+const SIMILARITY_TRANSFORM = {
+    n: 3,      // Exponent - controls curve steepness
+    m: 0.37    // Midpoint - raw value that maps to 50% transformed
+};
+
+/**
+ * Transform raw cosine similarity to display value
+ * @param {number} s - Raw cosine similarity (0-1)
+ * @returns {number} - Transformed similarity (0-1)
+ */
+function transformSimilarity(s) {
+    const { n, m } = SIMILARITY_TRANSFORM;
+    const c = m / (1 - m);
+    const sn = Math.pow(s, n);
+    const cn = Math.pow(c * (1 - s), n);
+    return sn / (sn + cn);
+}
+
 // ============ BACKGROUND MUSIC ============
 
 const DEFAULT_BGM_CONFIG = {
@@ -3324,11 +3345,12 @@ function updatePlayersGrid(game) {
         if (topGuesses && topGuesses.length > 0) {
             topGuessesHtml = '<div class="top-guesses">';
             topGuesses.forEach(guess => {
-                const simClass = getSimilarityClass(guess.similarity);
+                const transformedSim = transformSimilarity(guess.similarity);
+                const simClass = getSimilarityClass(transformedSim);
                 topGuessesHtml += `
                     <div class="top-guess">
                         <span class="guess-word">${escapeHtml(guess.word)}</span>
-                        <span class="guess-sim ${simClass}">${escapeHtml((guess.similarity * 100).toFixed(0))}%</span>
+                        <span class="guess-sim ${simClass}">${escapeHtml((transformedSim * 100).toFixed(0))}%</span>
                     </div>
                 `;
             });
@@ -3367,9 +3389,10 @@ function updatePlayersGrid(game) {
 }
 
 function getSimilarityClass(sim) {
-    if (sim >= 0.95) return 'danger';
-    if (sim >= 0.7) return 'high';
-    if (sim >= 0.4) return 'medium';
+    // Thresholds for TRANSFORMED similarity values
+    if (sim >= 0.95) return 'danger';  // Very close to elimination (~88%+ raw)
+    if (sim >= 0.75) return 'high';    // High danger zone (~55%+ raw)
+    if (sim >= 0.50) return 'medium';  // Moderate similarity (~37%+ raw)
     return 'low';
 }
 
@@ -3461,7 +3484,8 @@ function updateHistory(game) {
         game.players.forEach(player => {
             const sim = entry.similarities?.[player.id];
             if (sim !== undefined) {
-                const simClass = getSimilarityClass(sim);
+                const transformedSim = transformSimilarity(sim);
+                const simClass = getSimilarityClass(transformedSim);
                 // Show raw cosine similarity in nerd mode
                 const nerdInfo = optionsState.nerdMode 
                     ? `<span class="nerd-sim" title="Raw cosine similarity">(${sim.toFixed(4)})</span>` 
@@ -3469,7 +3493,7 @@ function updateHistory(game) {
                 simsHtml += `
                     <div class="sim-badge">
                         <span>${escapeHtml(player.name)}</span>
-                        <span class="score ${simClass}">${escapeHtml((sim * 100).toFixed(0))}%${nerdInfo}</span>
+                        <span class="score ${simClass}">${escapeHtml((transformedSim * 100).toFixed(0))}%${nerdInfo}</span>
                     </div>
                 `;
             }
@@ -4079,14 +4103,15 @@ function renderReplayState(turnIndex) {
     // Render player cards
     let playersHtml = '';
     Object.values(playerStates).forEach(p => {
-        const simClass = getSimilarityClass(p.maxSimilarity);
+        const transformedSim = transformSimilarity(p.maxSimilarity);
+        const simClass = getSimilarityClass(transformedSim);
         const isWinner = p.id === data.winner;
         
         playersHtml += `
             <div class="replay-player ${p.isAlive ? '' : 'eliminated'} ${isWinner ? 'winner' : ''}">
                 <div class="replay-player-name">${escapeHtml(p.name)}${isWinner ? ' 🏆' : ''}${!p.isAlive ? ' ☠️' : ''}</div>
                 <div class="replay-player-word">${escapeHtml(p.secret_word || '???')}</div>
-                <div class="replay-player-danger ${simClass}">${Math.round(p.maxSimilarity * 100)}%</div>
+                <div class="replay-player-danger ${simClass}">${Math.round(transformedSim * 100)}%</div>
             </div>
         `;
     });
@@ -4583,7 +4608,8 @@ function renderReplayScreen(turnIndex) {
     if (playersContainer) {
         let playersHtml = '';
         Object.values(playerStates).forEach(p => {
-            const simClass = getSimilarityClass(p.maxSimilarity);
+            const transformedSim = transformSimilarity(p.maxSimilarity);
+            const simClass = getSimilarityClass(transformedSim);
             const isWinner = p.id === data.winner;
             
             playersHtml += `
@@ -4593,7 +4619,7 @@ function renderReplayScreen(turnIndex) {
                         ${p.is_ai ? ' 🤖' : ''}
                     </div>
                     <div class="replay-screen-player-word">${escapeHtml(p.secret_word || '???')}</div>
-                    <div class="replay-screen-player-danger ${simClass}">${Math.round(p.maxSimilarity * 100)}%</div>
+                    <div class="replay-screen-player-danger ${simClass}">${Math.round(transformedSim * 100)}%</div>
                 </div>
             `;
         });

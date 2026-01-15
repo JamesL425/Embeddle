@@ -5,7 +5,8 @@
 
 import { escapeHtml } from '../utils/dom.js';
 import { gameState } from '../state/gameState.js';
-import { getSimilarityClass } from './playerCards.js';
+import { optionsState } from '../state/optionsState.js';
+import { getSimilarityClass, transformSimilarity } from './playerCards.js';
 
 // Pending guess state
 let pendingGuess = null;
@@ -113,14 +114,15 @@ export function render(game) {
             const playerLastChange = lastWordChangeIndex[player.id];
             const isStale = playerLastChange !== undefined && i < playerLastChange;
             
-            const simPercent = Math.round(sim * 100);
-            const simClass = getSimilarityClass(sim);
+            const transformedSim = transformSimilarity(sim);
+            const simPercent = Math.round(transformedSim * 100);
+            const simClass = getSimilarityClass(transformedSim);
             const isEliminated = eliminations.includes(player.id);
             const isMe = player.id === myPlayerId && !isSpectator;
             
             simHtml += `
                 <span class="history-sim ${simClass} ${isEliminated ? 'eliminated' : ''} ${isStale ? 'stale' : ''} ${isMe ? 'is-me' : ''}">
-                    ${escapeHtml(player.name)}: ${simPercent}%
+                    ${escapeHtml(player.name)}: ${simPercent}%${optionsState.nerdMode ? ` <span class="nerd-sim" title="Raw cosine similarity">(${sim.toFixed(4)})</span>` : ''}
                     ${isEliminated ? ' 💀' : ''}
                     ${isStale ? ' (old)' : ''}
                 </span>
