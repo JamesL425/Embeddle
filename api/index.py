@@ -219,7 +219,7 @@ MIN_PLAYERS = CONFIG.get("game", {}).get("min_players", 3)
 MAX_PLAYERS = CONFIG.get("game", {}).get("max_players", 4)
 GAME_EXPIRY_SECONDS = CONFIG.get("game", {}).get("game_expiry_seconds", 7200)
 LOBBY_EXPIRY_SECONDS = CONFIG.get("game", {}).get("lobby_expiry_seconds", 600)
-WORD_CHANGE_SAMPLE_SIZE = CONFIG.get("game", {}).get("word_change_sample_size", 6)
+WORD_CHANGE_SAMPLE_SIZE = CONFIG.get("game", {}).get("word_change_sample_size", 10)
 WORDS_PER_PLAYER = int((CONFIG.get("game", {}) or {}).get("words_per_player", 18) or 18)
 WORDS_PER_PLAYER = max(1, min(50, WORDS_PER_PLAYER))
 
@@ -4035,7 +4035,7 @@ def build_word_change_options(player: dict, game: dict) -> list:
     """
     Build a random sample of words offered when a player earns a word change.
     
-    Generates a fresh sample of WORD_CHANGE_SAMPLE_SIZE (12) words from the full theme (120 words).
+    Generates a fresh sample of WORD_CHANGE_SAMPLE_SIZE (10) words from the full theme (120 words).
     Only excludes current secret words of OTHER players.
     Previously guessed words and previous secret words are allowed.
     """
