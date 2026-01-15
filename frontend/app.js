@@ -1986,7 +1986,11 @@ async function createLobby({ visibility = 'private', isRanked = false } = {}) {
     try {
         // Get time control selection (only for casual games)
         const timeControlSelect = document.getElementById('time-control-select');
-        const timeControl = isRanked ? 'default' : (timeControlSelect?.value || 'default');
+        let timeControl = 'default';
+        if (!isRanked && timeControlSelect) {
+            timeControl = timeControlSelect.value || 'default';
+        }
+        console.log('[createLobby] time_control:', timeControl, 'isRanked:', isRanked);
         
         const data = await apiCall('/api/games', 'POST', {
             visibility,
@@ -2028,7 +2032,11 @@ async function quickPlay({ ranked = false } = {}) {
         // No suitable lobby: create a fresh public one
         // For quickplay, use the selected time control (or default for ranked)
         const timeControlSelect = document.getElementById('time-control-select');
-        const timeControl = ranked ? 'default' : (timeControlSelect?.value || 'default');
+        let timeControl = 'default';
+        if (!ranked && timeControlSelect) {
+            timeControl = timeControlSelect.value || 'default';
+        }
+        console.log('[quickPlay] time_control:', timeControl, 'ranked:', ranked);
         
         const createData = await apiCall('/api/games', 'POST', {
             visibility: 'public',
