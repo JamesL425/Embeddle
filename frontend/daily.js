@@ -419,11 +419,13 @@ function renderDailyNoAuth() {
     const creditsEl = document.getElementById('daily-credits');
     const streakEl = document.getElementById('daily-streak');
     const questsEl = document.getElementById('daily-quests');
+    const weeklyQuestsEl = document.getElementById('weekly-quests');
     const shopEl = document.getElementById('daily-shop');
     
-    if (creditsEl) creditsEl.textContent = '0';
-    if (streakEl) streakEl.innerHTML = '<div class="streak-display"><span class="streak-icon">🔥</span><span class="streak-count">0</span></div>';
+    if (creditsEl) creditsEl.textContent = '—';
+    if (streakEl) streakEl.innerHTML = '<div class="streak-display"><span class="streak-icon">🔥</span><span class="streak-count">—</span></div>';
     if (questsEl) questsEl.innerHTML = '<div class="daily-empty">Sign in with Google to access daily quests.</div>';
+    if (weeklyQuestsEl) weeklyQuestsEl.innerHTML = '<div class="daily-empty">Sign in with Google to access weekly quests.</div>';
     if (shopEl) shopEl.innerHTML = '<div class="daily-empty">Sign in with Google to access the shop.</div>';
 }
 

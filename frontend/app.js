@@ -1065,7 +1065,7 @@ function updateHomeStatsBar() {
     const rankEl = document.getElementById('stats-rank');
     const yourStatsCard = document.getElementById('home-your-stats');
     
-    // Only show for authenticated users
+    // Only show for authenticated users (not guests)
     if (!gameState.authToken) {
         if (statsBar) statsBar.classList.add('hidden');
         if (yourStatsCard) yourStatsCard.classList.add('hidden');
@@ -1084,10 +1084,16 @@ function updateHomeStatsBar() {
         creditsEl.textContent = credits.toLocaleString();
     }
     
-    // Update rank (from leaderboard position or MMR)
+    // Update rank (show placement progress or MMR)
     if (rankEl) {
-        const mmr = gameState.userData?.stats?.mmr;
-        if (mmr && mmr > 1000) {
+        const stats = gameState.userData?.stats;
+        const mmr = stats?.mmr;
+        const rankedGames = stats?.ranked_games || 0;
+        
+        if (rankedGames < 10) {
+            // Show placement progress
+            rankEl.textContent = `${rankedGames}/10`;
+        } else if (mmr && mmr > 1000) {
             rankEl.textContent = mmr;
         } else {
             rankEl.textContent = '—';
@@ -1107,7 +1113,16 @@ function updateHomeStatsBar() {
         if (gamesEl) gamesEl.textContent = (stats.mp_games_played || 0).toLocaleString();
         if (winsEl) winsEl.textContent = (stats.mp_wins || 0).toLocaleString();
         if (elimsEl) elimsEl.textContent = (stats.mp_eliminations || 0).toLocaleString();
-        if (mmrEl) mmrEl.textContent = stats.mmr || '—';
+        
+        // Show placement progress or MMR
+        if (mmrEl) {
+            const rankedGames = stats.ranked_games || 0;
+            if (rankedGames < 10) {
+                mmrEl.textContent = `${rankedGames}/10`;
+            } else {
+                mmrEl.textContent = stats.mmr || '—';
+            }
+        }
         
         yourStatsCard.classList.remove('hidden');
     }
@@ -1180,9 +1195,27 @@ function logout() {
     gameState.authToken = null;
     gameState.authUser = null;
     gameState.isAdminSession = false;
+    gameState.userData = null;
     localStorage.removeItem('embeddle_name');
     localStorage.removeItem('embeddle_auth_token');
     sessionStorage.removeItem('embeddle_admin_token');
+    
+    // Clear daily state to prevent stale data showing
+    if (typeof dailyState !== 'undefined') {
+        dailyState.quests = [];
+        dailyState.weeklyQuests = [];
+        dailyState.wallet = { credits: 0 };
+        dailyState.streak = {
+            streak_count: 0,
+            streak_last_date: '',
+            longest_streak: 0,
+            streak_claimed_today: false,
+        };
+        dailyState.streakCreditsEarned = 0;
+        dailyState.streakMilestoneBonus = 0;
+        dailyState.streakBroken = false;
+        dailyState.ownedCosmetics = {};
+    }
     
     document.getElementById('login-box').classList.remove('hidden');
     document.getElementById('logged-in-box').classList.add('hidden');
@@ -1196,6 +1229,9 @@ function logout() {
     }
 
     updateRankedUi();
+    
+    // Update UI to reflect logged-out state
+    updateHomeStatsBar();
 }
 
 // Google login button
@@ -2546,12 +2582,6 @@ async function loadRankedLeaderboard() {
 }
 
 // Leaderboard navigation
-document.getElementById('open-leaderboard-btn')?.addEventListener('click', () => {
-    showScreen('leaderboard');
-    // Default to casual view
-    setLeaderboardMode(leaderboardState.mode || 'casual');
-    setCasualLeaderboardType(leaderboardState.casualType || 'alltime');
-});
 document.getElementById('view-full-leaderboard-btn')?.addEventListener('click', () => {
     showScreen('leaderboard');
     setLeaderboardMode(leaderboardState.mode || 'casual');
@@ -3302,12 +3332,37 @@ async function handleWordSelectionTimeout() {
         
         if (result.timeout) {
             // Check if we were auto-assigned a word
-            const wasAutoAssigned = result.auto_assigned?.some(p => p.id === gameState.playerId);
-            if (wasAutoAssigned) {
-                showError('Time expired! A random word was assigned to you.');
+            const myAssignment = result.auto_assigned?.find(p => p.id === gameState.playerId);
+            if (myAssignment) {
+                // Fetch updated game state to get the assigned word
+                const data = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+                gameState.game = data;
+                const updatedPlayer = data.players?.find(p => p.id === gameState.playerId);
+                const assignedWord = updatedPlayer?.secret_word || 'RANDOM';
+                
+                showError(`Time expired! "${assignedWord.toUpperCase()}" was assigned to you.`);
+                
+                // Lock the UI - show locked notice with assigned word
+                document.getElementById('word-select-controls').classList.add('hidden');
+                document.getElementById('word-locked-notice').classList.remove('hidden');
+                document.getElementById('locked-word-display').textContent = assignedWord.toUpperCase();
+                
+                // Disable word selection options
+                document.querySelectorAll('.word-option').forEach(el => {
+                    el.style.pointerEvents = 'none';
+                    if (el.dataset.word.toLowerCase() !== assignedWord.toLowerCase()) {
+                        el.style.opacity = '0.3';
+                    } else {
+                        el.classList.add('selected');
+                    }
+                });
+                
+                // Update the selected word display
+                document.getElementById('selected-word-display').textContent = assignedWord.toUpperCase();
+                document.getElementById('selected-word-display').dataset.word = assignedWord;
             }
             
-            // Refresh the screen
+            // Refresh the screen to update player status counts
             updateWordSelectScreen();
         }
     } catch (error) {
@@ -3467,6 +3522,10 @@ document.getElementById('start-game-btn').addEventListener('click', async () => 
         
         // Fetch the updated game state with word pools
         const data = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
+        
+        // Reset button state on success (for next game without refresh)
+        startBtn.disabled = false;
+        startBtn.textContent = '> SELECT_WORDS';
         
         // Now transition to word selection with the data
         showWordSelectionScreen(data);
@@ -3959,8 +4018,7 @@ function updatePlayersGrid(game) {
             const tier = getRankTier(mmr);
             
             if (isPlacement) {
-                const gamesLeft = 10 - rankedGames;
-                rankedInfoHtml = `<div class="player-ranked-info placement"><span class="placement-badge">PLACEMENT</span><span class="placement-games">${gamesLeft} left</span></div>`;
+                rankedInfoHtml = `<div class="player-ranked-info placement"><span class="placement-badge">PLACEMENT</span><span class="placement-games">${rankedGames}/10</span></div>`;
             } else {
                 rankedInfoHtml = `<div class="player-ranked-info">${renderRankBadge(tier)}<span class="player-mmr">${mmr}</span></div>`;
             }
@@ -4993,9 +5051,6 @@ function renderReplayState(turnIndex) {
     const turnCounter = document.getElementById('replay-turn-counter');
     const currentTurnEl = document.getElementById('replay-current-turn');
     
-    // Update turn counter
-    turnCounter.textContent = `Turn ${turnIndex}/${history.length}`;
-    
     // Calculate player states at this point
     const playerStates = {};
     data.players.forEach(p => {
@@ -5006,6 +5061,13 @@ function renderReplayState(turnIndex) {
             lastGuess: null,
         };
     });
+    
+    // Calculate round number (same logic as updateSidebarMeta)
+    // A round completes when all alive players have guessed
+    const totalPlayers = data.players.length || 1;
+    let roundNumber = 1;
+    let guessesInCurrentRound = 0;
+    let aliveCount = totalPlayers;
     
     // Process history up to current turn
     for (let i = 0; i < turnIndex && i < history.length; i++) {
@@ -5020,15 +5082,31 @@ function renderReplayState(turnIndex) {
             });
         }
         
-        // Mark eliminations
-        if (entry.eliminations) {
-            entry.eliminations.forEach(pid => {
-                if (playerStates[pid]) {
-                    playerStates[pid].isAlive = false;
-                }
-            });
+        // Track round progression
+        guessesInCurrentRound++;
+        
+        // Check eliminations and update alive count
+        const eliminations = entry.eliminations || [];
+        
+        // Mark eliminations in player states
+        eliminations.forEach(pid => {
+            if (playerStates[pid]) {
+                playerStates[pid].isAlive = false;
+            }
+        });
+        
+        // Check if round is complete (all alive players before eliminations have guessed)
+        const playersBeforeElim = aliveCount;
+        aliveCount -= eliminations.length;
+        
+        if (guessesInCurrentRound >= playersBeforeElim) {
+            roundNumber++;
+            guessesInCurrentRound = 0;
         }
     }
+    
+    // Update turn counter to show round number
+    turnCounter.textContent = `Round ${roundNumber}`;
     
     // Render player cards
     let playersHtml = '';
@@ -5508,10 +5586,6 @@ function renderReplayScreen(turnIndex) {
     const themeEl = document.getElementById('replay-screen-theme');
     if (themeEl) themeEl.textContent = `Theme: ${data.theme?.name || 'Unknown'}`;
     
-    // Update turn counter
-    const turnCounter = document.getElementById('replay-screen-turn-counter');
-    if (turnCounter) turnCounter.textContent = `Turn ${turnIndex} / ${history.length}`;
-    
     // Update slider
     const slider = document.getElementById('replay-screen-slider');
     if (slider) {
@@ -5530,6 +5604,13 @@ function renderReplayScreen(turnIndex) {
         };
     });
     
+    // Calculate round number (same logic as updateSidebarMeta)
+    // A round completes when all alive players have guessed
+    const totalPlayers = data.players.length || 1;
+    let roundNumber = 1;
+    let guessesInCurrentRound = 0;
+    let aliveCount = totalPlayers;
+    
     // Process history up to current turn
     for (let i = 0; i < turnIndex && i < history.length; i++) {
         const entry = history[i];
@@ -5544,15 +5625,32 @@ function renderReplayScreen(turnIndex) {
             });
         }
         
-        // Mark eliminations
-        if (entry.eliminations) {
-            entry.eliminations.forEach(pid => {
-                if (playerStates[pid]) {
-                    playerStates[pid].isAlive = false;
-                }
-            });
+        // Track round progression
+        guessesInCurrentRound++;
+        
+        // Check eliminations and update alive count
+        const eliminations = entry.eliminations || [];
+        
+        // Mark eliminations in player states
+        eliminations.forEach(pid => {
+            if (playerStates[pid]) {
+                playerStates[pid].isAlive = false;
+            }
+        });
+        
+        // Check if round is complete (all alive players before eliminations have guessed)
+        const playersBeforeElim = aliveCount;
+        aliveCount -= eliminations.length;
+        
+        if (guessesInCurrentRound >= playersBeforeElim) {
+            roundNumber++;
+            guessesInCurrentRound = 0;
         }
     }
+    
+    // Update turn counter to show round number
+    const turnCounter = document.getElementById('replay-screen-turn-counter');
+    if (turnCounter) turnCounter.textContent = `Round ${roundNumber}`;
     
     // Render player cards
     const playersContainer = document.getElementById('replay-screen-players');

@@ -1054,12 +1054,34 @@ def ai_choose_guess(ai_player: dict, game: dict) -> Optional[str]:
 
 
 def ai_change_word(ai_player: dict, game: dict) -> Optional[str]:
-    """AI chooses a new secret word after eliminating someone."""
-    word_pool = ai_player.get("word_pool", [])
-    guessed_words = [e.get("word", "").lower() for e in game.get("history", []) if e.get("word")]
+    """AI chooses a new secret word after eliminating someone.
     
-    # Filter out guessed words from pool
-    available_words = [w for w in word_pool if w.lower() not in guessed_words]
+    If the AI's original word pool is exhausted, regenerate a fresh sample from the theme.
+    Only exclude current secret words of OTHER players - guessed words and previous secret words are allowed.
+    """
+    import random
+    
+    # Get current secret words of OTHER players (these are the only words we must exclude)
+    current_secrets = set()
+    ai_id = ai_player.get("id")
+    for p in game.get("players", []):
+        if p.get("id") != ai_id and p.get("secret_word"):
+            current_secrets.add(p["secret_word"].lower())
+    
+    # First try: use AI's existing word pool, filtered to exclude current secrets
+    word_pool = ai_player.get("word_pool", [])
+    available_words = [w for w in word_pool if w.lower() not in current_secrets]
+    
+    # If pool exhausted, regenerate from theme
+    if not available_words:
+        all_theme_words = (game.get("theme", {}) or {}).get("words", [])
+        available_words = [w for w in all_theme_words if w.lower() not in current_secrets]
+        
+        # Update AI's word pool with a fresh sample
+        if len(available_words) > WORDS_PER_PLAYER:
+            new_pool = random.sample(available_words, WORDS_PER_PLAYER)
+            ai_player["word_pool"] = sorted(new_pool)
+            available_words = new_pool
     
     if not available_words:
         return None
@@ -2247,20 +2269,30 @@ def generate_daily_quests_for_user(user: dict, date_str: str) -> list:
     def scale_reward(base: int) -> int:
         return max(10, int(base * reward_mult))
 
+    # Helper to generate description with actual target value
+    def desc_games(n): return f"Play {n} multiplayer game{'s' if n != 1 else ''}"
+    def desc_elims(n): return f"Get {n} elimination{'s' if n != 1 else ''}"
+    def desc_wins(n): return f"Win {n} multiplayer game{'s' if n != 1 else ''}"
+    
+    # Pre-calculate scaled targets for descriptions
+    engagement_targets = [scale_target(2), scale_target(3), scale_target(4)]
+    combat_targets = [scale_target(2), scale_target(4), scale_target(6)]
+    victory_targets = [1, scale_target(2)]
+    
     defs = {
         "engagement": [
-            ("mp_games", scale_target(2), scale_reward(35), "RUN OPERATIONS", "Play 2 multiplayer games"),
-            ("mp_games", scale_target(3), scale_reward(55), "FIELD WORK", "Play 3 multiplayer games"),
-            ("mp_games", scale_target(4), scale_reward(75), "FULL SHIFT", "Play 4 multiplayer games"),
+            ("mp_games", engagement_targets[0], scale_reward(35), "RUN OPERATIONS", desc_games(engagement_targets[0])),
+            ("mp_games", engagement_targets[1], scale_reward(55), "FIELD WORK", desc_games(engagement_targets[1])),
+            ("mp_games", engagement_targets[2], scale_reward(75), "FULL SHIFT", desc_games(engagement_targets[2])),
         ],
         "combat": [
-            ("mp_elims", scale_target(2), scale_reward(45), "TARGET PRACTICE", "Get 2 eliminations"),
-            ("mp_elims", scale_target(4), scale_reward(70), "HUNTER MODE", "Get 4 eliminations"),
-            ("mp_elims", scale_target(6), scale_reward(95), "EXECUTION ORDER", "Get 6 eliminations"),
+            ("mp_elims", combat_targets[0], scale_reward(45), "TARGET PRACTICE", desc_elims(combat_targets[0])),
+            ("mp_elims", combat_targets[1], scale_reward(70), "HUNTER MODE", desc_elims(combat_targets[1])),
+            ("mp_elims", combat_targets[2], scale_reward(95), "EXECUTION ORDER", desc_elims(combat_targets[2])),
         ],
         "victory": [
-            ("mp_wins", 1, scale_reward(85), "SECURE THE WIN", "Win 1 multiplayer game"),
-            ("mp_wins", scale_target(2), scale_reward(140), "DOMINATE", "Win 2 multiplayer games"),
+            ("mp_wins", victory_targets[0], scale_reward(85), "SECURE THE WIN", desc_wins(victory_targets[0])),
+            ("mp_wins", victory_targets[1], scale_reward(140), "DOMINATE", desc_wins(victory_targets[1])),
         ],
         "ranked": [
             ("ranked_games", 1, scale_reward(90), "RANKED DEPLOYMENT", "Play 1 ranked game"),
@@ -2621,24 +2653,39 @@ def is_word_in_theme(word: str, theme_words: list) -> bool:
 def build_word_change_options(player: dict, game: dict) -> list:
     """
     Build a random sample of words offered when a player earns a word change.
-    The sample is stored in game state so it remains stable across refresh/polling.
-    Words that have already been guessed are still available for selection.
+    
+    Generates a fresh sample of WORD_CHANGE_SAMPLE_SIZE (12) words from the full theme (120 words).
+    Only excludes current secret words of OTHER players.
+    Previously guessed words and previous secret words are allowed.
     """
     import random
-
-    pool = player.get('word_pool', []) or (game.get('theme', {}) or {}).get('words', [])
-
-    # Don't filter out guessed words - allow players to pick words that have been guessed
-    available = list(pool) if pool else []
-
-    if not available:
+    
+    # Get full theme words
+    all_theme_words = (game.get('theme', {}) or {}).get('words', [])
+    
+    if not all_theme_words:
         # Fallback: allow keeping current word if nothing else is available
         current = player.get('secret_word')
         return [current] if current else []
-
+    
+    # Get current secret words of OTHER players (only these are excluded)
+    player_id = player.get('id')
+    current_secrets = set()
+    for p in game.get('players', []):
+        if p.get('id') != player_id and p.get('secret_word'):
+            current_secrets.add(p['secret_word'].lower())
+    
+    # Filter to exclude only current secrets of other players
+    available = [w for w in all_theme_words if w.lower() not in current_secrets]
+    
+    if not available:
+        # Fallback: allow keeping current word
+        current = player.get('secret_word')
+        return [current] if current else []
+    
     if len(available) <= WORD_CHANGE_SAMPLE_SIZE:
         return sorted(available)
-
+    
     return sorted(random.sample(available, WORD_CHANGE_SAMPLE_SIZE))
 
 
