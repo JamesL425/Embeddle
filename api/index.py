@@ -4534,8 +4534,9 @@ def update_game_stats(game: dict):
         if not player.get('auth_user_id'):
             continue
         
-        # Only update leaderboard stats for multiplayer games (not solo)
-        if is_multiplayer:
+        # Only update casual leaderboard stats for multiplayer CASUAL games (not solo, not ranked)
+        # Ranked games have their own separate stats tracked via apply_ranked_mmr_updates
+        if is_multiplayer and not is_ranked:
             stats = get_player_stats(player['name'])
             stats['games_played'] += 1
             
@@ -4574,7 +4575,8 @@ def update_game_stats(game: dict):
             
             save_player_stats(player['name'], stats)
 
-            # Also update authenticated user's mp_* stats for cosmetics unlocks.
+        # Update authenticated user's mp_* stats for cosmetics unlocks (for ALL multiplayer games)
+        if is_multiplayer:
             auth_user_id = player.get('auth_user_id')
             if auth_user_id:
                 auth_user = get_user_by_id(auth_user_id)
