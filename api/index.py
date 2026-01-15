@@ -4447,6 +4447,18 @@ class handler(BaseHTTPRequestHandler):
                 # Count ready players
                 ready_count = sum(1 for p in game['players'] if p.get('is_ready', False))
                 
+                # Calculate time remaining for current turn
+                time_control = game.get('time_control', {})
+                turn_time = int(time_control.get('turn_time', 0) or 0)
+                increment = int(time_control.get('increment', 0) or 0)
+                timeout_penalty = str(time_control.get('timeout_penalty', 'skip') or 'skip')
+                
+                turn_time_remaining = None
+                turn_started_at = game.get('turn_started_at')
+                if turn_time > 0 and turn_started_at and game['status'] == 'playing' and not game.get('waiting_for_word_change'):
+                    elapsed = time.time() - turn_started_at
+                    turn_time_remaining = max(0, turn_time - elapsed)
+                
                 # Build response with hidden words
                 response = {
                     "code": game['code'],
@@ -4470,6 +4482,13 @@ class handler(BaseHTTPRequestHandler):
                     "all_words_set": all_words_set,
                     "ready_count": ready_count,
                     "is_singleplayer": game.get('is_singleplayer', False),
+                    "time_control": {
+                        "turn_time": turn_time,
+                        "increment": increment,
+                        "timeout_penalty": timeout_penalty,
+                    },
+                    "turn_time_remaining": turn_time_remaining,
+                    "turn_started_at": turn_started_at,
                 }
 
                 # Ranked: include per-game MMR results on finished games (so clients can display deltas).
