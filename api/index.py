@@ -3045,6 +3045,12 @@ def update_game_stats(game: dict):
             eliminated_players.update(entry['eliminations'])
     
     for player in game['players']:
+        # Skip bots and guest players - they shouldn't appear on leaderboards
+        if player.get('is_ai'):
+            continue
+        if not player.get('auth_user_id'):
+            continue
+        
         stats = get_player_stats(player['name'])
         stats['games_played'] += 1
         
