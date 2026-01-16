@@ -3179,6 +3179,8 @@ def get_or_create_user(google_user: dict) -> dict:
             user['daily_quests'] = new_daily_quests_state()
         if 'is_donor' not in user:
             user['is_donor'] = False
+        # Always update is_admin flag based on current ADMIN_EMAILS (re-check on each login)
+        user['is_admin'] = is_admin
         # Auto-grant donor status to admins
         if is_admin and not user.get('is_donor'):
             user['is_donor'] = True
@@ -3193,6 +3195,7 @@ def get_or_create_user(google_user: dict) -> dict:
         'name': google_user.get('name', 'Anonymous'),
         'avatar': google_user.get('picture', ''),
         'created_at': int(time.time()),
+        'is_admin': is_admin,  # Admin status from ADMIN_EMAILS env var
         'is_donor': is_admin,  # Admins start as donors
         'donation_date': int(time.time()) if is_admin else None,
         'cosmetics': DEFAULT_COSMETICS.copy(),
@@ -3312,6 +3315,14 @@ def get_user_cosmetics(user: dict) -> dict:
             and item.get('premium', False)
             and not (is_donor or is_admin)
         ):
+            fallback = DEFAULT_COSMETICS.get(category_key)
+            if result.get(category_key) != fallback:
+                result[category_key] = fallback
+                changed = True
+            continue
+
+        # Enforce admin-only gating (always on)
+        if item and item.get('admin_only', False) and not is_admin:
             fallback = DEFAULT_COSMETICS.get(category_key)
             if result.get(category_key) != fallback:
                 result[category_key] = fallback
@@ -8594,6 +8605,10 @@ class handler(BaseHTTPRequestHandler):
             
             is_donor = user.get('is_donor', False)
             is_admin = user.get('is_admin', False)
+
+            # Admin-only gating (always enforced)
+            if item.get('admin_only', False) and not is_admin:
+                return self._send_error("This legendary cosmetic is admin-only!", 403)
 
             # Premium gating (feature-flagged)
             if COSMETICS_PAYWALL_ENABLED and not COSMETICS_UNLOCK_ALL and item.get('premium', False) and not is_donor and not is_admin:

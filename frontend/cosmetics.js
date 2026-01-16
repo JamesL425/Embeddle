@@ -638,6 +638,21 @@ function getBadgeHtml(cosmetics) {
         overlord: '🦅',
         dragon: '🐉',
         alien: '👽',
+        // New badges
+        wizard: '🧙',
+        robot: '🤖',
+        unicorn: '🦄',
+        crystal_ball: '🔮',
+        joystick: '🕹️',
+        meteor: '☄️',
+        phoenix: '🔥',
+        wolf: '🐺',
+        octopus: '🐙',
+        ninja: '🥷',
+        fairy: '🧚',
+        cat: '🐈‍⬛',
+        dice: '🎲',
+        eye: '👁️',
         // Legacy v1 IDs (kept so old game states still render)
         heart: '❤️',
         crown: '👑',
@@ -792,6 +807,24 @@ function playVictoryEffect(effectId, targetEl = null) {
         case 'matrix_cascade':
             createMatrixCascadeEffect(container);
             break;
+        case 'level_up':
+            createLevelUpEffect(container);
+            break;
+        case 'dragon_roar':
+            createDragonRoarEffect(container);
+            break;
+        case 'pixel_parade':
+            createPixelParadeEffect(container);
+            break;
+        case 'spell_cast':
+            createSpellCastEffect(container);
+            break;
+        case 'warp_jump':
+            createWarpJumpEffect(container);
+            break;
+        case 'aurora':
+            createAuroraEffect(container);
+            break;
         default:
             if (typeof createConfetti === 'function') {
                 createConfetti(container); // Use existing confetti (allow override)
@@ -905,6 +938,178 @@ function createMatrixCascadeEffect(container) {
         char.style.animationDelay = `${delay}s`;
         
         container.appendChild(char);
+    }
+    
+    setTimeout(() => container.innerHTML = '', 4000);
+}
+
+function createLevelUpEffect(container) {
+    container.innerHTML = '';
+    
+    // Create "+1 LEVEL UP!" text
+    const levelUp = document.createElement('div');
+    levelUp.className = 'level-up-effect';
+    levelUp.textContent = '+1';
+    container.appendChild(levelUp);
+    
+    // Add sparkles around it
+    for (let i = 0; i < 20; i++) {
+        setTimeout(() => {
+            const sparkle = document.createElement('div');
+            sparkle.className = 'gold-particle';
+            sparkle.style.left = (30 + Math.random() * 40) + '%';
+            sparkle.style.top = (30 + Math.random() * 40) + '%';
+            sparkle.style.setProperty('--size', '8px');
+            sparkle.style.setProperty('--opacity', '0.8');
+            sparkle.style.setProperty('--dur', '1s');
+            sparkle.style.setProperty('--fall-distance', '-50px');
+            container.appendChild(sparkle);
+            setTimeout(() => sparkle.remove(), 1000);
+        }, i * 50);
+    }
+    
+    setTimeout(() => container.innerHTML = '', 2500);
+}
+
+function createDragonRoarEffect(container) {
+    container.innerHTML = '';
+    
+    // Create dragon emoji that flies across
+    const dragon = document.createElement('div');
+    dragon.className = 'dragon-fly';
+    dragon.textContent = '🐉';
+    container.appendChild(dragon);
+    
+    // Add fire trail
+    for (let i = 0; i < 10; i++) {
+        setTimeout(() => {
+            const fire = document.createElement('div');
+            fire.className = 'firework';
+            fire.style.left = (10 + i * 8) + '%';
+            fire.style.top = (40 + Math.random() * 20) + '%';
+            fire.style.background = '#ff4500';
+            container.appendChild(fire);
+            setTimeout(() => fire.remove(), 800);
+        }, 300 + i * 150);
+    }
+    
+    setTimeout(() => container.innerHTML = '', 3500);
+}
+
+function createPixelParadeEffect(container) {
+    container.innerHTML = '';
+    
+    const characters = ['👾', '🎮', '🕹️', '⭐', '🏆', '💎', '🎯', '🚀'];
+    
+    for (let i = 0; i < 15; i++) {
+        const char = document.createElement('div');
+        char.className = 'pixel-character';
+        char.textContent = characters[Math.floor(Math.random() * characters.length)];
+        char.style.left = (5 + Math.random() * 90) + '%';
+        char.style.bottom = (10 + Math.random() * 30) + '%';
+        char.style.animationDelay = (Math.random() * 0.5) + 's';
+        container.appendChild(char);
+    }
+    
+    // Also add confetti
+    if (typeof createConfetti === 'function') {
+        setTimeout(() => createConfetti(container), 200);
+    }
+    
+    setTimeout(() => container.innerHTML = '', 4000);
+}
+
+function createSpellCastEffect(container) {
+    container.innerHTML = '';
+    
+    // Create expanding magic circles
+    for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+            const circle = document.createElement('div');
+            circle.className = 'spell-circle';
+            circle.style.borderColor = i === 0 ? 'rgba(153, 51, 255, 0.6)' : 
+                                       i === 1 ? 'rgba(218, 112, 214, 0.5)' : 
+                                                 'rgba(255, 215, 0, 0.4)';
+            container.appendChild(circle);
+            setTimeout(() => circle.remove(), 2000);
+        }, i * 300);
+    }
+    
+    // Add sparkle particles
+    for (let i = 0; i < 30; i++) {
+        setTimeout(() => {
+            const sparkle = document.createElement('div');
+            sparkle.style.position = 'absolute';
+            sparkle.style.left = (20 + Math.random() * 60) + '%';
+            sparkle.style.top = (20 + Math.random() * 60) + '%';
+            sparkle.style.width = '4px';
+            sparkle.style.height = '4px';
+            sparkle.style.borderRadius = '50%';
+            sparkle.style.background = Math.random() > 0.5 ? '#ffd700' : '#da70d6';
+            sparkle.style.animation = 'sparkleFloat 1s ease-out forwards';
+            container.appendChild(sparkle);
+            setTimeout(() => sparkle.remove(), 1000);
+        }, Math.random() * 1500);
+    }
+    
+    setTimeout(() => container.innerHTML = '', 3000);
+}
+
+function createWarpJumpEffect(container) {
+    container.innerHTML = '';
+    
+    // Create warp lines effect
+    const warpLines = document.createElement('div');
+    warpLines.className = 'warp-lines';
+    container.appendChild(warpLines);
+    
+    // Add streaking stars
+    for (let i = 0; i < 50; i++) {
+        const star = document.createElement('div');
+        star.style.position = 'absolute';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        star.style.width = (2 + Math.random() * 3) + 'px';
+        star.style.height = '1px';
+        star.style.background = '#fff';
+        star.style.animation = `warpStar ${0.5 + Math.random() * 0.5}s linear forwards`;
+        star.style.animationDelay = (Math.random() * 0.5) + 's';
+        container.appendChild(star);
+    }
+    
+    setTimeout(() => container.innerHTML = '', 2000);
+}
+
+function createAuroraEffect(container) {
+    container.innerHTML = '';
+    
+    // Create aurora wave layers
+    for (let i = 0; i < 3; i++) {
+        const wave = document.createElement('div');
+        wave.className = 'aurora-wave';
+        wave.style.opacity = (0.2 + i * 0.1);
+        wave.style.animationDelay = (i * 0.5) + 's';
+        wave.style.background = i === 0 ? 
+            'linear-gradient(180deg, rgba(0, 255, 127, 0.2), transparent)' :
+            i === 1 ? 
+            'linear-gradient(180deg, rgba(138, 43, 226, 0.2), transparent)' :
+            'linear-gradient(180deg, rgba(0, 191, 255, 0.2), transparent)';
+        container.appendChild(wave);
+    }
+    
+    // Add twinkling stars
+    for (let i = 0; i < 20; i++) {
+        const star = document.createElement('div');
+        star.style.position = 'absolute';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 60 + '%';
+        star.style.width = '3px';
+        star.style.height = '3px';
+        star.style.borderRadius = '50%';
+        star.style.background = '#fff';
+        star.style.animation = 'sparkleFloat 2s ease-in-out infinite';
+        star.style.animationDelay = (Math.random() * 2) + 's';
+        container.appendChild(star);
     }
     
     setTimeout(() => container.innerHTML = '', 4000);

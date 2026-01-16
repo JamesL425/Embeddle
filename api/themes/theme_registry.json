@@ -29,7 +29,11 @@
     {"name": "Kaiju & Giant Monsters", "file": "kaiju_giant_monsters.json"},
     {"name": "Fairy Tales & Fables", "file": "fairy_tales_fables.json"},
     {"name": "Extreme Sports", "file": "extreme_sports.json"},
-    {"name": "Haunted House", "file": "haunted_house.json"}
+    {"name": "Haunted House", "file": "haunted_house.json"},
+    {"name": "Sharks & Ocean Predators", "file": "sharks_ocean.json"},
+    {"name": "Treasure Hunting & Archaeology", "file": "treasure_archaeology.json"},
+    {"name": "Robots & AI", "file": "robots_ai.json"},
+    {"name": "Gladiators & Ancient Rome", "file": "gladiators_rome.json"}
   ],
   "themes_per_day": 12
 }
