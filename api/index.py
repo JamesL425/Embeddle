@@ -229,8 +229,10 @@ PRESENCE_TTL_SECONDS = int((CONFIG.get("presence", {}) or {}).get("ttl_seconds",
 # Ranked settings (ELO/MMR)
 RANKED_INITIAL_MMR = int((CONFIG.get("ranked", {}) or {}).get("initial_mmr", 1000) or 1000)
 RANKED_K_FACTOR = float((CONFIG.get("ranked", {}) or {}).get("k_factor", 32) or 32)
-RANKED_PLACEMENT_K_FACTOR = float((CONFIG.get("ranked", {}) or {}).get("placement_k_factor", 64) or 64)
+RANKED_PLACEMENT_K_FACTOR = float((CONFIG.get("ranked", {}) or {}).get("placement_k_factor", 80) or 80)
 RANKED_PLACEMENT_GAMES = int((CONFIG.get("ranked", {}) or {}).get("placement_games", 5) or 5)
+RANKED_PROVISIONAL_GAMES = int((CONFIG.get("ranked", {}) or {}).get("provisional_games", 20) or 20)
+RANKED_PROVISIONAL_K_FACTOR = float((CONFIG.get("ranked", {}) or {}).get("provisional_k_factor", 48) or 48)
 
 # Time control settings (chess clock model)
 TIME_CONTROLS_CONFIG = CONFIG.get("time_controls", {})
@@ -4782,10 +4784,17 @@ def apply_ranked_mmr_updates(game: dict):
         if not user:
             continue
         
-        # Determine K-factor based on placement status (before this match)
+        # Determine K-factor based on games played (before this match)
+        # Placement (0-4 games): highest K-factor for fast calibration
+        # Provisional (5-19 games): medium K-factor as rating stabilizes
+        # Established (20+ games): normal K-factor for stable ratings
         games_before = pre_game_ranked_games.get(uid, 0)
-        is_placement = games_before < RANKED_PLACEMENT_GAMES
-        k_factor = RANKED_PLACEMENT_K_FACTOR if is_placement else RANKED_K_FACTOR
+        if games_before < RANKED_PLACEMENT_GAMES:
+            k_factor = RANKED_PLACEMENT_K_FACTOR
+        elif games_before < RANKED_PROVISIONAL_GAMES:
+            k_factor = RANKED_PROVISIONAL_K_FACTOR
+        else:
+            k_factor = RANKED_K_FACTOR
         scale = float(k_factor) / float(max(1, n - 1))
         
         old = rating[uid]

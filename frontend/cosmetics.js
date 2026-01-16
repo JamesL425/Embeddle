@@ -1210,51 +1210,107 @@ function createAscensionEffect(container) {
 function createBigBangEffect(container) {
     container.innerHTML = '';
     
-    // Create central explosion point
-    const bang = document.createElement('div');
-    bang.className = 'big-bang-effect';
-    container.appendChild(bang);
+    // Flash the entire screen white first
+    const flash = document.createElement('div');
+    flash.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #ffffff;
+        opacity: 0;
+        animation: bigBangFlash 0.5s ease-out forwards;
+        z-index: 100;
+    `;
+    container.appendChild(flash);
     
-    // Create expanding rings
-    for (let i = 0; i < 5; i++) {
+    // Create central explosion point
+    setTimeout(() => {
+        const bang = document.createElement('div');
+        bang.className = 'big-bang-effect';
+        container.appendChild(bang);
+    }, 200);
+    
+    // Create expanding rings with different colors
+    const ringColors = ['#ffffff', '#ffd700', '#ff8c00', '#ff4500', '#ff00ff', '#00ffff', '#0000ff'];
+    for (let i = 0; i < ringColors.length; i++) {
         setTimeout(() => {
             const ring = document.createElement('div');
-            ring.style.position = 'absolute';
-            ring.style.top = '50%';
-            ring.style.left = '50%';
-            ring.style.width = '10px';
-            ring.style.height = '10px';
-            ring.style.borderRadius = '50%';
-            ring.style.border = '3px solid';
-            ring.style.borderColor = ['#ffffff', '#ffd700', '#ff4500', '#ff00ff', '#00ffff'][i];
-            ring.style.transform = 'translate(-50%, -50%)';
-            ring.style.animation = 'bigBangRing 2s ease-out forwards';
+            ring.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                border: 4px solid ${ringColors[i]};
+                transform: translate(-50%, -50%);
+                animation: bigBangRing 2.5s ease-out forwards;
+                box-shadow: 0 0 20px ${ringColors[i]}, inset 0 0 20px ${ringColors[i]};
+            `;
             container.appendChild(ring);
-        }, i * 200);
+        }, 300 + i * 150);
     }
     
-    // Create star particles
+    // Create massive star particle explosion
     setTimeout(() => {
-        for (let i = 0; i < 100; i++) {
+        const particleColors = ['#ffffff', '#ffd700', '#ff00ff', '#00ffff', '#ff4500', '#00ff00'];
+        for (let i = 0; i < 200; i++) {
             const star = document.createElement('div');
-            star.style.position = 'absolute';
-            star.style.top = '50%';
-            star.style.left = '50%';
-            star.style.width = (2 + Math.random() * 4) + 'px';
-            star.style.height = star.style.width;
-            star.style.borderRadius = '50%';
-            star.style.background = ['#ffffff', '#ffd700', '#ff00ff', '#00ffff'][Math.floor(Math.random() * 4)];
+            const color = particleColors[Math.floor(Math.random() * particleColors.length)];
+            const size = 2 + Math.random() * 6;
             const angle = Math.random() * Math.PI * 2;
-            const distance = 50 + Math.random() * 150;
-            star.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
-            star.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
-            star.style.animation = 'bigBangStar 2s ease-out forwards';
-            star.style.animationDelay = (Math.random() * 0.5) + 's';
+            const distance = 100 + Math.random() * 400;
+            const duration = 1.5 + Math.random() * 2;
+            
+            star.style.cssText = `
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: ${size}px;
+                height: ${size}px;
+                border-radius: 50%;
+                background: ${color};
+                box-shadow: 0 0 ${size * 2}px ${color};
+                transform: translate(-50%, -50%);
+                --tx: ${Math.cos(angle) * distance}px;
+                --ty: ${Math.sin(angle) * distance}px;
+                animation: bigBangStar ${duration}s ease-out forwards;
+                animation-delay: ${Math.random() * 0.3}s;
+            `;
             container.appendChild(star);
         }
-    }, 500);
+    }, 600);
     
-    setTimeout(() => container.innerHTML = '', 4000);
+    // Create galaxy spiral arms
+    setTimeout(() => {
+        for (let arm = 0; arm < 4; arm++) {
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                const baseAngle = (arm * Math.PI / 2) + (i * 0.1);
+                const distance = 50 + i * 15;
+                const x = Math.cos(baseAngle) * distance;
+                const y = Math.sin(baseAngle) * distance;
+                
+                particle.style.cssText = `
+                    position: absolute;
+                    top: calc(50% + ${y}px);
+                    left: calc(50% + ${x}px);
+                    width: 3px;
+                    height: 3px;
+                    border-radius: 50%;
+                    background: ${['#ffd700', '#ffffff', '#00ffff'][i % 3]};
+                    opacity: 0;
+                    animation: galaxyArmParticle 3s ease-out forwards;
+                    animation-delay: ${0.8 + i * 0.02}s;
+                `;
+                container.appendChild(particle);
+            }
+        }
+    }, 800);
+    
+    setTimeout(() => container.innerHTML = '', 5000);
 }
 
 // Initialize cosmetics - attach directly since script is loaded at end of body

@@ -41,10 +41,12 @@
     "ttl_seconds": 15
   },
   "ranked": {
-    "initial_mmr": 1000,
+    "initial_mmr": 1250,
     "k_factor": 32,
-    "placement_k_factor": 64,
+    "placement_k_factor": 80,
     "placement_games": 5,
+    "provisional_games": 20,
+    "provisional_k_factor": 48,
     "tier_thresholds": {
       "bronze": 1100,
       "silver": 1250,
