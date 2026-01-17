@@ -4371,12 +4371,9 @@ def get_theme_embeddings(game: dict) -> dict:
     """
     Get all theme word embeddings from Redis cache.
     Returns dict mapping lowercase words to their embeddings.
-    Falls back to game['theme_embeddings'] if available.
-    """
-    # Fast path: use in-memory embeddings stored in game state
-    if game.get('theme_embeddings'):
-        return game['theme_embeddings']
     
+    Embeddings are cached in Redis during game start, so this is fast.
+    """
     theme_words = game.get('theme', {}).get('words', [])
     if not theme_words:
         return {}
@@ -7569,17 +7566,13 @@ class handler(BaseHTTPRequestHandler):
             game['word_selection_started_at'] = time.time()  # Start word selection timer
             game['word_selection_time'] = get_word_selection_time(bool(game.get('is_ranked', False)))
             
-            # Pre-cache theme embeddings NOW during word selection phase
-            # This prevents lag when host clicks "INITIATE_BREACH" later
+            # Pre-cache theme embeddings in Redis during word selection phase
+            # This warms the cache so lookups during gameplay are fast
+            # NOTE: We do NOT store embeddings in game state (too large ~2.5MB)
             theme_words = game.get('theme', {}).get('words', [])
             if theme_words:
                 try:
-                    theme_embeddings = batch_get_embeddings(theme_words)
-                    # Store embeddings in game state for fast access during gameplay
-                    game['theme_embeddings'] = theme_embeddings
-                    # Pre-compute similarity matrix for O(1) lookups during AI turns
-                    if theme_embeddings:
-                        game['theme_similarity_matrix'] = precompute_theme_similarities(game, theme_embeddings)
+                    batch_get_embeddings(theme_words)  # Just warm the Redis cache
                 except Exception as e:
                     print(f"Theme embedding pre-cache error (start): {e}")
             
@@ -7605,7 +7598,7 @@ class handler(BaseHTTPRequestHandler):
             if game['host_id'] != player_id:
                 return self._send_error("Only the host can begin", 403)
             if game['status'] != 'word_selection':
-                return self._send_error("Game not in word selection phase", 400)
+                return self._send_error(f"Game not in word selection phase (status={game['status']})", 400)
 
             # Singleplayer safety: if AIs haven't picked yet, pick them now (fallback for slow clients / many AIs)
             if game.get('is_singleplayer'):
@@ -7630,6 +7623,8 @@ class handler(BaseHTTPRequestHandler):
             # Check all players have set their words
             not_ready = [p['name'] for p in game['players'] if not p.get('secret_word')]
             if not_ready:
+                print(f"[BEGIN DEBUG] Game {code} not ready - waiting for: {not_ready}")
+                print(f"[BEGIN DEBUG] Players: {[(p['name'], bool(p.get('secret_word'))) for p in game['players']]}")
                 return self._send_error(f"Waiting for: {', '.join(not_ready)}", 400)
             
             # Randomize turn order for multiplayer so the host doesn't always go first.
@@ -7646,17 +7641,15 @@ class handler(BaseHTTPRequestHandler):
                 p['time_remaining'] = initial_time
 
             # Pre-cache all theme word embeddings in Redis for fast AI calculations
-            # Skip if already cached during /start (word selection phase)
+            # (Should already be cached from /start, but ensure it's done)
             theme_words = game.get('theme', {}).get('words', [])
-            if theme_words and not game.get('theme_embeddings'):
+            if theme_words:
                 try:
                     theme_embeddings = batch_get_embeddings(theme_words)  # Warm the cache and get embeddings
                     
-                    # Store embeddings in game state for fast access (avoids Redis lookups per turn)
-                    game['theme_embeddings'] = theme_embeddings
-                    
                     # Pre-compute similarity matrix for O(1) lookups during AI turns
-                    if theme_embeddings:
+                    # Store ONLY the similarity matrix (small: ~80KB) not the embeddings (~2.5MB)
+                    if theme_embeddings and not game.get('theme_similarity_matrix'):
                         game['theme_similarity_matrix'] = precompute_theme_similarities(game, theme_embeddings)
                 except Exception as e:
                     print(f"Theme embedding pre-cache error: {e}")
