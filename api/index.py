@@ -7568,6 +7568,21 @@ class handler(BaseHTTPRequestHandler):
             game['current_turn'] = 0
             game['word_selection_started_at'] = time.time()  # Start word selection timer
             game['word_selection_time'] = get_word_selection_time(bool(game.get('is_ranked', False)))
+            
+            # Pre-cache theme embeddings NOW during word selection phase
+            # This prevents lag when host clicks "INITIATE_BREACH" later
+            theme_words = game.get('theme', {}).get('words', [])
+            if theme_words:
+                try:
+                    theme_embeddings = batch_get_embeddings(theme_words)
+                    # Store embeddings in game state for fast access during gameplay
+                    game['theme_embeddings'] = theme_embeddings
+                    # Pre-compute similarity matrix for O(1) lookups during AI turns
+                    if theme_embeddings:
+                        game['theme_similarity_matrix'] = precompute_theme_similarities(game, theme_embeddings)
+                except Exception as e:
+                    print(f"Theme embedding pre-cache error (start): {e}")
+            
             save_game(code, game)
             return self._send_json({"status": "word_selection", "theme": game['theme']['name']})
 
@@ -7631,9 +7646,9 @@ class handler(BaseHTTPRequestHandler):
                 p['time_remaining'] = initial_time
 
             # Pre-cache all theme word embeddings in Redis for fast AI calculations
-            # This warms the cache so per-turn lookups are fast (but doesn't store in game state)
+            # Skip if already cached during /start (word selection phase)
             theme_words = game.get('theme', {}).get('words', [])
-            if theme_words:
+            if theme_words and not game.get('theme_embeddings'):
                 try:
                     theme_embeddings = batch_get_embeddings(theme_words)  # Warm the cache and get embeddings
                     
