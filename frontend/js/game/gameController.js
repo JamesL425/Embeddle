@@ -341,14 +341,19 @@ export function updateGame(game) {
     if (guessBtn) guessBtn.disabled = isSpectator || !isMyTurn;
     
     if (isMyTurn && !game.waiting_for_word_change) {
-        const activeEl = document.activeElement;
-        const isTypingElsewhere = activeEl && (
-            activeEl.tagName === 'INPUT' ||
-            activeEl.tagName === 'TEXTAREA' ||
-            activeEl.isContentEditable
-        );
-        if (!isTypingElsewhere && guessInput) {
-            guessInput.focus();
+        // Only auto-focus guess input on desktop (not mobile/touch devices)
+        // On mobile, auto-focus is annoying because it opens the keyboard unexpectedly
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (!isTouchDevice) {
+            const activeEl = document.activeElement;
+            const isTypingElsewhere = activeEl && (
+                activeEl.tagName === 'INPUT' ||
+                activeEl.tagName === 'TEXTAREA' ||
+                activeEl.isContentEditable
+            );
+            if (!isTypingElsewhere && guessInput) {
+                guessInput.focus();
+            }
         }
     }
     

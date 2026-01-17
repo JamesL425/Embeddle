@@ -3848,15 +3848,19 @@ function updateGame(game) {
     guessForm.querySelector('button').disabled = isSpectator || !isMyTurn;
     
     if (isMyTurn && !game.waiting_for_word_change) {
-        // Only auto-focus guess input if user isn't already typing somewhere else
-        const activeEl = document.activeElement;
-        const isTypingElsewhere = activeEl && (
-            activeEl.tagName === 'INPUT' ||
-            activeEl.tagName === 'TEXTAREA' ||
-            activeEl.isContentEditable
-        );
-        if (!isTypingElsewhere) {
-            guessInput.focus();
+        // Only auto-focus guess input on desktop (not mobile/touch devices)
+        // On mobile, auto-focus is annoying because it opens the keyboard unexpectedly
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        if (!isTouchDevice) {
+            const activeEl = document.activeElement;
+            const isTypingElsewhere = activeEl && (
+                activeEl.tagName === 'INPUT' ||
+                activeEl.tagName === 'TEXTAREA' ||
+                activeEl.isContentEditable
+            );
+            if (!isTypingElsewhere) {
+                guessInput.focus();
+            }
         }
     }
     
