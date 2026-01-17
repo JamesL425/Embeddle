@@ -1096,7 +1096,8 @@ function updateHomeStatsBar() {
         if (rankedGames < 5) {
             // Show placement progress
             rankEl.textContent = `${rankedGames}/5`;
-        } else if (mmr && mmr > 1000) {
+        } else if (mmr != null) {
+            // Show MMR for ranked players
             rankEl.textContent = mmr;
         } else {
             rankEl.textContent = '—';
@@ -1824,6 +1825,8 @@ function showScreen(screenName) {
         startLobbyRefresh();
         startSpectateRefresh();
         renderRecentGames();
+        // Refresh stats bar (ranked counter, credits, streak) when returning home
+        updateHomeStatsBar();
     } else {
         stopLobbyRefresh();
         stopSpectateRefresh();
