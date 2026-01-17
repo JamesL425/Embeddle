@@ -235,7 +235,7 @@ RANKED_PROVISIONAL_GAMES = int((CONFIG.get("ranked", {}) or {}).get("provisional
 RANKED_PROVISIONAL_K_FACTOR = float((CONFIG.get("ranked", {}) or {}).get("provisional_k_factor", 48) or 48)
 # Participation bonus: small flat MMR bonus per game to make elo slightly positive-sum
 # This prevents rating deflation and rewards active play
-RANKED_PARTICIPATION_BONUS = float((CONFIG.get("ranked", {}) or {}).get("participation_bonus", 10.0) or 10.0)
+RANKED_PARTICIPATION_BONUS = float((CONFIG.get("ranked", {}) or {}).get("participation_bonus", 100.0) or 100.0)
 
 # Time control settings (chess clock model)
 TIME_CONTROLS_CONFIG = CONFIG.get("time_controls", {})

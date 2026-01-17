@@ -62,8 +62,8 @@
       "casual": 60
     },
     "ranked": {
-      "initial_time": 180,
-      "increment": 5
+      "initial_time": 120,
+      "increment": 3
     },
     "casual_presets": {
       "bullet": {
