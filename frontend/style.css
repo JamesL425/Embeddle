@@ -5530,11 +5530,12 @@ body.nerd-mode .nerd-sim {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     transition: all var(--transition);
     display: flex;
     align-items: center;
     gap: var(--space-xs);
+    flex-wrap: wrap;
     user-select: none;
 }
 
@@ -5572,10 +5573,19 @@ body.nerd-mode .nerd-sim {
     font-size: 0.9rem;
 }
 
+.cosmetic-option .cosmetic-name {
+    flex-shrink: 1;
+    min-width: 0;
+}
+
 .cosmetic-option .cosmetic-progress {
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    margin-left: 0.15rem;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    margin-left: 0.25rem;
+    padding: 1px 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 3px;
+    white-space: nowrap;
 }
 
 .cosmetic-option .cosmetic-price {
@@ -5586,7 +5596,8 @@ body.nerd-mode .nerd-sim {
 }
 
 .cosmetic-option.locked .cosmetic-progress {
-    color: var(--warning);
+    color: var(--accent-secondary);
+    background: rgba(0, 212, 255, 0.15);
 }
 
 .cosmetic-option.equipped .cosmetic-progress {

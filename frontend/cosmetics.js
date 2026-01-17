@@ -208,14 +208,22 @@ function formatRequirement(req, stats) {
     const min = Number(req?.min || 0);
     const have = Number(stats?.[metric] || 0);
     const labels = {
-        mp_games_played: 'MP games',
-        mp_wins: 'MP wins',
-        mp_eliminations: 'MP elims',
-        mp_times_eliminated: 'MP deaths',
-        peak_mmr: 'Peak MMR',
+        mp_games_played: 'games',
+        mp_wins: 'wins',
+        mp_eliminations: 'eliminations',
+        mp_times_eliminated: 'deaths',
+        peak_mmr: 'MMR',
+    };
+    const shortLabels = {
+        mp_games_played: '🎮',
+        mp_wins: '🏆',
+        mp_eliminations: '⚔️',
+        mp_times_eliminated: '💀',
+        peak_mmr: '📈',
     };
     const metricLabel = labels[metric] || metric || 'progress';
-    return { metric, min, have, metricLabel };
+    const shortLabel = shortLabels[metric] || '';
+    return { metric, min, have, metricLabel, shortLabel };
 }
 
 function buildRequirementsInfo(requirements, stats) {
@@ -294,19 +302,20 @@ function renderCosmeticCategory(key, catalogKey, label, equipped, hasFullAccess,
         } else if (isShopLocked) {
             lockReason = `Purchase in Shop (${price} credits)`;
         } else if (isReqLocked && reqInfo.unmet) {
-            lockReason = `Locked: requires ${reqInfo.unmet.min} ${reqInfo.unmet.metricLabel} (${reqInfo.unmet.have}/${reqInfo.unmet.min})`;
-            progressHtml = `<span class="cosmetic-progress">${reqInfo.unmet.have}/${reqInfo.unmet.min}</span>`;
+            const r = reqInfo.unmet;
+            lockReason = `Unlock at ${r.min} ${r.metricLabel}`;
+            progressHtml = `<span class="cosmetic-progress">${r.shortLabel} ${r.have}/${r.min}</span>`;
         }
 
         const titleParts = [item.description].filter(Boolean);
         if (isReqLocked && reqInfo.all.length) {
             const detail = reqInfo.all
-                .map(p => `${p.metricLabel}: ${Math.min(p.have, p.min)}/${p.min}`)
-                .join(' • ');
-            titleParts.push(`Requires ${detail}`);
+                .map(p => `${p.have}/${p.min} ${p.metricLabel}`)
+                .join(' + ');
+            titleParts.push(`Unlock: ${detail}`);
         }
-        if (isPremiumLocked) titleParts.push('Donate to unlock');
-        if (isShopLocked) titleParts.push(`Shop: ${price} credits`);
+        if (isPremiumLocked) titleParts.push('🔒 Supporter exclusive');
+        if (isShopLocked) titleParts.push(`💰 Shop: ${price} credits`);
         
         // Show price badge for shop items
         let priceHtml = '';

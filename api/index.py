@@ -228,14 +228,18 @@ PRESENCE_TTL_SECONDS = int((CONFIG.get("presence", {}) or {}).get("ttl_seconds",
 
 # Ranked settings (ELO/MMR)
 RANKED_INITIAL_MMR = int((CONFIG.get("ranked", {}) or {}).get("initial_mmr", 1000) or 1000)
-RANKED_K_FACTOR = float((CONFIG.get("ranked", {}) or {}).get("k_factor", 32) or 32)
-RANKED_PLACEMENT_K_FACTOR = float((CONFIG.get("ranked", {}) or {}).get("placement_k_factor", 80) or 80)
+RANKED_K_FACTOR = float((CONFIG.get("ranked", {}) or {}).get("k_factor", 30) or 30)
+RANKED_PLACEMENT_K_FACTOR = float((CONFIG.get("ranked", {}) or {}).get("placement_k_factor", 200) or 200)
 RANKED_PLACEMENT_GAMES = int((CONFIG.get("ranked", {}) or {}).get("placement_games", 5) or 5)
 RANKED_PROVISIONAL_GAMES = int((CONFIG.get("ranked", {}) or {}).get("provisional_games", 20) or 20)
-RANKED_PROVISIONAL_K_FACTOR = float((CONFIG.get("ranked", {}) or {}).get("provisional_k_factor", 48) or 48)
+RANKED_PROVISIONAL_K_FACTOR = float((CONFIG.get("ranked", {}) or {}).get("provisional_k_factor", 100) or 100)
+# K-factor decay: K decays over time but never below this minimum
+RANKED_K_FACTOR_MIN = float((CONFIG.get("ranked", {}) or {}).get("k_factor_min", 16) or 16)
+# Decay rate: how much K decreases per game after provisional period
+RANKED_K_FACTOR_DECAY_RATE = float((CONFIG.get("ranked", {}) or {}).get("k_factor_decay_rate", 0.5) or 0.5)
 # Participation bonus: small flat MMR bonus per game to make elo slightly positive-sum
 # This prevents rating deflation and rewards active play
-RANKED_PARTICIPATION_BONUS = float((CONFIG.get("ranked", {}) or {}).get("participation_bonus", 100.0) or 100.0)
+RANKED_PARTICIPATION_BONUS = float((CONFIG.get("ranked", {}) or {}).get("participation_bonus", 4.0) or 4.0)
 
 # Time control settings (chess clock model)
 TIME_CONTROLS_CONFIG = CONFIG.get("time_controls", {})
@@ -326,39 +330,42 @@ def load_theme_registry():
     return {"themes": [], "themes_per_day": 12}
 
 
-def get_themes_for_today() -> list:
+def get_themes_for_current_rotation() -> list:
     """
-    Return the list of theme names available for today based on UTC date.
+    Return the list of theme names available for the current 3-hour rotation window.
     Uses deterministic rotation to ensure all players see the same themes.
+    Rotations occur at 00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, 21:00 UTC.
     """
     import random
     from datetime import datetime
     
     registry = load_theme_registry()
     all_theme_names = [t["name"] for t in registry.get("themes", [])]
-    themes_per_day = registry.get("themes_per_day", 12)
+    themes_per_rotation = registry.get("themes_per_day", 12)
     
     # Fallback if registry is empty
     if not all_theme_names:
         all_theme_names = list(PREGENERATED_THEMES.keys())
     
-    # If we have fewer themes than themes_per_day, return all
-    if len(all_theme_names) <= themes_per_day:
+    # If we have fewer themes than themes_per_rotation, return all
+    if len(all_theme_names) <= themes_per_rotation:
         return all_theme_names
     
-    # Use UTC date as seed for deterministic daily rotation
-    today = datetime.utcnow().strftime("%Y-%m-%d")
-    rng = random.Random(f"theme_rotation:{today}")
+    # Use UTC date + 3-hour window as seed for deterministic rotation
+    now = datetime.utcnow()
+    rotation_window = now.hour // 3  # 0-7 for each 3-hour window
+    rotation_key = f"{now.strftime('%Y-%m-%d')}:{rotation_window}"
+    rng = random.Random(f"theme_rotation:{rotation_key}")
     
-    # Shuffle and select themes_per_day themes
+    # Shuffle and select themes_per_rotation themes
     shuffled = all_theme_names.copy()
     rng.shuffle(shuffled)
-    return shuffled[:themes_per_day]
+    return shuffled[:themes_per_rotation]
 
 
 PREGENERATED_THEMES = load_themes()
-# THEME_CATEGORIES now uses daily rotation instead of all themes
-THEME_CATEGORIES = get_themes_for_today() if PREGENERATED_THEMES else CONFIG.get("theme_categories", [])
+# THEME_CATEGORIES now uses 3-hour rotation instead of all themes
+THEME_CATEGORIES = get_themes_for_current_rotation() if PREGENERATED_THEMES else CONFIG.get("theme_categories", [])
 
 # Backwards-compatible theme aliases:
 # Old lobbies can have theme names persisted in Redis that no longer exist in api/themes.json.
@@ -4874,14 +4881,19 @@ def apply_ranked_mmr_updates(game: dict):
         # Determine K-factor based on games played (before this match)
         # Placement (0-4 games): highest K-factor for fast calibration
         # Provisional (5-19 games): medium K-factor as rating stabilizes
-        # Established (20+ games): normal K-factor for stable ratings
+        # Established (20+ games): K decays over time but never below minimum
         games_before = pre_game_ranked_games.get(uid, 0)
         if games_before < RANKED_PLACEMENT_GAMES:
             k_factor = RANKED_PLACEMENT_K_FACTOR
         elif games_before < RANKED_PROVISIONAL_GAMES:
             k_factor = RANKED_PROVISIONAL_K_FACTOR
         else:
-            k_factor = RANKED_K_FACTOR
+            # K decays from base K factor, losing decay_rate per game after provisional
+            games_after_provisional = games_before - RANKED_PROVISIONAL_GAMES
+            k_factor = max(
+                RANKED_K_FACTOR_MIN,
+                RANKED_K_FACTOR - (games_after_provisional * RANKED_K_FACTOR_DECAY_RATE)
+            )
         scale = float(k_factor) / float(max(1, n - 1))
         
         old = rating[uid]
@@ -5468,12 +5480,12 @@ class handler(BaseHTTPRequestHandler):
                 }
             })
 
-        # GET /api/themes/today - Get today's available themes (for rotation display)
+        # GET /api/themes/today - Get current rotation's available themes
         if path == '/api/themes/today':
-            themes_today = get_themes_for_today()
+            themes_current = get_themes_for_current_rotation()
             return self._send_json({
-                "themes": themes_today,
-                "count": len(themes_today),
+                "themes": themes_current,
+                "count": len(themes_current),
             })
 
         # ============== DEBUG (ADMIN ONLY) ==============

@@ -42,11 +42,14 @@
   },
   "ranked": {
     "initial_mmr": 1200,
-    "k_factor": 64,
-    "placement_k_factor": 160,
+    "k_factor": 30,
+    "placement_k_factor": 200,
     "placement_games": 5,
     "provisional_games": 20,
     "provisional_k_factor": 100,
+    "k_factor_min": 16,
+    "k_factor_decay_rate": 0.5,
+    "participation_bonus": 4,
     "tier_thresholds": {
       "bronze": 1000,
       "silver": 1200,

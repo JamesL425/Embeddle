@@ -1,0 +1,2527 @@
+{
+  "card_borders": {
+    "classic": {
+      "name": "Classic",
+      "description": "Default border",
+      "premium": false
+    },
+    "newcomer": {
+      "name": "Newcomer",
+      "description": "Welcome glow (First game!)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 1
+        }
+      ]
+    },
+    "synthwave": {
+      "name": "Synthwave",
+      "description": "Retro neon border (Shop)",
+      "premium": false,
+      "price": 150
+    },
+    "neon_glow": {
+      "name": "Neon Glow",
+      "description": "Animated neon pulse (10 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 10
+        }
+      ]
+    },
+    "ice": {
+      "name": "Ice",
+      "description": "Cold blue edge (5 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 5
+        }
+      ]
+    },
+    "fire": {
+      "name": "Fire",
+      "description": "Hot animated flame edge (25 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 25
+        }
+      ]
+    },
+    "plasma": {
+      "name": "Plasma",
+      "description": "Swirling plasma (150 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 150
+        }
+      ]
+    },
+    "gold_elite": {
+      "name": "Gold Elite",
+      "description": "Prestige frame (75 MP wins + 150 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 75
+        },
+        {
+          "metric": "mp_eliminations",
+          "min": 150
+        }
+      ]
+    },
+    "diamond_edge": {
+      "name": "Diamond Edge",
+      "description": "Ultimate prestige (200 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 200
+        }
+      ]
+    },
+    "inferno": {
+      "name": "Inferno",
+      "description": "Blazing animated flames (Shop)",
+      "premium": false,
+      "price": 800
+    },
+    "void_pulse": {
+      "name": "Void Pulse",
+      "description": "Pulsing dark energy (Shop)",
+      "premium": false,
+      "price": 1000
+    },
+    "chromatic": {
+      "name": "Chromatic",
+      "description": "Shifting rainbow edge (Shop)",
+      "premium": false,
+      "price": 1500
+    },
+    "pixel_frame": {
+      "name": "Pixel Frame",
+      "description": "8-bit retro border (Shop)",
+      "premium": false,
+      "price": 400
+    },
+    "rune_circle": {
+      "name": "Rune Circle",
+      "description": "Glowing arcane runes (100 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 100
+        }
+      ]
+    },
+    "glitch_edge": {
+      "name": "Glitch Edge",
+      "description": "Corrupted digital artifacts (Shop)",
+      "premium": false,
+      "price": 650
+    },
+    "stargate": {
+      "name": "Stargate",
+      "description": "Swirling portal energy (50 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 50
+        }
+      ]
+    },
+    "dragon_scale": {
+      "name": "Dragon Scale",
+      "description": "Iridescent scale pattern (Shop)",
+      "premium": false,
+      "price": 900
+    },
+    "time_warp": {
+      "name": "Time Warp",
+      "description": "Temporal distortion (Supporter)",
+      "premium": true
+    },
+    "holographic": {
+      "name": "Holographic",
+      "description": "Rainbow shimmer (Supporter)",
+      "premium": true
+    },
+    "obsidian_throne": {
+      "name": "Obsidian Throne",
+      "description": "Ancient dark stone frame with glowing cracks (Shop)",
+      "premium": false,
+      "price": 3500
+    },
+    "celestial_halo": {
+      "name": "Celestial Halo",
+      "description": "Radiant golden halo with orbiting stars (Shop)",
+      "premium": false,
+      "price": 4500
+    },
+    "godframe": {
+      "name": "Godframe",
+      "description": "Divine golden aura with celestial particles (Legendary)",
+      "premium": false,
+      "admin_only": true
+    }
+  },
+  "card_backgrounds": {
+    "default": {
+      "name": "Default",
+      "description": "Standard background",
+      "premium": false
+    },
+    "subtle_glow": {
+      "name": "Subtle Glow",
+      "description": "Soft glow (3 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 3
+        }
+      ]
+    },
+    "midnight": {
+      "name": "Midnight",
+      "description": "Deep blue gradient (Shop)",
+      "premium": false,
+      "price": 120
+    },
+    "circuit_board": {
+      "name": "Circuit Board",
+      "description": "Circuit overlay (25 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 25
+        }
+      ]
+    },
+    "gradient_ice": {
+      "name": "Gradient Ice",
+      "description": "Blue-cyan gradient (15 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 15
+        }
+      ]
+    },
+    "gradient_fire": {
+      "name": "Gradient Fire",
+      "description": "Red-orange gradient (50 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 50
+        }
+      ]
+    },
+    "gradient_toxic": {
+      "name": "Gradient Toxic",
+      "description": "Green-purple gradient (150 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 150
+        }
+      ]
+    },
+    "matrix_code": {
+      "name": "Matrix Code",
+      "description": "Deep matrix sheen (100 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 100
+        }
+      ]
+    },
+    "nebula": {
+      "name": "Nebula",
+      "description": "Cosmic swirl (200 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 200
+        }
+      ]
+    },
+    "warp_drive": {
+      "name": "Warp Drive",
+      "description": "Hyperspace streaks (Shop)",
+      "premium": false,
+      "price": 750
+    },
+    "neural_network": {
+      "name": "Neural Network",
+      "description": "AI neural patterns (Shop)",
+      "premium": false,
+      "price": 1200
+    },
+    "quantum_field": {
+      "name": "Quantum Field",
+      "description": "Quantum particle effects (Shop)",
+      "premium": false,
+      "price": 2000
+    },
+    "arcade_cabinet": {
+      "name": "Arcade Cabinet",
+      "description": "CRT scanlines with joystick icons (Shop)",
+      "premium": false,
+      "price": 350
+    },
+    "enchanted_forest": {
+      "name": "Enchanted Forest",
+      "description": "Mystical trees with firefly glow (75 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 75
+        }
+      ]
+    },
+    "hyperspace": {
+      "name": "Hyperspace",
+      "description": "Streaking stars at warp speed (Shop)",
+      "premium": false,
+      "price": 550
+    },
+    "spell_book": {
+      "name": "Spell Book",
+      "description": "Ancient tome pages with runes (30 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 30
+        }
+      ]
+    },
+    "vhs_static": {
+      "name": "VHS Static",
+      "description": "Retro tape tracking lines (Shop)",
+      "premium": false,
+      "price": 280
+    },
+    "crystal_cave": {
+      "name": "Crystal Cave",
+      "description": "Glowing gemstone formations (Supporter)",
+      "premium": true
+    },
+    "holographic": {
+      "name": "Holographic",
+      "description": "Shifting rainbow (Supporter)",
+      "premium": true
+    },
+    "ancient_temple": {
+      "name": "Ancient Temple",
+      "description": "Weathered stone with glowing hieroglyphs (Shop)",
+      "premium": false,
+      "price": 3200
+    },
+    "dimensional_rift": {
+      "name": "Dimensional Rift",
+      "description": "Torn reality revealing cosmic energy (Shop)",
+      "premium": false,
+      "price": 4000
+    },
+    "reality_tear": {
+      "name": "Reality Tear",
+      "description": "A rift in spacetime revealing the void beyond (Legendary)",
+      "premium": false,
+      "admin_only": true
+    }
+  },
+  "name_colors": {
+    "default": {
+      "name": "Default",
+      "description": "Standard green",
+      "premium": false
+    },
+    "cyan": {
+      "name": "Cyan",
+      "description": "Cool cyan (First win!)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 1
+        }
+      ]
+    },
+    "amber": {
+      "name": "Amber",
+      "description": "Warm orange glow (Shop)",
+      "premium": false,
+      "price": 100
+    },
+    "teal": {
+      "name": "Teal",
+      "description": "Cool teal glow (Shop)",
+      "premium": false,
+      "price": 100
+    },
+    "ice": {
+      "name": "Ice",
+      "description": "Cyan glow (5 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 5
+        }
+      ]
+    },
+    "fire": {
+      "name": "Fire",
+      "description": "Hot red glow (25 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 25
+        }
+      ]
+    },
+    "shadow": {
+      "name": "Shadow",
+      "description": "Purple shadow (50 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 50
+        }
+      ]
+    },
+    "gold": {
+      "name": "Gold",
+      "description": "Prestige gold (75 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 75
+        }
+      ]
+    },
+    "crimson": {
+      "name": "Crimson",
+      "description": "Deep red (200 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 200
+        }
+      ]
+    },
+    "plasma_glow": {
+      "name": "Plasma Glow",
+      "description": "Bright plasma effect (Shop)",
+      "premium": false,
+      "price": 500
+    },
+    "void_text": {
+      "name": "Void",
+      "description": "Dark matter text (Shop)",
+      "premium": false,
+      "price": 750
+    },
+    "electric_blue": {
+      "name": "Electric Blue",
+      "description": "Bright electric glow (Shop)",
+      "premium": false,
+      "price": 200
+    },
+    "enchanted": {
+      "name": "Enchanted",
+      "description": "Purple-pink magical shimmer (40 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 40
+        }
+      ]
+    },
+    "retro_green": {
+      "name": "Retro Green",
+      "description": "Classic terminal phosphor (Shop)",
+      "premium": false,
+      "price": 180
+    },
+    "molten": {
+      "name": "Molten",
+      "description": "Orange-red lava glow (100 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 100
+        }
+      ]
+    },
+    "cosmic": {
+      "name": "Cosmic",
+      "description": "Deep space purple (Shop)",
+      "premium": false,
+      "price": 350
+    },
+    "glitch_text": {
+      "name": "Glitched",
+      "description": "Flickering corrupted text (Supporter)",
+      "premium": true
+    },
+    "rainbow": {
+      "name": "Rainbow",
+      "description": "Animated spectrum (Supporter)",
+      "premium": true
+    },
+    "neon_pink": {
+      "name": "Neon Pink",
+      "description": "Neon magenta (Supporter)",
+      "premium": true
+    },
+    "prismatic": {
+      "name": "Prismatic",
+      "description": "Light-splitting crystal effect that shifts through the spectrum (Shop)",
+      "premium": false,
+      "price": 2500
+    },
+    "supernova_glow": {
+      "name": "Supernova",
+      "description": "Blinding stellar explosion glow (Shop)",
+      "premium": false,
+      "price": 3500
+    },
+    "omniscient": {
+      "name": "Omniscient",
+      "description": "All-seeing cosmic eye glow that shifts through impossible colors (Legendary)",
+      "premium": false,
+      "admin_only": true
+    }
+  },
+  "badges": {
+    "none": {
+      "name": "None",
+      "description": "No badge",
+      "premium": false,
+      "icon": ""
+    },
+    "star": {
+      "name": "Star",
+      "description": "First elimination!",
+      "premium": false,
+      "icon": "\u2b50",
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 1
+        }
+      ]
+    },
+    "skull": {
+      "name": "Skull",
+      "description": "Menacing skull (Shop)",
+      "premium": false,
+      "icon": "\ud83d\udc80",
+      "price": 200
+    },
+    "ghost": {
+      "name": "Ghost",
+      "description": "Spooky ghost (Shop)",
+      "premium": false,
+      "icon": "\ud83d\udc7b",
+      "price": 180
+    },
+    "rocket": {
+      "name": "Rocket",
+      "description": "Blast off (Shop)",
+      "premium": false,
+      "icon": "\ud83d\ude80",
+      "price": 180
+    },
+    "rookie": {
+      "name": "Rookie",
+      "description": "10 multiplayer games",
+      "premium": false,
+      "icon": "\ud83d\udd30",
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 10
+        }
+      ]
+    },
+    "hunter": {
+      "name": "Hunter",
+      "description": "50 multiplayer eliminations",
+      "premium": false,
+      "icon": "\u2694\ufe0f",
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 50
+        }
+      ]
+    },
+    "assassin": {
+      "name": "Assassin",
+      "description": "150 multiplayer eliminations",
+      "premium": false,
+      "icon": "\ud83d\udde1\ufe0f",
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 150
+        }
+      ]
+    },
+    "executioner": {
+      "name": "Executioner",
+      "description": "300 multiplayer eliminations",
+      "premium": false,
+      "icon": "\u2620\ufe0f",
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 300
+        }
+      ]
+    },
+    "victor": {
+      "name": "Victor",
+      "description": "25 multiplayer wins",
+      "premium": false,
+      "icon": "\ud83c\udf96\ufe0f",
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 25
+        }
+      ]
+    },
+    "champion": {
+      "name": "Champion",
+      "description": "50 multiplayer wins",
+      "premium": false,
+      "icon": "\ud83c\udfc6",
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 50
+        }
+      ]
+    },
+    "legend": {
+      "name": "Legend",
+      "description": "150 multiplayer wins",
+      "premium": false,
+      "icon": "\ud83d\udc51",
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 150
+        }
+      ]
+    },
+    "veteran": {
+      "name": "Veteran",
+      "description": "100 multiplayer games",
+      "premium": false,
+      "icon": "\ud83c\udf97\ufe0f",
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 100
+        }
+      ]
+    },
+    "rank_bronze": {
+      "name": "Bronze Rank",
+      "description": "Peak MMR 1000+",
+      "premium": false,
+      "icon": "\ud83e\udd49",
+      "requirements": [
+        {
+          "metric": "peak_mmr",
+          "min": 1000
+        }
+      ]
+    },
+    "rank_silver": {
+      "name": "Silver Rank",
+      "description": "Peak MMR 1200+",
+      "premium": false,
+      "icon": "\ud83e\udd48",
+      "requirements": [
+        {
+          "metric": "peak_mmr",
+          "min": 1200
+        }
+      ]
+    },
+    "rank_gold": {
+      "name": "Gold Rank",
+      "description": "Peak MMR 1400+",
+      "premium": false,
+      "icon": "\ud83e\udd47",
+      "requirements": [
+        {
+          "metric": "peak_mmr",
+          "min": 1400
+        }
+      ]
+    },
+    "rank_platinum": {
+      "name": "Platinum Rank",
+      "description": "Peak MMR 1600+",
+      "premium": false,
+      "icon": "\ud83d\udca0",
+      "requirements": [
+        {
+          "metric": "peak_mmr",
+          "min": 1600
+        }
+      ]
+    },
+    "rank_diamond": {
+      "name": "Diamond Rank",
+      "description": "Peak MMR 1800+",
+      "premium": false,
+      "icon": "\ud83d\udd37",
+      "requirements": [
+        {
+          "metric": "peak_mmr",
+          "min": 1800
+        }
+      ]
+    },
+    "rank_master": {
+      "name": "Master Rank",
+      "description": "Peak MMR 2000+",
+      "premium": false,
+      "icon": "\u269c\ufe0f",
+      "requirements": [
+        {
+          "metric": "peak_mmr",
+          "min": 2000
+        }
+      ]
+    },
+    "hacker": {
+      "name": "Hacker",
+      "description": "Elite hacker badge (Shop)",
+      "premium": false,
+      "icon": "\ud83d\udcbb",
+      "price": 500
+    },
+    "ghost_protocol": {
+      "name": "Ghost Protocol",
+      "description": "Invisible operative (Shop)",
+      "premium": false,
+      "icon": "\ud83d\udd75\ufe0f",
+      "price": 800
+    },
+    "overlord": {
+      "name": "Overlord",
+      "description": "Supreme commander (Shop)",
+      "premium": false,
+      "icon": "\ud83e\udd85",
+      "price": 1500
+    },
+    "dragon": {
+      "name": "Dragon",
+      "description": "Mythical beast (Shop)",
+      "premium": false,
+      "icon": "\ud83d\udc09",
+      "price": 1200
+    },
+    "alien": {
+      "name": "Alien",
+      "description": "Extraterrestrial (Shop)",
+      "premium": false,
+      "icon": "\ud83d\udc7d",
+      "price": 600
+    },
+    "wizard": {
+      "name": "Wizard",
+      "description": "Master of words (100 MP wins)",
+      "premium": false,
+      "icon": "\ud83e\uddd9",
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 100
+        }
+      ]
+    },
+    "robot": {
+      "name": "Robot",
+      "description": "Mechanical precision (Shop)",
+      "premium": false,
+      "icon": "\ud83e\udd16",
+      "price": 350
+    },
+    "unicorn": {
+      "name": "Unicorn",
+      "description": "Rare and magical (Shop)",
+      "premium": false,
+      "icon": "\ud83e\udd84",
+      "price": 500
+    },
+    "crystal_ball": {
+      "name": "Oracle",
+      "description": "Sees the answer (75 MP games)",
+      "premium": false,
+      "icon": "\ud83d\udd2e",
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 75
+        }
+      ]
+    },
+    "joystick": {
+      "name": "Gamer",
+      "description": "Retro champion (Shop)",
+      "premium": false,
+      "icon": "\ud83d\udd79\ufe0f",
+      "price": 300
+    },
+    "meteor": {
+      "name": "Meteor",
+      "description": "Unstoppable force (250 MP eliminations)",
+      "premium": false,
+      "icon": "\u2604\ufe0f",
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 250
+        }
+      ]
+    },
+    "phoenix": {
+      "name": "Phoenix",
+      "description": "Rising from defeat (Shop)",
+      "premium": false,
+      "icon": "\ud83d\udd25",
+      "price": 700
+    },
+    "wolf": {
+      "name": "Wolf",
+      "description": "Pack hunter (Shop)",
+      "premium": false,
+      "icon": "\ud83d\udc3a",
+      "price": 400
+    },
+    "octopus": {
+      "name": "Kraken",
+      "description": "Deep sea terror (Shop)",
+      "premium": false,
+      "icon": "\ud83d\udc19",
+      "price": 450
+    },
+    "ninja": {
+      "name": "Ninja",
+      "description": "Silent eliminator (100 MP eliminations)",
+      "premium": false,
+      "icon": "\ud83e\udd77",
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 100
+        }
+      ]
+    },
+    "cat": {
+      "name": "Black Cat",
+      "description": "Lucky charm (Shop)",
+      "premium": false,
+      "icon": "\ud83d\udc08\u200d\u2b1b",
+      "price": 250
+    },
+    "dice": {
+      "name": "Gambler",
+      "description": "Risk taker (Shop)",
+      "premium": false,
+      "icon": "\ud83c\udfb2",
+      "price": 320
+    },
+    "fairy": {
+      "name": "Fairy",
+      "description": "Magical helper (Supporter)",
+      "premium": true,
+      "icon": "\ud83e\uddda"
+    },
+    "eye": {
+      "name": "All-Seeing",
+      "description": "Nothing escapes (Supporter)",
+      "premium": true,
+      "icon": "\ud83d\udc41\ufe0f"
+    },
+    "coffee": {
+      "name": "Supporter",
+      "description": "Ko-fi supporter badge",
+      "premium": true,
+      "icon": "\u2615"
+    },
+    "diamond": {
+      "name": "Diamond Supporter",
+      "description": "Ko-fi supporter badge",
+      "premium": true,
+      "icon": "\ud83d\udc8e"
+    },
+    "ancient_one": {
+      "name": "Ancient One",
+      "description": "Eldritch symbol of forbidden knowledge (Shop)",
+      "premium": false,
+      "icon": "\ud83e\udd91",
+      "price": 3000
+    },
+    "cosmic_entity": {
+      "name": "Cosmic Entity",
+      "description": "Being from beyond the stars (Shop)",
+      "premium": false,
+      "icon": "\ud83c\udf0c",
+      "price": 4000
+    },
+    "infinity": {
+      "name": "Infinity",
+      "description": "The infinite symbol pulses with universal power (Legendary)",
+      "premium": false,
+      "admin_only": true,
+      "icon": "\u267e\ufe0f"
+    }
+  },
+  "elimination_effects": {
+    "classic": {
+      "name": "Classic",
+      "description": "Simple fade out",
+      "premium": false
+    },
+    "shatter": {
+      "name": "Shatter",
+      "description": "Break into shards (10 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 10
+        }
+      ]
+    },
+    "explosion": {
+      "name": "Explosion",
+      "description": "Explosive elimination (50 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 50
+        }
+      ]
+    },
+    "freeze_shatter": {
+      "name": "Freeze Shatter",
+      "description": "Freeze then shatter (15 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 15
+        }
+      ]
+    },
+    "glitch_out": {
+      "name": "Glitch Out",
+      "description": "Digital corruption (35 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 35
+        }
+      ]
+    },
+    "vaporize": {
+      "name": "Vaporize",
+      "description": "Instant vaporization (100 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 100
+        }
+      ]
+    },
+    "crystallize": {
+      "name": "Crystallize",
+      "description": "Frozen solid then shattered (75 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 75
+        }
+      ]
+    },
+    "gravity_well": {
+      "name": "Gravity Well",
+      "description": "Pulled into oblivion (125 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 125
+        }
+      ]
+    },
+    "melt_down": {
+      "name": "Melt Down",
+      "description": "Melting into nothing (50 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 50
+        }
+      ]
+    },
+    "ink_bleed": {
+      "name": "Ink Bleed",
+      "description": "Consumed by spreading darkness (Shop)",
+      "premium": false,
+      "price": 850
+    },
+    "burn_away": {
+      "name": "Burn Away",
+      "description": "Consumed by flames (Shop)",
+      "premium": false,
+      "price": 900
+    },
+    "static_wipe": {
+      "name": "Static Wipe",
+      "description": "Signal lost (Shop)",
+      "premium": false,
+      "price": 700
+    },
+    "black_hole": {
+      "name": "Black Hole",
+      "description": "Sucked into singularity (Shop)",
+      "premium": false,
+      "price": 1000
+    },
+    "pixelate": {
+      "name": "Pixelate",
+      "description": "Retro pixel death (Shop)",
+      "premium": false,
+      "price": 750
+    },
+    "teleport": {
+      "name": "Teleport",
+      "description": "Sci-fi transporter beam-out (Shop)",
+      "premium": false,
+      "price": 650
+    },
+    "petrify": {
+      "name": "Petrify",
+      "description": "Turns to stone then crumbles (75 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 75
+        }
+      ]
+    },
+    "banish": {
+      "name": "Banish",
+      "description": "Sucked into magic portal (Shop)",
+      "premium": false,
+      "price": 800
+    },
+    "derez": {
+      "name": "Derez",
+      "description": "TRON-style digital death (Shop)",
+      "premium": false,
+      "price": 950
+    },
+    "ragdoll": {
+      "name": "Ragdoll",
+      "description": "Comical physics tumble (Shop)",
+      "premium": false,
+      "price": 500
+    },
+    "8bit_death": {
+      "name": "8-Bit Death",
+      "description": "Retro game over explosion (Shop)",
+      "premium": false,
+      "price": 600
+    },
+    "lightning_strike": {
+      "name": "Lightning Strike",
+      "description": "Zapped by bolt (125 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 125
+        }
+      ]
+    },
+    "snap": {
+      "name": "Snap",
+      "description": "Dust to nothing (Supporter)",
+      "premium": true
+    },
+    "disintegrate": {
+      "name": "Disintegrate",
+      "description": "Dust to void (Supporter)",
+      "premium": true
+    },
+    "void": {
+      "name": "Void",
+      "description": "Sucked into the void (Supporter)",
+      "premium": true
+    },
+    "soul_drain": {
+      "name": "Soul Drain",
+      "description": "Spirit departing (Supporter)",
+      "premium": true
+    },
+    "dimension_shatter": {
+      "name": "Dimension Shatter",
+      "description": "Reality breaks into fragments around them (Shop)",
+      "premium": false,
+      "price": 2800
+    },
+    "time_collapse": {
+      "name": "Time Collapse",
+      "description": "Past and future versions flicker before vanishing (Shop)",
+      "premium": false,
+      "price": 3500
+    },
+    "annihilate": {
+      "name": "Annihilate",
+      "description": "Complete erasure from existence - reality itself forgets them (Legendary)",
+      "premium": false,
+      "admin_only": true
+    }
+  },
+  "guess_effects": {
+    "classic": {
+      "name": "Classic",
+      "description": "Simple submit",
+      "premium": false
+    },
+    "pulse_wave": {
+      "name": "Pulse Wave",
+      "description": "Ripple outward (5 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 5
+        }
+      ]
+    },
+    "spark_burst": {
+      "name": "Spark Burst",
+      "description": "Quick spark burst (10 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 10
+        }
+      ]
+    },
+    "energy_ring": {
+      "name": "Energy Ring",
+      "description": "Expanding energy (25 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 25
+        }
+      ]
+    },
+    "shockwave": {
+      "name": "Shockwave",
+      "description": "Powerful shockwave (Shop)",
+      "premium": false,
+      "price": 600
+    },
+    "hologram_burst": {
+      "name": "Hologram Burst",
+      "description": "Holographic fragments (Shop)",
+      "premium": false,
+      "price": 900
+    },
+    "magic_cast": {
+      "name": "Magic Cast",
+      "description": "Wand wave with sparkles (Shop)",
+      "premium": false,
+      "price": 400
+    },
+    "power_up": {
+      "name": "Power Up",
+      "description": "Video game power-up flash (15 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 15
+        }
+      ]
+    },
+    "glitch_send": {
+      "name": "Glitch Send",
+      "description": "Digital corruption burst (Shop)",
+      "premium": false,
+      "price": 550
+    },
+    "coin_insert": {
+      "name": "Coin Insert",
+      "description": "Arcade coin-drop visual (Shop)",
+      "premium": false,
+      "price": 350
+    },
+    "thunderclap": {
+      "name": "Thunderclap",
+      "description": "Lightning and thunder shake the screen (Shop)",
+      "premium": false,
+      "price": 2500
+    },
+    "gravity_pulse": {
+      "name": "Gravity Pulse",
+      "description": "Spacetime warps around your guess (Shop)",
+      "premium": false,
+      "price": 3200
+    },
+    "reality_warp": {
+      "name": "Reality Warp",
+      "description": "Your guess bends the fabric of spacetime as it submits (Legendary)",
+      "premium": false,
+      "admin_only": true
+    }
+  },
+  "turn_indicators": {
+    "classic": {
+      "name": "Classic",
+      "description": "Standard highlight",
+      "premium": false
+    },
+    "spotlight": {
+      "name": "Spotlight",
+      "description": "Bright spotlight (3 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 3
+        }
+      ]
+    },
+    "pulse_glow": {
+      "name": "Pulse Glow",
+      "description": "Breathing glow (20 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 20
+        }
+      ]
+    },
+    "danger_zone": {
+      "name": "Danger Zone",
+      "description": "Red alert (50 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 50
+        }
+      ]
+    },
+    "target_lock": {
+      "name": "Target Lock",
+      "description": "Targeting reticle (Shop)",
+      "premium": false,
+      "price": 500
+    },
+    "quantum_glow": {
+      "name": "Quantum Glow",
+      "description": "Quantum uncertainty (Shop)",
+      "premium": false,
+      "price": 850
+    },
+    "magic_circle": {
+      "name": "Magic Circle",
+      "description": "Rotating spell sigil (25 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 25
+        }
+      ]
+    },
+    "targeting_system": {
+      "name": "Targeting System",
+      "description": "Sci-fi HUD lock-on (Shop)",
+      "premium": false,
+      "price": 700
+    },
+    "pixel_select": {
+      "name": "Pixel Select",
+      "description": "8-bit cursor blink (Shop)",
+      "premium": false,
+      "price": 450
+    },
+    "boss_health": {
+      "name": "Boss Health",
+      "description": "RPG boss health bar style (Supporter)",
+      "premium": true
+    },
+    "fire_ring": {
+      "name": "Fire Ring",
+      "description": "Ring of fire (Supporter)",
+      "premium": true
+    },
+    "holographic": {
+      "name": "Holographic",
+      "description": "Rainbow shimmer (Supporter)",
+      "premium": true
+    },
+    "void_aura": {
+      "name": "Void Aura",
+      "description": "Dark matter swirls ominously around you (Shop)",
+      "premium": false,
+      "price": 2800
+    },
+    "celestial_blessing": {
+      "name": "Celestial Blessing",
+      "description": "Heavenly rays descend upon the chosen (Shop)",
+      "premium": false,
+      "price": 3500
+    },
+    "divine_mandate": {
+      "name": "Divine Mandate",
+      "description": "Golden light descends from above marking the chosen one (Legendary)",
+      "premium": false,
+      "admin_only": true
+    }
+  },
+  "victory_effects": {
+    "classic": {
+      "name": "Classic",
+      "description": "Default confetti",
+      "premium": false
+    },
+    "fireworks": {
+      "name": "Fireworks",
+      "description": "Fireworks burst (5 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 5
+        }
+      ]
+    },
+    "gold_rain": {
+      "name": "Gold Rain",
+      "description": "Golden downpour (25 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 25
+        }
+      ]
+    },
+    "supernova": {
+      "name": "Supernova",
+      "description": "Blinding nova (75 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 75
+        }
+      ]
+    },
+    "champion_crown": {
+      "name": "Champion Crown",
+      "description": "Crown descent (150 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 150
+        }
+      ]
+    },
+    "nuclear": {
+      "name": "Nuclear",
+      "description": "Mushroom cloud explosion (Shop)",
+      "premium": false,
+      "price": 1200
+    },
+    "matrix_cascade": {
+      "name": "Matrix Cascade",
+      "description": "Green code rain victory (Shop)",
+      "premium": false,
+      "price": 1800
+    },
+    "level_up": {
+      "name": "Level Up",
+      "description": "RPG level-up fanfare (Shop)",
+      "premium": false,
+      "price": 800
+    },
+    "dragon_roar": {
+      "name": "Dragon Roar",
+      "description": "Dragon flies across screen (Shop)",
+      "premium": false,
+      "price": 1500
+    },
+    "pixel_parade": {
+      "name": "Pixel Parade",
+      "description": "8-bit characters celebrate (Shop)",
+      "premium": false,
+      "price": 1000
+    },
+    "spell_cast": {
+      "name": "Spell Cast",
+      "description": "Magic circles and sparkles (100 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 100
+        }
+      ]
+    },
+    "warp_jump": {
+      "name": "Warp Jump",
+      "description": "Hyperspace jump effect (Shop)",
+      "premium": false,
+      "price": 1100
+    },
+    "aurora": {
+      "name": "Aurora",
+      "description": "Northern lights dance (Supporter)",
+      "premium": true
+    },
+    "cosmic_collapse": {
+      "name": "Cosmic Collapse",
+      "description": "Stars implode into a brilliant singularity (Shop)",
+      "premium": false,
+      "price": 3500
+    },
+    "ascension": {
+      "name": "Ascension",
+      "description": "Rise to godhood with angelic wings and light (Shop)",
+      "premium": false,
+      "price": 5000
+    },
+    "big_bang": {
+      "name": "Big Bang",
+      "description": "The universe explodes into existence celebrating your victory (Legendary)",
+      "premium": false,
+      "admin_only": true
+    }
+  },
+  "matrix_colors": {
+    "classic": {
+      "name": "Classic",
+      "description": "Default green",
+      "premium": false,
+      "colors": [
+        "#00ff41"
+      ]
+    },
+    "ocean": {
+      "name": "Ocean",
+      "description": "Deep blue (First game!)",
+      "premium": false,
+      "colors": [
+        "#0077be",
+        "#00a8e8"
+      ],
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 1
+        }
+      ]
+    },
+    "sunset": {
+      "name": "Sunset",
+      "description": "Orange/pink gradient (Shop)",
+      "premium": false,
+      "colors": [
+        "#ff6b35",
+        "#f7931e"
+      ],
+      "price": 140
+    },
+    "cyber_blue": {
+      "name": "Cyber Blue",
+      "description": "Blue/cyan (10 MP games)",
+      "premium": false,
+      "colors": [
+        "#00ccff",
+        "#0066ff"
+      ],
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 10
+        }
+      ]
+    },
+    "crimson": {
+      "name": "Crimson",
+      "description": "Red/dark red (50 MP eliminations)",
+      "premium": false,
+      "colors": [
+        "#ff3333",
+        "#990000"
+      ],
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 50
+        }
+      ]
+    },
+    "royal_purple": {
+      "name": "Royal Purple",
+      "description": "Purple/violet (15 MP wins)",
+      "premium": false,
+      "colors": [
+        "#9933ff",
+        "#6600cc"
+      ],
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 15
+        }
+      ]
+    },
+    "toxic": {
+      "name": "Toxic",
+      "description": "Neon green/yellow (100 MP games)",
+      "premium": false,
+      "colors": [
+        "#39ff14",
+        "#ccff00"
+      ],
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 100
+        }
+      ]
+    },
+    "blood_red": {
+      "name": "Blood Red",
+      "description": "Deep crimson matrix (Shop)",
+      "premium": false,
+      "colors": [
+        "#8b0000",
+        "#dc143c"
+      ],
+      "price": 600
+    },
+    "arctic": {
+      "name": "Arctic",
+      "description": "Frozen blue matrix (Shop)",
+      "premium": false,
+      "colors": [
+        "#00ffff",
+        "#e0ffff"
+      ],
+      "price": 800
+    },
+    "synthwave": {
+      "name": "Synthwave",
+      "description": "Pink/cyan 80s (Shop)",
+      "premium": false,
+      "colors": [
+        "#ff00ff",
+        "#00ffff"
+      ],
+      "price": 450
+    },
+    "dragon_fire": {
+      "name": "Dragon Fire",
+      "description": "Orange/gold flames (75 MP eliminations)",
+      "premium": false,
+      "colors": [
+        "#ff4500",
+        "#ffd700"
+      ],
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 75
+        }
+      ]
+    },
+    "ice_crystal": {
+      "name": "Ice Crystal",
+      "description": "Frozen pale blue (Shop)",
+      "premium": false,
+      "colors": [
+        "#b0e0e6",
+        "#ffffff"
+      ],
+      "price": 400
+    },
+    "enchanted_matrix": {
+      "name": "Enchanted",
+      "description": "Purple/pink magic (50 MP wins)",
+      "premium": false,
+      "colors": [
+        "#9400d3",
+        "#ff1493"
+      ],
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 50
+        }
+      ]
+    },
+    "terminal": {
+      "name": "Terminal",
+      "description": "Classic phosphor (Shop)",
+      "premium": false,
+      "colors": [
+        "#33ff33",
+        "#003300"
+      ],
+      "price": 300
+    },
+    "gold_rush": {
+      "name": "Gold Rush",
+      "description": "Gold/amber (Supporter)",
+      "premium": true,
+      "colors": [
+        "#ffd700",
+        "#ff9900"
+      ]
+    },
+    "monochrome": {
+      "name": "Monochrome",
+      "description": "White/gray (Supporter)",
+      "premium": true,
+      "colors": [
+        "#ffffff",
+        "#888888"
+      ]
+    },
+    "neon_pink": {
+      "name": "Neon Pink",
+      "description": "Hot pink (Supporter)",
+      "premium": true,
+      "colors": [
+        "#ff00ff",
+        "#ff66b3"
+      ]
+    },
+    "nebula_core": {
+      "name": "Nebula Core",
+      "description": "Swirling cosmic dust in deep purples and blues (Shop)",
+      "premium": false,
+      "colors": [
+        "#4b0082",
+        "#9400d3",
+        "#00ced1"
+      ],
+      "price": 2500
+    },
+    "solar_flare": {
+      "name": "Solar Flare",
+      "description": "Intense plasma eruption colors (Shop)",
+      "premium": false,
+      "colors": [
+        "#ff4500",
+        "#ff8c00",
+        "#ffd700",
+        "#ffffff"
+      ],
+      "price": 3200
+    },
+    "event_horizon": {
+      "name": "Event Horizon",
+      "description": "Colors from beyond the singularity - impossible hues that shouldn't exist (Legendary)",
+      "premium": false,
+      "admin_only": true,
+      "colors": [
+        "#000000",
+        "#ff00ff",
+        "#00ffff",
+        "#ffffff"
+      ]
+    }
+  },
+  "particle_overlays": {
+    "none": {
+      "name": "None",
+      "description": "No particles",
+      "premium": false
+    },
+    "scan_lines": {
+      "name": "Scan Lines",
+      "description": "CRT scan lines (5 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 5
+        }
+      ]
+    },
+    "circuit": {
+      "name": "Circuit",
+      "description": "Circuit overlay (25 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 25
+        }
+      ]
+    },
+    "sparks": {
+      "name": "Sparks",
+      "description": "Ember sparks (25 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 25
+        }
+      ]
+    },
+    "rain": {
+      "name": "Rain",
+      "description": "Digital rain (75 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 75
+        }
+      ]
+    },
+    "fireflies_overlay": {
+      "name": "Fireflies",
+      "description": "Floating light particles (Shop)",
+      "premium": false,
+      "price": 600
+    },
+    "data_stream": {
+      "name": "Data Stream",
+      "description": "Binary data flow (Shop)",
+      "premium": false,
+      "price": 900
+    },
+    "hologram_overlay": {
+      "name": "Hologram",
+      "description": "Holographic interference (Shop)",
+      "premium": false,
+      "price": 1500
+    },
+    "magic_dust": {
+      "name": "Magic Dust",
+      "description": "Floating sparkle particles (Shop)",
+      "premium": false,
+      "price": 500
+    },
+    "binary_fall": {
+      "name": "Binary Fall",
+      "description": "Cascading 0s and 1s (40 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 40
+        }
+      ]
+    },
+    "pixel_noise": {
+      "name": "Pixel Noise",
+      "description": "Retro TV static (Shop)",
+      "premium": false,
+      "price": 400
+    },
+    "embers": {
+      "name": "Embers",
+      "description": "Rising fire particles (75 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 75
+        }
+      ]
+    },
+    "runes": {
+      "name": "Floating Runes",
+      "description": "Drifting arcane symbols (Supporter)",
+      "premium": true
+    },
+    "starfield": {
+      "name": "Starfield",
+      "description": "Twinkling stars (Supporter)",
+      "premium": true
+    },
+    "quantum_foam": {
+      "name": "Quantum Foam",
+      "description": "Reality bubbles forming and popping constantly (Shop)",
+      "premium": false,
+      "price": 2800
+    },
+    "astral_projection": {
+      "name": "Astral Projection",
+      "description": "Ghostly spirit forms drift across the screen (Shop)",
+      "premium": false,
+      "price": 3500
+    },
+    "cosmic_dust": {
+      "name": "Cosmic Dust",
+      "description": "Stardust from dying galaxies drifts across your screen (Legendary)",
+      "premium": false,
+      "admin_only": true
+    }
+  },
+  "seasonal_themes": {
+    "none": {
+      "name": "None",
+      "description": "No seasonal theme",
+      "premium": false
+    },
+    "snowfall": {
+      "name": "Snowfall",
+      "description": "Winter snow (10 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 10
+        }
+      ]
+    },
+    "heartbeat": {
+      "name": "Heartbeat",
+      "description": "Hearts (5 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 5
+        }
+      ]
+    },
+    "spooky": {
+      "name": "Spooky",
+      "description": "Halloween (25 MP eliminations)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 25
+        }
+      ]
+    },
+    "autumn": {
+      "name": "Autumn",
+      "description": "Falling leaves (50 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 50
+        }
+      ]
+    },
+    "sakura": {
+      "name": "Sakura",
+      "description": "Cherry blossom petals (Shop)",
+      "premium": false,
+      "price": 700
+    },
+    "northern_lights": {
+      "name": "Northern Lights",
+      "description": "Aurora borealis (Shop)",
+      "premium": false,
+      "price": 1100
+    },
+    "fireworks": {
+      "name": "Fireworks",
+      "description": "Celebration overlay (Supporter)",
+      "premium": true
+    },
+    "cherry_blossom": {
+      "name": "Cherry Blossom",
+      "description": "Falling petals (Supporter)",
+      "premium": true
+    },
+    "blood_moon": {
+      "name": "Blood Moon",
+      "description": "Crimson lunar glow with ominous atmosphere (Shop)",
+      "premium": false,
+      "price": 2500
+    },
+    "cosmic_storm": {
+      "name": "Cosmic Storm",
+      "description": "Swirling nebula clouds with lightning (Shop)",
+      "premium": false,
+      "price": 3500
+    },
+    "eclipse": {
+      "name": "Eclipse",
+      "description": "The sun and moon align in eternal darkness (Legendary)",
+      "premium": false,
+      "admin_only": true
+    }
+  },
+  "alt_backgrounds": {
+    "matrix": {
+      "name": "Matrix Rain",
+      "description": "Default matrix rain",
+      "premium": false
+    },
+    "deep_space": {
+      "name": "Deep Space",
+      "description": "Nebula background (15 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 15
+        }
+      ]
+    },
+    "ocean_depths": {
+      "name": "Ocean Depths",
+      "description": "Ocean gradient (50 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 50
+        }
+      ]
+    },
+    "fireflies": {
+      "name": "Fireflies",
+      "description": "Forest glow (15 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 15
+        }
+      ]
+    },
+    "void": {
+      "name": "Void",
+      "description": "Dark void (100 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 100
+        }
+      ]
+    },
+    "cyberpunk_city": {
+      "name": "Cyberpunk City",
+      "description": "Neon cityscape (Shop)",
+      "premium": false,
+      "price": 1000
+    },
+    "binary_rain": {
+      "name": "Binary Rain",
+      "description": "Falling binary code (Shop)",
+      "premium": false,
+      "price": 800
+    },
+    "aurora": {
+      "name": "Aurora",
+      "description": "Aurora waves (Supporter)",
+      "premium": true
+    },
+    "eldritch_realm": {
+      "name": "Eldritch Realm",
+      "description": "Tentacles and eyes peer from impossible geometries (Shop)",
+      "premium": false,
+      "price": 3000
+    },
+    "astral_plane": {
+      "name": "Astral Plane",
+      "description": "Ethereal dimension of pure energy (Shop)",
+      "premium": false,
+      "price": 4000
+    },
+    "multiverse": {
+      "name": "Multiverse",
+      "description": "Glimpses of infinite parallel realities flickering behind you (Legendary)",
+      "premium": false,
+      "admin_only": true
+    }
+  },
+  "bundles": {
+    "cyber_pack": {
+      "name": "Cyber Pack",
+      "description": "Void Pulse border + Neural Network bg + Hacker badge",
+      "premium": false,
+      "price": 2000,
+      "contents": {
+        "card_border": "void_pulse",
+        "card_background": "neural_network",
+        "badge": "hacker"
+      },
+      "value": 2700
+    },
+    "elite_pack": {
+      "name": "Elite Pack",
+      "description": "Chromatic border + Quantum Field bg + Overlord badge",
+      "premium": false,
+      "price": 4000,
+      "contents": {
+        "card_border": "chromatic",
+        "card_background": "quantum_field",
+        "badge": "overlord"
+      },
+      "value": 5500
+    },
+    "destruction_pack": {
+      "name": "Destruction Pack",
+      "description": "Black Hole elim + Nuclear victory + Inferno border",
+      "premium": false,
+      "price": 2500,
+      "contents": {
+        "elimination_effect": "black_hole",
+        "victory_effect": "nuclear",
+        "card_border": "inferno"
+      },
+      "value": 3000
+    },
+    "matrix_pack": {
+      "name": "Matrix Pack",
+      "description": "Matrix Cascade victory + Binary Rain bg + Data Stream particles",
+      "premium": false,
+      "price": 3000,
+      "contents": {
+        "victory_effect": "matrix_cascade",
+        "alt_background": "binary_rain",
+        "particle_overlay": "data_stream"
+      },
+      "value": 3500
+    },
+    "starter_pack": {
+      "name": "Starter Pack",
+      "description": "Synthwave border + Midnight bg + Amber name",
+      "premium": false,
+      "price": 300,
+      "contents": {
+        "card_border": "synthwave",
+        "card_background": "midnight",
+        "name_color": "amber"
+      },
+      "value": 370
+    },
+    "retro_pack": {
+      "name": "Retro Pack",
+      "description": "Pixel Frame border + Arcade Cabinet bg + 8-Bit Death elim + Retro Gamer title",
+      "premium": false,
+      "price": 1500,
+      "contents": {
+        "card_border": "pixel_frame",
+        "card_background": "arcade_cabinet",
+        "elimination_effect": "8bit_death",
+        "profile_title": "retro_gamer"
+      },
+      "value": 2030
+    },
+    "wizard_pack": {
+      "name": "Wizard Pack",
+      "description": "Rune Circle border + Spell Book bg + Magic Cast guess + Wizard badge",
+      "premium": false,
+      "price": 2200,
+      "contents": {
+        "card_border": "rune_circle",
+        "card_background": "spell_book",
+        "guess_effect": "magic_cast",
+        "badge": "wizard"
+      },
+      "value": 2800
+    },
+    "cyberpunk_pack": {
+      "name": "Cyberpunk Pack",
+      "description": "Glitch Edge border + Hyperspace bg + Derez elim + Cybernaut title",
+      "premium": false,
+      "price": 2000,
+      "contents": {
+        "card_border": "glitch_edge",
+        "card_background": "hyperspace",
+        "elimination_effect": "derez",
+        "profile_title": "cybernaut"
+      },
+      "value": 2750
+    },
+    "dragon_pack": {
+      "name": "Dragon Pack",
+      "description": "Dragon Scale border + Dragon Fire matrix + Dragon Roar victory",
+      "premium": false,
+      "price": 2800,
+      "contents": {
+        "card_border": "dragon_scale",
+        "matrix_color": "dragon_fire",
+        "victory_effect": "dragon_roar"
+      },
+      "value": 3350
+    }
+  },
+  "profile_titles": {
+    "none": {
+      "name": "None",
+      "description": "No title",
+      "premium": false,
+      "text": ""
+    },
+    "newcomer": {
+      "name": "The Newcomer",
+      "description": "Welcome to Embeddle (First game!)",
+      "premium": false,
+      "text": "The Newcomer",
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 1
+        }
+      ]
+    },
+    "word_hunter": {
+      "name": "Word Hunter",
+      "description": "Hunting for words (25 MP eliminations)",
+      "premium": false,
+      "text": "Word Hunter",
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 25
+        }
+      ]
+    },
+    "semantic_scholar": {
+      "name": "Semantic Scholar",
+      "description": "Student of meaning (50 MP games)",
+      "premium": false,
+      "text": "Semantic Scholar",
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 50
+        }
+      ]
+    },
+    "embedding_master": {
+      "name": "Embedding Master",
+      "description": "Master of vectors (100 MP wins)",
+      "premium": false,
+      "text": "Embedding Master",
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 100
+        }
+      ]
+    },
+    "the_eliminator": {
+      "name": "The Eliminator",
+      "description": "Fear the eliminator (200 MP eliminations)",
+      "premium": false,
+      "text": "The Eliminator",
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 200
+        }
+      ]
+    },
+    "veteran_agent": {
+      "name": "Veteran Agent",
+      "description": "Seasoned operative (150 MP games)",
+      "premium": false,
+      "text": "Veteran Agent",
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 150
+        }
+      ]
+    },
+    "apex_predator": {
+      "name": "Apex Predator",
+      "description": "Top of the food chain (Shop)",
+      "premium": false,
+      "text": "Apex Predator",
+      "price": 1500
+    },
+    "shadow_broker": {
+      "name": "Shadow Broker",
+      "description": "Information dealer (Shop)",
+      "premium": false,
+      "text": "Shadow Broker",
+      "price": 1200
+    },
+    "code_breaker": {
+      "name": "Code Breaker",
+      "description": "Cracking the cipher (Shop)",
+      "premium": false,
+      "text": "Code Breaker",
+      "price": 800
+    },
+    "pixel_warrior": {
+      "name": "Pixel Warrior",
+      "description": "8-bit champion (Shop)",
+      "premium": false,
+      "text": "Pixel Warrior",
+      "price": 600
+    },
+    "archmage": {
+      "name": "Archmage",
+      "description": "Master of semantic magic (150 MP wins)",
+      "premium": false,
+      "text": "Archmage",
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 150
+        }
+      ]
+    },
+    "cybernaut": {
+      "name": "Cybernaut",
+      "description": "Digital explorer (200 MP games)",
+      "premium": false,
+      "text": "Cybernaut",
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 200
+        }
+      ]
+    },
+    "dragon_slayer": {
+      "name": "Dragon Slayer",
+      "description": "Legendary hunter (300 MP eliminations)",
+      "premium": false,
+      "text": "Dragon Slayer",
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 300
+        }
+      ]
+    },
+    "glitch_king": {
+      "name": "Glitch King",
+      "description": "Ruler of chaos (Shop)",
+      "premium": false,
+      "text": "Glitch King",
+      "price": 1000
+    },
+    "retro_gamer": {
+      "name": "Retro Gamer",
+      "description": "Old school cool (Shop)",
+      "premium": false,
+      "text": "Retro Gamer",
+      "price": 500
+    },
+    "spell_weaver": {
+      "name": "Spell Weaver",
+      "description": "Weaver of words (75 MP wins)",
+      "premium": false,
+      "text": "Spell Weaver",
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 75
+        }
+      ]
+    },
+    "time_lord": {
+      "name": "Time Lord",
+      "description": "Master of moments (Supporter)",
+      "premium": true,
+      "text": "Time Lord"
+    },
+    "neural_architect": {
+      "name": "Neural Architect",
+      "description": "Builder of minds (Supporter)",
+      "premium": true,
+      "text": "Neural Architect"
+    },
+    "void_walker": {
+      "name": "Void Walker",
+      "description": "Between dimensions (Supporter)",
+      "premium": true,
+      "text": "Void Walker"
+    },
+    "reality_bender": {
+      "name": "Reality Bender",
+      "description": "One who warps the fabric of existence (Shop)",
+      "premium": false,
+      "text": "Reality Bender",
+      "price": 3500
+    },
+    "cosmic_sovereign": {
+      "name": "Cosmic Sovereign",
+      "description": "Ruler of galaxies and dimensions (Shop)",
+      "premium": false,
+      "text": "Cosmic Sovereign",
+      "price": 5000
+    },
+    "the_creator": {
+      "name": "The Creator",
+      "description": "One who shapes reality itself (Legendary)",
+      "premium": false,
+      "admin_only": true,
+      "text": "The Creator"
+    }
+  },
+  "profile_banners": {
+    "none": {
+      "name": "None",
+      "description": "No banner",
+      "premium": false
+    },
+    "circuit_pattern": {
+      "name": "Circuit",
+      "description": "Tech circuitry pattern (10 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 10
+        }
+      ]
+    },
+    "hexagon_grid": {
+      "name": "Hexagon",
+      "description": "Honeycomb pattern (25 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 25
+        }
+      ]
+    },
+    "wave_pattern": {
+      "name": "Wave",
+      "description": "Flowing waves (10 MP wins)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 10
+        }
+      ]
+    },
+    "cosmic_dust": {
+      "name": "Cosmic",
+      "description": "Stardust particles (50 MP games)",
+      "premium": false,
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 50
+        }
+      ]
+    },
+    "binary_stream": {
+      "name": "Binary",
+      "description": "Digital data flow (Shop)",
+      "premium": false,
+      "price": 600
+    },
+    "neon_grid": {
+      "name": "Neon Grid",
+      "description": "Retro neon lines (Shop)",
+      "premium": false,
+      "price": 800
+    },
+    "plasma_field": {
+      "name": "Plasma Field",
+      "description": "Swirling energy (Shop)",
+      "premium": false,
+      "price": 1000
+    },
+    "aurora_waves": {
+      "name": "Aurora",
+      "description": "Northern lights (Supporter)",
+      "premium": true
+    },
+    "ancient_runes": {
+      "name": "Ancient Runes",
+      "description": "Mystical symbols from forgotten civilizations (Shop)",
+      "premium": false,
+      "price": 2500
+    },
+    "galactic_core": {
+      "name": "Galactic Core",
+      "description": "Swirling stars at the heart of a galaxy (Shop)",
+      "premium": false,
+      "price": 3500
+    },
+    "genesis": {
+      "name": "Genesis",
+      "description": "The birth of a universe captured in a banner (Legendary)",
+      "premium": false,
+      "admin_only": true
+    }
+  },
+  "profile_accents": {
+    "default": {
+      "name": "Matrix Green",
+      "description": "Default accent",
+      "premium": false,
+      "color": "#00ff41"
+    },
+    "cyber_cyan": {
+      "name": "Cyber Cyan",
+      "description": "Cool cyan accent (5 MP games)",
+      "premium": false,
+      "color": "#00e5ff",
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 5
+        }
+      ]
+    },
+    "neon_pink": {
+      "name": "Neon Pink",
+      "description": "Hot pink accent (15 MP games)",
+      "premium": false,
+      "color": "#ff00ff",
+      "requirements": [
+        {
+          "metric": "mp_games_played",
+          "min": 15
+        }
+      ]
+    },
+    "solar_gold": {
+      "name": "Solar Gold",
+      "description": "Golden accent (25 MP wins)",
+      "premium": false,
+      "color": "#ffd700",
+      "requirements": [
+        {
+          "metric": "mp_wins",
+          "min": 25
+        }
+      ]
+    },
+    "toxic_green": {
+      "name": "Toxic Green",
+      "description": "Radioactive green (50 MP eliminations)",
+      "premium": false,
+      "color": "#39ff14",
+      "requirements": [
+        {
+          "metric": "mp_eliminations",
+          "min": 50
+        }
+      ]
+    },
+    "royal_purple": {
+      "name": "Royal Purple",
+      "description": "Majestic purple (Shop)",
+      "premium": false,
+      "color": "#9933ff",
+      "price": 400
+    },
+    "blood_red": {
+      "name": "Blood Red",
+      "description": "Crimson accent (Shop)",
+      "premium": false,
+      "color": "#dc143c",
+      "price": 500
+    },
+    "ice_blue": {
+      "name": "Ice Blue",
+      "description": "Frozen accent (Shop)",
+      "premium": false,
+      "color": "#00ccff",
+      "price": 400
+    },
+    "sunset_orange": {
+      "name": "Sunset Orange",
+      "description": "Warm sunset (Supporter)",
+      "premium": true,
+      "color": "#ff6b35"
+    },
+    "void_black": {
+      "name": "Void Black",
+      "description": "Deepest darkness that absorbs all light (Shop)",
+      "premium": false,
+      "color": "#0a0a0a",
+      "price": 2500
+    },
+    "celestial_white": {
+      "name": "Celestial White",
+      "description": "Pure radiant light from the heavens (Shop)",
+      "premium": false,
+      "color": "#f0f0ff",
+      "price": 3000
+    },
+    "singularity": {
+      "name": "Singularity",
+      "description": "A color that exists beyond the visible spectrum (Legendary)",
+      "premium": false,
+      "admin_only": true,
+      "color": "singularity"
+    }
+  }
+}
