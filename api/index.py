@@ -938,6 +938,8 @@ def _ai_select_isolated_word(word_pool: list) -> str:
     to other words in the pool, making them hard to triangulate.
     
     Score = -avg_similarity - 0.5 * max_similarity (lower is better)
+    
+    Uses pre-computed theme similarity matrix when available for O(1) lookups.
     """
     import random
     
@@ -945,7 +947,35 @@ def _ai_select_isolated_word(word_pool: list) -> str:
         return word_pool[0] if word_pool else None
     
     try:
-        # Get embeddings for all words in pool
+        # Fast path: use pre-computed similarity matrix if available
+        similarity_matrix = game.get('theme_similarity_matrix') if game else None
+        if similarity_matrix:
+            isolation_scores = []
+            for word in word_pool:
+                word_lower = word.lower()
+                word_sims = similarity_matrix.get(word_lower, {})
+                if not word_sims:
+                    continue
+                
+                similarities = []
+                for other_word in word_pool:
+                    if other_word.lower() == word_lower:
+                        continue
+                    sim = word_sims.get(other_word.lower(), 0.5)
+                    similarities.append(sim)
+                
+                if similarities:
+                    avg_sim = sum(similarities) / len(similarities)
+                    max_sim = max(similarities)
+                    isolation_score = avg_sim + 0.5 * max_sim
+                    isolation_scores.append((word, isolation_score))
+            
+            if isolation_scores:
+                isolation_scores.sort(key=lambda x: x[1])
+                top_isolated = isolation_scores[:min(3, len(isolation_scores))]
+                return random.choice(top_isolated)[0]
+        
+        # Fallback: use cached embeddings from Redis
         embeddings = {}
         for word in word_pool:
             try:
@@ -1000,6 +1030,8 @@ def _ai_select_counter_intel_word(ai_player: dict, game: dict, word_pool: list) 
     Picks a new word that is:
     1. Maximally distant from all previous high-similarity guesses against it
     2. Semantically isolated (low connectivity to theme)
+    
+    Uses pre-computed theme similarity matrix when available for O(1) lookups.
     """
     import random
     
@@ -1023,7 +1055,50 @@ def _ai_select_counter_intel_word(ai_player: dict, game: dict, word_pool: list) 
                 if word:
                     dangerous_words.append((word, sims[ai_id]))
         
-        # Get embeddings for pool words
+        # Fast path: use pre-computed similarity matrix if available
+        similarity_matrix = game.get('theme_similarity_matrix') if game else None
+        if similarity_matrix:
+            word_scores = []
+            for word in word_pool:
+                word_lower = word.lower()
+                word_sims = similarity_matrix.get(word_lower, {})
+                if not word_sims:
+                    continue
+                
+                # Distance from dangerous words
+                danger_distance = 0
+                if dangerous_words:
+                    for dword, dsim in dangerous_words:
+                        sim_to_danger = word_sims.get(dword.lower(), 0.5)
+                        danger_distance += (1 - sim_to_danger) * dsim
+                    danger_distance /= len(dangerous_words)
+                else:
+                    danger_distance = 0.5
+                
+                # Isolation score
+                isolation_sims = []
+                for other_word in word_pool:
+                    if other_word.lower() == word_lower:
+                        continue
+                    isolation_sims.append(word_sims.get(other_word.lower(), 0.5))
+                
+                if isolation_sims:
+                    avg_sim = sum(isolation_sims) / len(isolation_sims)
+                    max_sim = max(isolation_sims)
+                    isolation_score = avg_sim + 0.5 * max_sim
+                else:
+                    isolation_score = 0.5
+                
+                # Combined score: maximize danger distance, minimize isolation
+                combined_score = danger_distance * 0.6 - isolation_score * 0.4
+                word_scores.append((word, combined_score))
+            
+            if word_scores:
+                word_scores.sort(key=lambda x: x[1], reverse=True)
+                top_words = word_scores[:min(3, len(word_scores))]
+                return random.choice(top_words)[0]
+        
+        # Fallback: use cached embeddings from Redis
         pool_embeddings = {}
         for word in word_pool:
             try:
@@ -7643,19 +7718,25 @@ class handler(BaseHTTPRequestHandler):
             for p in game['players']:
                 p['time_remaining'] = initial_time
 
-            # Pre-cache all theme word embeddings in Redis for fast AI calculations
-            # (Should already be cached from /start, but ensure it's done)
+            # Embeddings should already be cached from /start phase
+            # Pre-compute similarity matrix in background if not already done
+            # (This is fast if embeddings are cached, ~100ms for 100 words)
             theme_words = game.get('theme', {}).get('words', [])
-            if theme_words:
-                try:
-                    theme_embeddings = batch_get_embeddings(theme_words)  # Warm the cache and get embeddings
-                    
-                    # Pre-compute similarity matrix for O(1) lookups during AI turns
-                    # Store ONLY the similarity matrix (small: ~80KB) not the embeddings (~2.5MB)
-                    if theme_embeddings and not game.get('theme_similarity_matrix'):
-                        game['theme_similarity_matrix'] = precompute_theme_similarities(game, theme_embeddings)
-                except Exception as e:
-                    print(f"Theme embedding pre-cache error: {e}")
+            if theme_words and not game.get('theme_similarity_matrix'):
+                import threading
+                def compute_similarity_matrix():
+                    try:
+                        theme_embeddings = batch_get_embeddings(theme_words)
+                        if theme_embeddings:
+                            matrix = precompute_theme_similarities(game, theme_embeddings)
+                            # Update game state with matrix (need to reload/save)
+                            g = load_game(code)
+                            if g and not g.get('theme_similarity_matrix'):
+                                g['theme_similarity_matrix'] = matrix
+                                save_game(code, g)
+                    except Exception as e:
+                        print(f"Theme similarity matrix error: {e}")
+                threading.Thread(target=compute_similarity_matrix, daemon=True).start()
 
             game['status'] = 'playing'
             game['turn_started_at'] = time.time()  # Start the turn timer
