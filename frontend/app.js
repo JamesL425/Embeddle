@@ -188,6 +188,12 @@ let gameState = {
     // Word change timer state (after elimination)
     wordChangeTimerInterval: null,
     wordChangeTimeRemaining: null,
+    // Local flag to track if user has locked their word (prevents race with timeout)
+    hasLockedWord: false,
+    // Local flag to track if user has submitted word change (prevents race with timeout)
+    hasSubmittedWordChange: false,
+    // Local flag to track if a guess is currently being submitted (prevents race with timeout)
+    isSubmittingGuess: false,
 };
 
 // ============ OPTIONS ============
@@ -628,6 +634,10 @@ function clearGameSession() {
     hideTimer();
     // Clear word selection timer
     stopWordSelectionTimer();
+    // Reset local race-condition flags
+    gameState.hasLockedWord = false;
+    gameState.hasSubmittedWordChange = false;
+    gameState.isSubmittingGuess = false;
     // Reset URL to home
     if (window.location.pathname !== '/') {
         history.pushState({}, '', '/');
@@ -3178,6 +3188,9 @@ function showWordSelectionScreen(data) {
     document.getElementById('word-select-controls').classList.remove('hidden');
     document.getElementById('word-locked-notice').classList.add('hidden');
     
+    // Reset local lock flag
+    gameState.hasLockedWord = false;
+    
     showScreen('wordselect');
     startWordSelectPolling();
     
@@ -3349,10 +3362,15 @@ async function handleWordSelectionTimeout() {
         gameState.wordSelectionTimerInterval = null;
     }
     
-    // Check if we already have a word locked
+    // Check if we already have a word locked (local flag takes priority to avoid race condition)
+    if (gameState.hasLockedWord) {
+        return; // Already locked in locally, nothing to do
+    }
+    
+    // Also check server state as fallback
     const myPlayer = gameState.game?.players?.find(p => p.id === gameState.playerId);
     if (myPlayer?.has_word) {
-        return; // Already locked in, nothing to do
+        return; // Already locked in on server, nothing to do
     }
     
     try {
@@ -3423,6 +3441,9 @@ document.getElementById('lock-word-btn')?.addEventListener('click', async () => 
             session_token: gameState.sessionToken,
             secret_word: word,
         });
+        
+        // Set local flag IMMEDIATELY to prevent timeout race condition
+        gameState.hasLockedWord = true;
         
         // Show locked notice
         document.getElementById('word-select-controls').classList.add('hidden');
@@ -3679,6 +3700,9 @@ function updateGame(game) {
         
         if (myPlayer.can_change_word) {
             changeWordContainer.classList.remove('hidden');
+            
+            // Reset word change flag when the UI is shown (new word change opportunity)
+            gameState.hasSubmittedWordChange = false;
             
             // Start/update word change timer if we have time remaining from server
             updateWordChangeTimer(game.word_change_time_remaining);
@@ -4416,6 +4440,11 @@ async function handleWordChangeTimeout() {
         return;
     }
     
+    // Check if we already submitted a word change (local flag to prevent race condition)
+    if (gameState.hasSubmittedWordChange) {
+        return; // Already submitted locally, nothing to do
+    }
+    
     try {
         const result = await apiCall(`/api/games/${gameState.code}/word-change-timeout`, 'POST', {
             player_id: gameState.playerId,
@@ -4451,6 +4480,11 @@ async function handleTurnTimeout() {
     // Only trigger timeout if we're in the game (not spectating)
     if (gameState.isSpectator || !gameState.code) {
         return;
+    }
+    
+    // Check if we're currently submitting a guess (prevents race condition)
+    if (gameState.isSubmittingGuess) {
+        return; // Guess is in flight, let it complete - server will handle timing
     }
     
     try {
@@ -4678,6 +4712,9 @@ async function submitGuess() {
     guessInput.disabled = true;
     guessInput.placeholder = 'Submitting...';
     
+    // Set flag IMMEDIATELY to prevent timeout race condition
+    gameState.isSubmittingGuess = true;
+    
     // Play guess effect immediately for responsive feedback
     const guessEffect = cosmeticsState?.userCosmetics?.guess_effect || 'classic';
     if (typeof playGuessEffect === 'function') {
@@ -4718,6 +4755,7 @@ async function submitGuess() {
         }
     } finally {
         guessInput.placeholder = originalPlaceholder;
+        gameState.isSubmittingGuess = false;
     }
 }
 
@@ -4893,6 +4931,9 @@ document.getElementById('skip-word-change-btn').addEventListener('click', async 
     btn.disabled = true;
     btn.textContent = 'Keeping...';
     
+    // Set local flag IMMEDIATELY to prevent timeout race condition
+    gameState.hasSubmittedWordChange = true;
+    
     // Optimistic: hide the change word UI immediately
     document.getElementById('change-word-container')?.classList.add('hidden');
     
@@ -4905,7 +4946,8 @@ document.getElementById('skip-word-change-btn').addEventListener('click', async 
         maybeRunSingleplayerAiTurns(game);
     } catch (error) {
         showError(error.message);
-        // Restore UI on error
+        // Restore UI on error - also reset the flag
+        gameState.hasSubmittedWordChange = false;
         document.getElementById('change-word-container')?.classList.remove('hidden');
     } finally {
         btn.disabled = false;
@@ -4929,6 +4971,9 @@ async function submitWordChange() {
         changeBtn.textContent = 'Changing...';
     }
     
+    // Set local flag IMMEDIATELY to prevent timeout race condition
+    gameState.hasSubmittedWordChange = true;
+    
     // Optimistic: update secret word display and hide change UI immediately
     document.getElementById('your-secret-word').textContent = newWord.toUpperCase();
     document.getElementById('change-word-container')?.classList.add('hidden');
@@ -4945,7 +4990,9 @@ async function submitWordChange() {
         maybeRunSingleplayerAiTurns(game);
     } catch (error) {
         showError(error.message);
-        // Restore UI on error - re-fetch to get correct state
+        // Restore UI on error - also reset the flag
+        gameState.hasSubmittedWordChange = false;
+        // Re-fetch to get correct state
         try {
             const game = await apiCall(`/api/games/${gameState.code}?player_id=${gameState.playerId}`);
             updateGame(game);

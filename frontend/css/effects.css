@@ -2012,6 +2012,65 @@ body[data-particles="runes"]::before {
 }
 
 /* Matrix Colors - Expensive Shop (handled via JS canvas) */
+
+/* Multi-color matrix effects */
+body.matrix-multicolor[data-matrix-effect="nebula_core"] .matrix-char {
+    animation: matrixNebula 4s ease-in-out infinite;
+}
+
+body.matrix-multicolor[data-matrix-effect="solar_flare"] .matrix-char {
+    animation: matrixSolarFlare 3s ease-in-out infinite;
+}
+
+body.matrix-multicolor[data-matrix-effect="event_horizon"] .matrix-char {
+    animation: matrixEventHorizon 2s linear infinite;
+    text-shadow: 
+        0 0 10px var(--matrix-color-1),
+        0 0 20px var(--matrix-color-2),
+        0 0 30px var(--matrix-color-3);
+}
+
+@keyframes matrixNebula {
+    0%, 100% { color: var(--matrix-color-1, #4b0082); }
+    33% { color: var(--matrix-color-2, #9400d3); }
+    66% { color: var(--matrix-color-3, #00ced1); }
+}
+
+@keyframes matrixSolarFlare {
+    0%, 100% { color: var(--matrix-color-1, #ff4500); text-shadow: 0 0 10px var(--matrix-color-1); }
+    25% { color: var(--matrix-color-2, #ff8c00); text-shadow: 0 0 15px var(--matrix-color-2); }
+    50% { color: var(--matrix-color-3, #ffd700); text-shadow: 0 0 20px var(--matrix-color-3); }
+    75% { color: var(--matrix-color-4, #ffffff); text-shadow: 0 0 25px var(--matrix-color-4); }
+}
+
+@keyframes matrixEventHorizon {
+    0% { 
+        color: var(--matrix-color-1, #ff00ff);
+        text-shadow: 0 0 15px var(--matrix-color-1), 0 0 30px var(--matrix-color-2);
+        filter: brightness(1);
+    }
+    25% { 
+        color: var(--matrix-color-2, #00ffff);
+        text-shadow: 0 0 20px var(--matrix-color-2), 0 0 40px var(--matrix-color-3);
+        filter: brightness(1.2);
+    }
+    50% { 
+        color: var(--matrix-color-3, #ffffff);
+        text-shadow: 0 0 25px var(--matrix-color-3), 0 0 50px var(--matrix-color-1);
+        filter: brightness(1.5);
+    }
+    75% { 
+        color: var(--matrix-color-4, #ff00ff);
+        text-shadow: 0 0 20px var(--matrix-color-4), 0 0 40px var(--matrix-color-2);
+        filter: brightness(1.2);
+    }
+    100% { 
+        color: var(--matrix-color-1, #ff00ff);
+        text-shadow: 0 0 15px var(--matrix-color-1), 0 0 30px var(--matrix-color-2);
+        filter: brightness(1);
+    }
+}
+
 /* Particle Overlays - Expensive Shop */
 body[data-particles="quantum_foam"]::before {
     content: '';
@@ -2269,6 +2328,65 @@ body[data-alt-bg="multiverse"]::before {
         radial-gradient(ellipse at center, rgba(255, 215, 0, 0.2) 0%, transparent 50%),
         linear-gradient(135deg, rgba(75, 0, 130, 0.3), rgba(0, 0, 50, 0.3)),
         var(--bg-secondary);
+}
+
+/* Profile Accents - Legendary Admin */
+body.accent-singularity {
+    --profile-accent: #ff00ff;
+}
+
+body.accent-singularity .profile-modal,
+body.accent-singularity [style*="--profile-accent"] {
+    animation: singularityAccent 3s linear infinite;
+}
+
+@keyframes singularityAccent {
+    0% { --profile-accent: #ff00ff; filter: hue-rotate(0deg); }
+    25% { --profile-accent: #00ffff; filter: hue-rotate(90deg); }
+    50% { --profile-accent: #ffd700; filter: hue-rotate(180deg); }
+    75% { --profile-accent: #ff0000; filter: hue-rotate(270deg); }
+    100% { --profile-accent: #ff00ff; filter: hue-rotate(360deg); }
+}
+
+/* Profile Titles - Legendary Admin */
+.player-title.title-the-creator {
+    background: linear-gradient(90deg, #ffd700, #ffffff, #ffd700, #ff8c00, #ffd700);
+    background-size: 400% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: creatorTitleShift 4s linear infinite, creatorTitleGlow 2s ease-in-out infinite;
+    font-weight: bold;
+    letter-spacing: 1px;
+    filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8));
+    position: relative;
+}
+
+.player-title.title-the-creator::before {
+    content: '✦ ';
+    -webkit-text-fill-color: #ffd700;
+    animation: creatorStar 1.5s ease-in-out infinite;
+}
+
+.player-title.title-the-creator::after {
+    content: ' ✦';
+    -webkit-text-fill-color: #ffd700;
+    animation: creatorStar 1.5s ease-in-out infinite 0.75s;
+}
+
+@keyframes creatorTitleShift {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 400% 50%; }
+}
+
+@keyframes creatorTitleGlow {
+    0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8)); }
+    50% { filter: drop-shadow(0 0 15px rgba(255, 215, 0, 1)) drop-shadow(0 0 25px rgba(255, 255, 255, 0.5)); }
+}
+
+@keyframes creatorStar {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.2); }
 }
 
 /* Profile Banners - Legendary Admin */

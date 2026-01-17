@@ -353,7 +353,8 @@ function applyPersonalCosmetics() {
 }
 
 function applyMatrixColor(colorId) {
-    const colors = {
+    // Simple single-color matrix colors
+    const simpleColors = {
         classic: '#00ff41',
         crimson: '#ff3333',
         cyber_blue: '#00ccff',
@@ -363,11 +364,39 @@ function applyMatrixColor(colorId) {
         neon_pink: '#ff00ff',
         sunset: '#ff6b35',
     };
-    document.documentElement.style.setProperty('--matrix-color', colors[colorId] || colors.classic);
+    
+    // Multi-color matrix effects (use first color as primary, animate through others)
+    const multiColors = {
+        nebula_core: ['#4b0082', '#9400d3', '#00ced1'],
+        solar_flare: ['#ff4500', '#ff8c00', '#ffd700', '#ffffff'],
+        event_horizon: ['#ff00ff', '#00ffff', '#ffffff', '#ff00ff'], // Admin legendary
+    };
+    
+    if (simpleColors[colorId]) {
+        document.documentElement.style.setProperty('--matrix-color', simpleColors[colorId]);
+        document.body.classList.remove('matrix-multicolor');
+        document.body.removeAttribute('data-matrix-effect');
+    } else if (multiColors[colorId]) {
+        // Use first color as base, add special effect class
+        document.documentElement.style.setProperty('--matrix-color', multiColors[colorId][0]);
+        document.body.classList.add('matrix-multicolor');
+        document.body.setAttribute('data-matrix-effect', colorId);
+        
+        // Set CSS variables for multi-color animation
+        const colors = multiColors[colorId];
+        document.documentElement.style.setProperty('--matrix-color-1', colors[0] || '#00ff41');
+        document.documentElement.style.setProperty('--matrix-color-2', colors[1] || colors[0]);
+        document.documentElement.style.setProperty('--matrix-color-3', colors[2] || colors[1] || colors[0]);
+        document.documentElement.style.setProperty('--matrix-color-4', colors[3] || colors[2] || colors[0]);
+    } else {
+        document.documentElement.style.setProperty('--matrix-color', simpleColors.classic);
+        document.body.classList.remove('matrix-multicolor');
+        document.body.removeAttribute('data-matrix-effect');
+    }
 }
 
 function applyAltBackground(bgId) {
-    document.body.dataset.background = bgId;
+    document.body.dataset.altBg = bgId;
 }
 
 function applyParticleOverlay(particleId) {
@@ -379,10 +408,18 @@ function applyProfileAccent(accentId) {
     if (catalog && catalog.profile_accents && catalog.profile_accents[accentId]) {
         const color = catalog.profile_accents[accentId].color;
         if (color) {
-            document.documentElement.style.setProperty('--profile-accent', color);
+            // Special handling for legendary singularity effect
+            if (color === 'singularity' || accentId === 'singularity') {
+                document.documentElement.style.setProperty('--profile-accent', '#ff00ff');
+                document.body.classList.add('accent-singularity');
+            } else {
+                document.documentElement.style.setProperty('--profile-accent', color);
+                document.body.classList.remove('accent-singularity');
+            }
         }
     } else {
         document.documentElement.style.removeProperty('--profile-accent');
+        document.body.classList.remove('accent-singularity');
     }
 }
 
@@ -676,7 +713,9 @@ function getTitleHtml(cosmetics) {
         const titleData = catalog.profile_titles[cosmetics.profile_title];
         const titleText = titleData.text || titleData.name || '';
         if (titleText) {
-            return `<span class="player-title">${titleText}</span>`;
+            // Add special class for legendary admin title
+            const specialClass = cosmetics.profile_title === 'the_creator' ? ' title-the-creator' : '';
+            return `<span class="player-title${specialClass}">${titleText}</span>`;
         }
     }
     return '';
@@ -720,10 +759,11 @@ function playEliminationEffect(playerId, effectId) {
         // Phase 4: Particle burst
         createEliminationParticles(card);
         
-        // Cleanup
+        // Cleanup - longer for complex effects
+        const duration = (effect === 'annihilate') ? 2500 : 1500;
         setTimeout(() => {
             card.classList.remove(`elim-${effect}`);
-        }, 1500);
+        }, duration);
     }, 300);
 }
 
@@ -781,9 +821,11 @@ function playGuessEffect(effectId, targetEl = null) {
     const effect = effectId || 'classic';
     form.classList.add(`guess-${effect}`);
     
+    // Longer cleanup time for complex effects
+    const duration = (effect === 'reality_warp') ? 1200 : 800;
     setTimeout(() => {
         form.classList.remove(`guess-${effect}`);
-    }, 800);
+    }, duration);
 }
 
 function playVictoryEffect(effectId, targetEl = null) {
