@@ -105,7 +105,9 @@ async function startBackgroundMusic() {
     try {
         bgmAudio = new Audio(bgmConfig.track);
         bgmAudio.loop = true;
-        bgmAudio.volume = clamp01(bgmConfig.volume);
+        // Apply user's saved volume preference combined with config base volume
+        const musicVol = typeof optionsState?.musicVolume === 'number' ? optionsState.musicVolume : 12;
+        bgmAudio.volume = clamp01((musicVol / 100) * bgmConfig.volume * (100 / 12));
         bgmAudio.preload = 'auto';
 
         const tryPlay = async () => {
@@ -1057,6 +1059,11 @@ async function loadAuthenticatedUser(token) {
         gameState.authUser = user;
         setLoggedInWithAuth(user);
         updateRankedUi();
+        
+        // Check if user needs to set a username
+        if (user.needs_username) {
+            showUsernameModal();
+        }
     } catch (error) {
         console.error('Failed to load authenticated user:', error);
         localStorage.removeItem('embeddle_auth_token');
@@ -1067,12 +1074,14 @@ async function loadAuthenticatedUser(token) {
 }
 
 function setLoggedInWithAuth(user) {
-    gameState.playerName = user.name;
+    // Use username if set, otherwise fall back to Google name
+    const displayName = user.username || user.name;
+    gameState.playerName = displayName;
     gameState.authUser = user;
     
     document.getElementById('login-box').classList.add('hidden');
     document.getElementById('logged-in-box').classList.remove('hidden');
-    document.getElementById('logged-in-name').textContent = user.name.toUpperCase();
+    document.getElementById('logged-in-name').textContent = displayName.toUpperCase();
     
     // Update topbar toggle username for mobile collapsed state
     updateTopbarState();
@@ -1678,6 +1687,170 @@ function closeProfileModal() {
     const modal = document.getElementById('profile-modal');
     if (modal) modal.classList.remove('show');
 }
+
+// ============ USERNAME MODAL ============
+
+function showUsernameModal() {
+    const modal = document.getElementById('username-modal');
+    if (!modal) return;
+    
+    // Reset state
+    const input = document.getElementById('username-input');
+    const error = document.getElementById('username-error');
+    const charCount = document.getElementById('username-char-count');
+    const submitBtn = document.getElementById('username-submit-btn');
+    
+    if (input) {
+        input.value = '';
+        input.classList.remove('error');
+    }
+    if (error) {
+        error.textContent = '';
+        error.classList.add('hidden');
+    }
+    if (charCount) charCount.textContent = '0/20';
+    if (submitBtn) submitBtn.disabled = true;
+    
+    modal.style.display = 'flex';
+}
+
+function hideUsernameModal() {
+    const modal = document.getElementById('username-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+function validateUsernameInput(username) {
+    if (!username || username.length < 3) {
+        return { valid: false, error: 'Username must be at least 3 characters' };
+    }
+    if (username.length > 20) {
+        return { valid: false, error: 'Username must be at most 20 characters' };
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+        return { valid: false, error: 'Only letters, numbers, underscores, and hyphens allowed' };
+    }
+    return { valid: true, error: '' };
+}
+
+async function submitUsername(username) {
+    const submitBtn = document.getElementById('username-submit-btn');
+    const error = document.getElementById('username-error');
+    
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'SAVING...';
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/user/username`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${gameState.authToken}`,
+            },
+            body: JSON.stringify({ username }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            if (error) {
+                error.textContent = data.detail || data.error || 'Failed to set username';
+                error.classList.remove('hidden');
+            }
+            const input = document.getElementById('username-input');
+            if (input) input.classList.add('error');
+            return false;
+        }
+        
+        // Success - update local state
+        if (gameState.authUser) {
+            gameState.authUser.username = data.username;
+            gameState.authUser.needs_username = false;
+        }
+        gameState.playerName = data.username;
+        
+        // Update UI
+        const nameEl = document.getElementById('logged-in-name');
+        if (nameEl) nameEl.textContent = data.username.toUpperCase();
+        updateTopbarState();
+        
+        hideUsernameModal();
+        showToast('Callsign set successfully!', 'success');
+        return true;
+    } catch (err) {
+        console.error('Failed to set username:', err);
+        if (error) {
+            error.textContent = 'Network error. Please try again.';
+            error.classList.remove('hidden');
+        }
+        return false;
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '> CONFIRM CALLSIGN';
+        }
+    }
+}
+
+// Username modal input handler
+document.getElementById('username-input')?.addEventListener('input', (e) => {
+    const value = e.target.value;
+    const charCount = document.getElementById('username-char-count');
+    const submitBtn = document.getElementById('username-submit-btn');
+    const error = document.getElementById('username-error');
+    
+    if (charCount) charCount.textContent = `${value.length}/20`;
+    
+    const validation = validateUsernameInput(value);
+    
+    if (error) {
+        if (!validation.valid && value.length > 0) {
+            error.textContent = validation.error;
+            error.classList.remove('hidden');
+            e.target.classList.add('error');
+        } else {
+            error.classList.add('hidden');
+            e.target.classList.remove('error');
+        }
+    }
+    
+    if (submitBtn) {
+        submitBtn.disabled = !validation.valid;
+    }
+});
+
+// Username modal submit button
+document.getElementById('username-submit-btn')?.addEventListener('click', async () => {
+    const input = document.getElementById('username-input');
+    if (!input) return;
+    
+    const username = input.value.trim();
+    const validation = validateUsernameInput(username);
+    
+    if (!validation.valid) return;
+    
+    await submitUsername(username);
+});
+
+// Username modal skip button
+document.getElementById('username-skip-btn')?.addEventListener('click', () => {
+    hideUsernameModal();
+});
+
+// Allow Enter key to submit username
+document.getElementById('username-input')?.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const input = e.target;
+        const username = input.value.trim();
+        const validation = validateUsernameInput(username);
+        
+        if (validation.valid) {
+            await submitUsername(username);
+        }
+    }
+});
 
 // Profile modal close button
 document.getElementById('close-profile-btn')?.addEventListener('click', closeProfileModal);

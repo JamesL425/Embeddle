@@ -1076,6 +1076,29 @@
         </div>
     </div>
 
+    <!-- Username Setup Modal -->
+    <div id="username-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-backdrop"></div>
+        <div class="modal username-modal">
+            <div class="username-modal-header">
+                <h2>🎖️ CHOOSE YOUR CALLSIGN</h2>
+            </div>
+            <div class="username-modal-content">
+                <p class="username-modal-description">Pick a unique callsign for your operative profile. This will be displayed to other players instead of your Google account name.</p>
+                <div class="username-input-group">
+                    <input type="text" id="username-input" placeholder="Enter callsign..." maxlength="20" autocomplete="off" spellcheck="false">
+                    <span id="username-char-count" class="username-char-count">0/20</span>
+                </div>
+                <p id="username-error" class="username-error hidden"></p>
+                <p class="username-rules">3-20 characters. Letters, numbers, underscores, and hyphens only.</p>
+                <div class="username-modal-buttons">
+                    <button id="username-submit-btn" class="btn btn-primary" disabled>&gt; CONFIRM CALLSIGN</button>
+                    <button id="username-skip-btn" class="btn btn-ghost btn-small">Skip for now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="/cosmetics.js"></script>
     <script src="/daily.js"></script>
     <script src="/app.js"></script>

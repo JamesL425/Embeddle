@@ -2802,6 +2802,130 @@ body.nerd-mode .nerd-sim {
     margin: 1rem 0;
 }
 
+/* ============ USERNAME SETUP MODAL ============ */
+
+.username-modal {
+    position: relative;
+    z-index: 1;
+    width: min(420px, 90%);
+    background: var(--bg-card);
+    border: 2px solid var(--accent-primary);
+    border-radius: var(--radius);
+    box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+    animation: username-modal-appear 0.2s ease-out;
+}
+
+@keyframes username-modal-appear {
+    from {
+        transform: scale(0.95) translateY(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+.username-modal-header {
+    padding: 1.5rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.username-modal-header h2 {
+    color: var(--accent-primary);
+    font-size: 1.25rem;
+    margin: 0;
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+}
+
+.username-modal-content {
+    padding: 1.5rem;
+}
+
+.username-modal-description {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0 0 1.25rem;
+}
+
+.username-input-group {
+    position: relative;
+    margin-bottom: 0.5rem;
+}
+
+.username-input-group input {
+    width: 100%;
+    padding: 0.875rem 3.5rem 0.875rem 1rem;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 1rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.username-input-group input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+}
+
+.username-input-group input.error {
+    border-color: var(--danger);
+    box-shadow: 0 0 10px rgba(255, 68, 68, 0.2);
+}
+
+.username-char-count {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    pointer-events: none;
+}
+
+.username-error {
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem 0.75rem;
+    background: rgba(255, 68, 68, 0.1);
+    border-radius: var(--radius);
+}
+
+.username-error.hidden {
+    display: none;
+}
+
+.username-rules {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin: 0.75rem 0 1.25rem;
+}
+
+.username-modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.username-modal-buttons .btn-primary {
+    width: 100%;
+    padding: 0.875rem;
+}
+
+.username-modal-buttons .btn-ghost {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.username-modal-buttons .btn-ghost:hover {
+    color: var(--text-secondary);
+}
+
 /* ============ PLAYER PROFILE MODAL ============ */
 
 .profile-modal {

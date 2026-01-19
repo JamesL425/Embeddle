@@ -163,6 +163,122 @@ def sanitize_word(word: str) -> Optional[str]:
         return None
     return word
 
+
+# ============== USERNAME VALIDATION ==============
+
+# Username pattern: 3-20 characters, alphanumeric, underscores, hyphens
+USERNAME_PATTERN = re.compile(r'^[a-zA-Z0-9_-]{3,20}$')
+
+# Reserved usernames that cannot be used
+RESERVED_USERNAMES = {
+    'admin', 'administrator', 'system', 'embeddle', 'mod', 'moderator',
+    'support', 'help', 'bot', 'official', 'staff', 'dev', 'developer',
+    'anonymous', 'guest', 'null', 'undefined', 'api', 'root', 'user'
+}
+
+# Load profanity list
+def _load_profanity_list() -> set:
+    """Load profanity words from profanity.json."""
+    try:
+        profanity_path = Path(__file__).parent / "profanity.json"
+        if profanity_path.exists():
+            with open(profanity_path) as f:
+                words = json.load(f)
+                return {w.lower() for w in words if isinstance(w, str)}
+    except Exception as e:
+        print(f"[WARNING] Failed to load profanity list: {e}")
+    return set()
+
+PROFANITY_LIST = _load_profanity_list()
+
+
+def contains_profanity(text: str) -> bool:
+    """Check if text contains any profanity words (as substrings)."""
+    if not text:
+        return False
+    text_lower = text.lower()
+    for word in PROFANITY_LIST:
+        if word in text_lower:
+            return True
+    return False
+
+
+def validate_username(username: str) -> tuple[bool, str]:
+    """
+    Validate a username.
+    
+    Returns:
+        (is_valid, error_message) - error_message is empty if valid
+    """
+    if not username:
+        return False, "Username is required"
+    
+    username = username.strip()
+    
+    # Check length
+    if len(username) < 3:
+        return False, "Username must be at least 3 characters"
+    if len(username) > 20:
+        return False, "Username must be at most 20 characters"
+    
+    # Check pattern (alphanumeric, underscores, hyphens)
+    if not USERNAME_PATTERN.match(username):
+        return False, "Username can only contain letters, numbers, underscores, and hyphens"
+    
+    # Check reserved words
+    if username.lower() in RESERVED_USERNAMES:
+        return False, "This username is reserved"
+    
+    # Check profanity
+    if contains_profanity(username):
+        return False, "Username contains inappropriate language"
+    
+    return True, ""
+
+
+def is_username_available(username: str) -> bool:
+    """Check if a username is available (not taken by another user)."""
+    redis = get_redis()
+    if not redis:
+        return False
+    try:
+        existing = redis.get(f"username:{username.lower()}")
+        return existing is None
+    except Exception:
+        return False
+
+
+def reserve_username(username: str, user_id: str) -> bool:
+    """Reserve a username for a user. Returns True if successful."""
+    redis = get_redis()
+    if not redis:
+        return False
+    try:
+        # Use SETNX to atomically check and set (only if not exists)
+        key = f"username:{username.lower()}"
+        result = redis.setnx(key, user_id)
+        return bool(result)
+    except Exception as e:
+        print(f"[ERROR] Failed to reserve username: {e}")
+        return False
+
+
+def release_username(username: str, user_id: str) -> bool:
+    """Release a username reservation. Only releases if owned by user_id."""
+    redis = get_redis()
+    if not redis:
+        return False
+    try:
+        key = f"username:{username.lower()}"
+        current_owner = redis.get(key)
+        if current_owner == user_id:
+            redis.delete(key)
+            return True
+        return False
+    except Exception:
+        return False
+
+
 # ============== CONFIG ==============
 
 def load_config():
@@ -3031,6 +3147,7 @@ def get_or_create_user(google_user: dict) -> dict:
         'id': user_id,
         'email': google_user.get('email', ''),
         'name': google_user.get('name', 'Anonymous'),
+        'username': None,  # Custom username, set by user after first login
         'avatar': google_user.get('picture', ''),
         'created_at': int(time.time()),
         'is_admin': is_admin,  # Admin status from ADMIN_EMAILS env var
@@ -3070,6 +3187,13 @@ def save_user(user: dict):
     redis = get_redis()
     user_key = f"user:{user['id']}"
     redis.set(user_key, json.dumps(user))
+
+
+def get_user_display_name(user: dict) -> str:
+    """Get user's display name (username if set, otherwise Google name)."""
+    if not user:
+        return 'Anonymous'
+    return user.get('username') or user.get('name', 'Anonymous')
 
 
 def get_user_by_email(email: str) -> Optional[dict]:
@@ -5454,9 +5578,13 @@ class handler(BaseHTTPRequestHandler):
             if not user:
                 return self._send_error("User not found", 404)
             
+            username = user.get('username')
+            
             return self._send_json({
                 'id': user['id'],
                 'name': user['name'],
+                'username': username,
+                'needs_username': username is None,  # True if user hasn't set a username yet
                 'email': user.get('email', ''),
                 'avatar': user.get('avatar', ''),
                 'stats': get_user_stats(user),
@@ -5723,7 +5851,7 @@ class handler(BaseHTTPRequestHandler):
                 players.append({
                     "rank": rank,
                     "id": user.get('id'),
-                    "name": user.get('name'),
+                    "name": get_user_display_name(user),
                     "avatar": user.get('avatar', ''),
                     "mmr": int(stats.get('mmr', mmr) or mmr),
                     "peak_mmr": int(stats.get('peak_mmr', mmr) or mmr),
@@ -8267,6 +8395,62 @@ class handler(BaseHTTPRequestHandler):
                     "name": timed_out_player['name'],
                 },
                 "game_over": game_over,
+            })
+
+        # POST /api/user/username - Set or update username
+        if path == '/api/user/username':
+            auth_header = self.headers.get('Authorization', '')
+            if not auth_header.startswith('Bearer '):
+                return self._send_error("Not authenticated", 401)
+
+            token = auth_header[7:]
+            payload = verify_jwt_token(token)
+            if not payload:
+                return self._send_error("Invalid or expired token", 401)
+
+            user = get_user_by_id(payload.get('sub', ''))
+            if not user:
+                return self._send_error("User not found", 404)
+
+            new_username = body.get('username', '')
+            if not isinstance(new_username, str):
+                return self._send_error("Username must be a string", 400)
+            
+            new_username = new_username.strip()
+            
+            # Validate username
+            is_valid, error_msg = validate_username(new_username)
+            if not is_valid:
+                return self._send_error(error_msg, 400)
+            
+            # Check if user already has this username (case-insensitive)
+            current_username = user.get('username')
+            if current_username and current_username.lower() == new_username.lower():
+                return self._send_json({
+                    "success": True,
+                    "username": current_username,
+                    "message": "Username unchanged"
+                })
+            
+            # Check availability
+            if not is_username_available(new_username):
+                return self._send_error("This username is already taken", 409)
+            
+            # Release old username if exists
+            if current_username:
+                release_username(current_username, user['id'])
+            
+            # Reserve new username
+            if not reserve_username(new_username, user['id']):
+                return self._send_error("Failed to reserve username. Please try again.", 500)
+            
+            # Update user record
+            user['username'] = new_username
+            save_user(user)
+            
+            return self._send_json({
+                "success": True,
+                "username": new_username,
             })
 
         # POST /api/user/daily/claim - Claim a completed daily or weekly quest for credits
