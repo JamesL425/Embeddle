@@ -134,7 +134,7 @@ function updateCosmeticsPanel() {
         html += `
             <div class="cosmetics-banner">
                 <p>🔒 Donate to unlock Premium cosmetics!</p>
-                <a href="https://ko-fi.com/jamesleung425" target="_blank" class="btn btn-primary btn-small">☕ Support on Ko-fi</a>
+                <a href="https://ko-fi.com/embeddle" target="_blank" class="btn btn-primary btn-small">☕ Support on Ko-fi</a>
             </div>
         `;
     } else if (cosmeticsState.isAdmin) {
@@ -189,10 +189,13 @@ function updateCosmeticsPanel() {
                 equipCosmetic(cat, id);
             } else {
                 const reason = el.dataset.lockReason;
-                if (reason) {
+                const isPremium = el.dataset.premium === 'true';
+                
+                if (isPremium && cosmeticsState.paywallEnabled && !hasFullAccess) {
+                    // Show premium unlock prompt instead of just an error
+                    showPremiumUnlockPrompt(el.dataset.name || 'this item');
+                } else if (reason) {
                     showError(reason);
-                } else if (cosmeticsState.paywallEnabled && !hasFullAccess) {
-                    showError('Donate to unlock premium cosmetics!');
                 } else {
                     showError('Locked');
                 }
@@ -201,6 +204,47 @@ function updateCosmeticsPanel() {
     });
 
     updateCosmeticsPreview();
+}
+
+// Show a nicer prompt for premium items
+function showPremiumUnlockPrompt(itemName) {
+    // Create or update the premium prompt tooltip
+    let prompt = document.getElementById('premium-unlock-prompt');
+    if (!prompt) {
+        prompt = document.createElement('div');
+        prompt.id = 'premium-unlock-prompt';
+        prompt.className = 'premium-unlock-prompt';
+        prompt.innerHTML = `
+            <div class="premium-prompt-content">
+                <p class="premium-prompt-title">🔒 Supporter Exclusive</p>
+                <p class="premium-prompt-text"><span class="premium-item-name"></span> is available to Ko-fi supporters!</p>
+                <a href="https://ko-fi.com/embeddle" target="_blank" rel="noopener" class="btn btn-small btn-support">☕ Unlock All Premium</a>
+                <button class="btn btn-ghost btn-tiny premium-prompt-close">×</button>
+            </div>
+        `;
+        document.body.appendChild(prompt);
+        
+        // Close button handler
+        prompt.querySelector('.premium-prompt-close').addEventListener('click', () => {
+            prompt.classList.remove('show');
+        });
+        
+        // Close on click outside
+        prompt.addEventListener('click', (e) => {
+            if (e.target === prompt) {
+                prompt.classList.remove('show');
+            }
+        });
+    }
+    
+    // Update item name and show
+    prompt.querySelector('.premium-item-name').textContent = itemName;
+    prompt.classList.add('show');
+    
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        prompt.classList.remove('show');
+    }, 5000);
 }
 
 function formatRequirement(req, stats) {
@@ -325,7 +369,9 @@ function renderCosmeticCategory(key, catalogKey, label, equipped, hasFullAccess,
         
         html += `
             <div class="cosmetic-option ${isEquipped ? 'equipped' : ''} ${isLocked ? 'locked' : ''}" 
-                 data-category="${key}" data-id="${id}" data-lock-reason="${lockReason}" title="${titleParts.join(' — ')}">
+                 data-category="${key}" data-id="${id}" data-lock-reason="${lockReason}" 
+                 data-premium="${item.premium ? 'true' : 'false'}" data-name="${item.name}"
+                 title="${titleParts.join(' — ')}">
                 ${icon ? `<span class="cosmetic-icon">${icon}</span>` : ''}
                 <span class="cosmetic-name">${item.name}</span>
                 ${progressHtml}

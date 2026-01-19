@@ -5,7 +5,7 @@
 
 import { optionsState, getOptions } from '../state/optionsState.js';
 import { saveOptions, loadFromStorage, saveToStorage } from '../utils/storage.js';
-import { applyMusicPreference } from '../utils/audio.js';
+import { applyMusicPreference, setMusicVolume, setSfxVolume } from '../utils/audio.js';
 import * as chat from './chat.js';
 
 // Panel states
@@ -29,21 +29,26 @@ export function init() {
         saveOptions(optionsState);
         applyOptions();
     });
-    document.getElementById('opt-music-enabled')?.addEventListener('change', (e) => {
-        optionsState.musicEnabled = Boolean(e.target.checked);
+    
+    // Music volume slider
+    document.getElementById('opt-music-volume')?.addEventListener('input', (e) => {
+        const volume = parseInt(e.target.value, 10) || 0;
+        optionsState.musicVolume = volume;
+        setMusicVolume(volume);
+        updateVolumeDisplay('music-volume-display', volume);
         saveOptions(optionsState);
         applyOptions();
     });
-    document.getElementById('opt-click-sfx-enabled')?.addEventListener('change', (e) => {
-        optionsState.clickSfxEnabled = Boolean(e.target.checked);
+    
+    // SFX volume slider
+    document.getElementById('opt-sfx-volume')?.addEventListener('input', (e) => {
+        const volume = parseInt(e.target.value, 10) || 0;
+        optionsState.sfxVolume = volume;
+        setSfxVolume(volume);
+        updateVolumeDisplay('sfx-volume-display', volume);
         saveOptions(optionsState);
-        applyOptions();
     });
-    document.getElementById('opt-elim-sfx-enabled')?.addEventListener('change', (e) => {
-        optionsState.eliminationSfxEnabled = Boolean(e.target.checked);
-        saveOptions(optionsState);
-        applyOptions();
-    });
+    
     document.getElementById('opt-turn-notifications')?.addEventListener('change', (e) => {
         optionsState.turnNotificationsEnabled = Boolean(e.target.checked);
         saveOptions(optionsState);
@@ -64,6 +69,18 @@ export function init() {
         const modal = document.getElementById('ml-info-modal');
         if (modal) modal.classList.remove('show');
     });
+}
+
+/**
+ * Update volume display text
+ * @param {string} elementId - ID of the display element
+ * @param {number} volume - Volume value 0-100
+ */
+function updateVolumeDisplay(elementId, volume) {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.textContent = `${volume}%`;
+    }
 }
 
 /**
@@ -152,16 +169,41 @@ export function closeOptions() {
  */
 export function applyOptionsToUI() {
     const chatCb = document.getElementById('opt-chat-enabled');
-    const musicCb = document.getElementById('opt-music-enabled');
-    const clickCb = document.getElementById('opt-click-sfx-enabled');
-    const elimCb = document.getElementById('opt-elim-sfx-enabled');
+    const musicSlider = document.getElementById('opt-music-volume');
+    const sfxSlider = document.getElementById('opt-sfx-volume');
     const turnNotifCb = document.getElementById('opt-turn-notifications');
     const nerdCb = document.getElementById('opt-nerd-mode');
 
     if (chatCb) chatCb.checked = Boolean(optionsState.chatEnabled);
-    if (musicCb) musicCb.checked = Boolean(optionsState.musicEnabled);
-    if (clickCb) clickCb.checked = Boolean(optionsState.clickSfxEnabled);
-    if (elimCb) elimCb.checked = Boolean(optionsState.eliminationSfxEnabled);
+    
+    // Handle music volume (migrate from old musicEnabled boolean)
+    let musicVol = optionsState.musicVolume;
+    if (typeof musicVol !== 'number') {
+        // Migrate from old boolean format
+        musicVol = optionsState.musicEnabled === false ? 0 : 12;
+        optionsState.musicVolume = musicVol;
+    }
+    if (musicSlider) {
+        musicSlider.value = musicVol;
+        updateVolumeDisplay('music-volume-display', musicVol);
+    }
+    
+    // Handle SFX volume (migrate from old individual toggles)
+    let sfxVol = optionsState.sfxVolume;
+    if (typeof sfxVol !== 'number') {
+        // Default to 50% for new users, or based on old settings
+        sfxVol = 50;
+        optionsState.sfxVolume = sfxVol;
+    }
+    if (sfxSlider) {
+        sfxSlider.value = sfxVol;
+        updateVolumeDisplay('sfx-volume-display', sfxVol);
+    }
+    
+    // Set audio module volumes
+    setMusicVolume(musicVol);
+    setSfxVolume(sfxVol);
+    
     if (turnNotifCb) turnNotifCb.checked = Boolean(optionsState.turnNotificationsEnabled);
     if (nerdCb) nerdCb.checked = Boolean(optionsState.nerdMode);
 }
@@ -173,8 +215,9 @@ export function applyOptions() {
     // Update chat visibility
     chat.updateVisibility();
     
-    // Apply music preference
-    applyMusicPreference(optionsState.musicEnabled);
+    // Apply music volume preference
+    const musicVol = typeof optionsState.musicVolume === 'number' ? optionsState.musicVolume : 12;
+    applyMusicPreference(musicVol);
     
     // Render chat if needed
     chat.render();
@@ -191,4 +234,3 @@ export default {
     applyOptions,
     updateTopbarUsername,
 };
-

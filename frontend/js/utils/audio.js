@@ -13,6 +13,13 @@ let bgmConfig = {
 let bgmInitStarted = false;
 let sfxAudioCtx = null;
 
+// Volume state (0-100 scale from UI, converted to 0-1 internally)
+let musicVolume = 12;  // Default 12%
+let sfxVolume = 50;    // Default 50%
+
+// Preloaded click sound
+let clickAudio = null;
+
 /**
  * Clamp a number between 0 and 1
  * @param {number} n
@@ -60,10 +67,21 @@ export async function resumeSfxContext() {
 }
 
 /**
+ * Get effective SFX volume (0-1 scale)
+ * @returns {number}
+ */
+function getEffectiveSfxVolume() {
+    return sfxVolume / 100;
+}
+
+/**
  * Play a synthesized tone
  * @param {Object} options - Tone options
  */
 export function playTone({ freq = 800, durationMs = 40, type = 'square', volume = 0.04 } = {}) {
+    const effectiveVolume = getEffectiveSfxVolume();
+    if (effectiveVolume <= 0) return;
+    
     const ctx = getSfxContext();
     if (!ctx) return;
     const now = ctx.currentTime;
@@ -74,8 +92,10 @@ export function playTone({ freq = 800, durationMs = 40, type = 'square', volume 
     osc.type = type;
     osc.frequency.setValueAtTime(freq, now);
 
+    // Scale volume by SFX volume setting
+    const scaledVolume = volume * effectiveVolume;
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume), now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, scaledVolume), now + 0.005);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + (durationMs / 1000));
 
     osc.connect(gain);
@@ -86,21 +106,45 @@ export function playTone({ freq = 800, durationMs = 40, type = 'square', volume 
 }
 
 /**
- * Play click sound effect
- * @param {boolean} enabled - Whether click SFX is enabled
+ * Initialize click sound audio element
  */
-export function playClickSfx(enabled) {
-    if (!enabled) return;
-    resumeSfxContext();
-    playTone({ freq: 880, durationMs: 28, type: 'square', volume: 0.03 });
+function initClickAudio() {
+    if (clickAudio) return;
+    try {
+        clickAudio = new Audio('/click.mp3');
+        clickAudio.preload = 'auto';
+    } catch (e) {
+        console.warn('Failed to init click audio:', e);
+    }
+}
+
+/**
+ * Play click sound effect using audio file
+ */
+export function playClickSfx() {
+    const effectiveVolume = getEffectiveSfxVolume();
+    if (effectiveVolume <= 0) return;
+    
+    initClickAudio();
+    if (!clickAudio) return;
+    
+    try {
+        // Clone the audio to allow overlapping plays
+        const sound = clickAudio.cloneNode();
+        sound.volume = clamp01(effectiveVolume * 0.5); // Base volume 50% of SFX slider
+        sound.play().catch(() => {});
+    } catch (e) {
+        // Fallback to synthesized tone
+        resumeSfxContext();
+        playTone({ freq: 880, durationMs: 28, type: 'square', volume: 0.03 });
+    }
 }
 
 /**
  * Play elimination sound effect
- * @param {boolean} enabled - Whether elimination SFX is enabled
  */
-export function playEliminationSfx(enabled) {
-    if (!enabled) return;
+export function playEliminationSfx() {
+    if (getEffectiveSfxVolume() <= 0) return;
     resumeSfxContext();
     playTone({ freq: 140, durationMs: 90, type: 'sawtooth', volume: 0.05 });
     setTimeout(() => playTone({ freq: 90, durationMs: 110, type: 'sawtooth', volume: 0.04 }), 60);
@@ -110,6 +154,7 @@ export function playEliminationSfx(enabled) {
  * Play victory sound effect - triumphant ascending tones
  */
 export function playVictorySfx() {
+    if (getEffectiveSfxVolume() <= 0) return;
     resumeSfxContext();
     // Ascending triumphant chord
     const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
@@ -129,6 +174,7 @@ export function playVictorySfx() {
  * Play quest complete sound effect - satisfying ding
  */
 export function playQuestCompleteSfx() {
+    if (getEffectiveSfxVolume() <= 0) return;
     resumeSfxContext();
     // Two-tone satisfying ding
     playTone({ freq: 880, durationMs: 80, type: 'sine', volume: 0.05 });
@@ -141,6 +187,7 @@ export function playQuestCompleteSfx() {
  * Play rank up sound effect - fanfare-like sequence
  */
 export function playRankUpSfx() {
+    if (getEffectiveSfxVolume() <= 0) return;
     resumeSfxContext();
     // Dramatic ascending fanfare
     const fanfare = [
@@ -171,6 +218,7 @@ export function playRankUpSfx() {
  * @param {boolean} isGain - Whether MMR increased (true) or decreased (false)
  */
 export function playMMRChangeSfx(isGain) {
+    if (getEffectiveSfxVolume() <= 0) return;
     resumeSfxContext();
     if (isGain) {
         // Ascending positive tone
@@ -197,6 +245,7 @@ export function playMMRChangeSfx(isGain) {
  * Play turn notification sound effect - attention-grabbing but pleasant chime
  */
 export function playTurnNotificationSfx() {
+    if (getEffectiveSfxVolume() <= 0) return;
     resumeSfxContext();
     // Two-note attention chime (like a doorbell or notification)
     playTone({ freq: 587, durationMs: 120, type: 'sine', volume: 0.06 }); // D5
@@ -236,11 +285,63 @@ export function isBgmInitialized() {
 }
 
 /**
- * Initialize and start background music
- * @param {boolean} musicEnabled - Whether user has music enabled
+ * Set music volume (0-100)
+ * @param {number} volume - Volume level 0-100
  */
-export async function startBackgroundMusic(musicEnabled) {
-    if (bgmInitStarted) return;
+export function setMusicVolume(volume) {
+    musicVolume = Math.max(0, Math.min(100, Number(volume) || 0));
+    if (bgmAudio) {
+        // Combine user volume with config base volume
+        bgmAudio.volume = clamp01((musicVolume / 100) * bgmConfig.volume * (100 / 12));
+    }
+}
+
+/**
+ * Get current music volume (0-100)
+ * @returns {number}
+ */
+export function getMusicVolume() {
+    return musicVolume;
+}
+
+/**
+ * Set SFX volume (0-100)
+ * @param {number} volume - Volume level 0-100
+ */
+export function setSfxVolume(volume) {
+    sfxVolume = Math.max(0, Math.min(100, Number(volume) || 0));
+}
+
+/**
+ * Get current SFX volume (0-100)
+ * @returns {number}
+ */
+export function getSfxVolume() {
+    return sfxVolume;
+}
+
+/**
+ * Initialize and start background music
+ * @param {number} volume - Music volume 0-100
+ */
+export async function startBackgroundMusic(volume) {
+    // Update volume state
+    if (typeof volume === 'number') {
+        musicVolume = Math.max(0, Math.min(100, volume));
+    }
+    
+    if (bgmInitStarted) {
+        // Just update volume if already initialized
+        if (bgmAudio) {
+            bgmAudio.volume = clamp01((musicVolume / 100) * bgmConfig.volume * (100 / 12));
+            if (musicVolume > 0 && bgmAudio.paused && hasUserActivation()) {
+                try { await bgmAudio.play(); } catch (e) {}
+            } else if (musicVolume <= 0) {
+                bgmAudio.pause();
+            }
+        }
+        return;
+    }
     bgmInitStarted = true;
 
     if (!bgmConfig.enabled) return;
@@ -248,11 +349,11 @@ export async function startBackgroundMusic(musicEnabled) {
     try {
         bgmAudio = new Audio(bgmConfig.track);
         bgmAudio.loop = true;
-        bgmAudio.volume = clamp01(bgmConfig.volume);
+        bgmAudio.volume = clamp01((musicVolume / 100) * bgmConfig.volume * (100 / 12));
         bgmAudio.preload = 'auto';
 
         const tryPlay = async () => {
-            if (!musicEnabled) return;
+            if (musicVolume <= 0) return;
             try {
                 await bgmAudio.play();
             } catch (err) {
@@ -276,16 +377,24 @@ export async function startBackgroundMusic(musicEnabled) {
 }
 
 /**
- * Apply music preference (play/pause)
- * @param {boolean} musicEnabled - Whether user has music enabled
+ * Apply music volume preference
+ * @param {number} volume - Music volume 0-100
  */
-export async function applyMusicPreference(musicEnabled) {
+export async function applyMusicPreference(volume) {
+    if (typeof volume === 'number') {
+        musicVolume = Math.max(0, Math.min(100, volume));
+    }
+    
     if (!bgmInitStarted) {
-        await startBackgroundMusic(musicEnabled);
+        await startBackgroundMusic(musicVolume);
+        return;
     }
     if (!bgmAudio) return;
     
-    if (bgmConfig.enabled && musicEnabled) {
+    // Update volume
+    bgmAudio.volume = clamp01((musicVolume / 100) * bgmConfig.volume * (100 / 12));
+    
+    if (bgmConfig.enabled && musicVolume > 0) {
         if (hasUserActivation()) {
             try {
                 await bgmAudio.play();
@@ -301,4 +410,3 @@ export async function applyMusicPreference(musicEnabled) {
         }
     }
 }
-

@@ -8,9 +8,8 @@ import { saveOptions as persistOptions, loadOptions as loadPersistedOptions } fr
 // Default options
 const DEFAULT_OPTIONS = {
     chatEnabled: true,
-    musicEnabled: true,
-    clickSfxEnabled: false,
-    eliminationSfxEnabled: true,
+    musicVolume: 12,  // 0-100, default 12%
+    sfxVolume: 50,    // 0-100, default 50%
     turnNotificationsEnabled: true,
     nerdMode: false,
 };

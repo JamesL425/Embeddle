@@ -109,7 +109,8 @@ async function startBackgroundMusic() {
         bgmAudio.preload = 'auto';
 
         const tryPlay = async () => {
-            if (!optionsState?.musicEnabled) return;
+            const musicVol = typeof optionsState?.musicVolume === 'number' ? optionsState.musicVolume : 12;
+            if (musicVol <= 0) return;
             try {
                 await bgmAudio.play();
             } catch (err) {
@@ -141,7 +142,12 @@ async function applyMusicPreference() {
         await startBackgroundMusic();
     }
     if (!bgmAudio) return;
-    if (bgmConfig.enabled && optionsState.musicEnabled) {
+    
+    const musicVol = typeof optionsState.musicVolume === 'number' ? optionsState.musicVolume : 12;
+    // Update volume: combine user volume with config base volume
+    bgmAudio.volume = clamp01((musicVol / 100) * bgmConfig.volume * (100 / 12));
+    
+    if (bgmConfig.enabled && musicVol > 0) {
         // Avoid spamming autoplay warnings on load; resume handler will start it on first interaction.
         if (hasUserActivation()) {
             try {
@@ -200,19 +206,34 @@ let gameState = {
 
 const DEFAULT_OPTIONS = {
     chatEnabled: true,
-    musicEnabled: true,
-    clickSfxEnabled: false,
-    eliminationSfxEnabled: true,
+    musicVolume: 12,      // 0-100, default 12%
+    sfxVolume: 50,        // 0-100, default 50%
+    turnNotificationsEnabled: true,
     nerdMode: false,  // Show embedding details for ML enthusiasts
 };
 
 let optionsState = { ...DEFAULT_OPTIONS };
+
+// Preloaded click sound
+let clickAudio = null;
 
 function loadOptions() {
     try {
         const raw = localStorage.getItem('embeddle_options');
         const parsed = raw ? JSON.parse(raw) : null;
         if (parsed && typeof parsed === 'object') {
+            // Migrate old boolean options to volume
+            if (typeof parsed.musicEnabled === 'boolean') {
+                parsed.musicVolume = parsed.musicEnabled ? 12 : 0;
+                delete parsed.musicEnabled;
+            }
+            if (typeof parsed.clickSfxEnabled !== 'undefined' || typeof parsed.eliminationSfxEnabled !== 'undefined') {
+                // If either old SFX toggle was on, default to 50%
+                const hadSfx = parsed.clickSfxEnabled || parsed.eliminationSfxEnabled;
+                parsed.sfxVolume = hadSfx ? 50 : 0;
+                delete parsed.clickSfxEnabled;
+                delete parsed.eliminationSfxEnabled;
+            }
             optionsState = { ...DEFAULT_OPTIONS, ...parsed };
         } else {
             optionsState = { ...DEFAULT_OPTIONS };
@@ -231,17 +252,28 @@ function saveOptions() {
 }
 
 function applyOptionsToUI() {
-    // Sync checkboxes (if present)
+    // Sync checkboxes and sliders (if present)
     const chatCb = document.getElementById('opt-chat-enabled');
-    const musicCb = document.getElementById('opt-music-enabled');
-    const clickCb = document.getElementById('opt-click-sfx-enabled');
-    const elimCb = document.getElementById('opt-elim-sfx-enabled');
+    const musicSlider = document.getElementById('opt-music-volume');
+    const musicDisplay = document.getElementById('music-volume-display');
+    const sfxSlider = document.getElementById('opt-sfx-volume');
+    const sfxDisplay = document.getElementById('sfx-volume-display');
+    const turnNotifCb = document.getElementById('opt-turn-notifications');
     const nerdCb = document.getElementById('opt-nerd-mode');
 
     if (chatCb) chatCb.checked = Boolean(optionsState.chatEnabled);
-    if (musicCb) musicCb.checked = Boolean(optionsState.musicEnabled);
-    if (clickCb) clickCb.checked = Boolean(optionsState.clickSfxEnabled);
-    if (elimCb) elimCb.checked = Boolean(optionsState.eliminationSfxEnabled);
+    
+    // Music volume
+    const musicVol = typeof optionsState.musicVolume === 'number' ? optionsState.musicVolume : 12;
+    if (musicSlider) musicSlider.value = musicVol;
+    if (musicDisplay) musicDisplay.textContent = `${musicVol}%`;
+    
+    // SFX volume
+    const sfxVol = typeof optionsState.sfxVolume === 'number' ? optionsState.sfxVolume : 50;
+    if (sfxSlider) sfxSlider.value = sfxVol;
+    if (sfxDisplay) sfxDisplay.textContent = `${sfxVol}%`;
+    
+    if (turnNotifCb) turnNotifCb.checked = Boolean(optionsState.turnNotificationsEnabled);
     if (nerdCb) nerdCb.checked = Boolean(optionsState.nerdMode);
 
     // Show/hide chat button + close panel when disabled
@@ -265,7 +297,7 @@ function applyOptionsToUI() {
     document.body.classList.toggle('nerd-mode', Boolean(optionsState.nerdMode));
 }
 
-// ============ SOUND EFFECTS (PLACEHOLDER) ============
+// ============ SOUND EFFECTS ============
 
 let sfxAudioCtx = null;
 
@@ -285,7 +317,15 @@ async function resumeSfxContext() {
     }
 }
 
+function getEffectiveSfxVolume() {
+    const vol = typeof optionsState.sfxVolume === 'number' ? optionsState.sfxVolume : 50;
+    return vol / 100;
+}
+
 function playTone({ freq = 800, durationMs = 40, type = 'square', volume = 0.04 } = {}) {
+    const effectiveVolume = getEffectiveSfxVolume();
+    if (effectiveVolume <= 0) return;
+    
     const ctx = getSfxContext();
     if (!ctx) return;
     const now = ctx.currentTime;
@@ -296,8 +336,10 @@ function playTone({ freq = 800, durationMs = 40, type = 'square', volume = 0.04 
     osc.type = type;
     osc.frequency.setValueAtTime(freq, now);
 
+    // Scale volume by SFX volume setting
+    const scaledVolume = volume * effectiveVolume;
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume), now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, scaledVolume), now + 0.005);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + (durationMs / 1000));
 
     osc.connect(gain);
@@ -307,14 +349,42 @@ function playTone({ freq = 800, durationMs = 40, type = 'square', volume = 0.04 
     osc.stop(now + (durationMs / 1000) + 0.02);
 }
 
+function initClickAudio() {
+    if (clickAudio) return;
+    try {
+        clickAudio = new Audio('/click.mp3');
+        clickAudio.preload = 'auto';
+    } catch (e) {
+        console.warn('Failed to init click audio:', e);
+    }
+}
+
 function playClickSfx() {
-    if (!optionsState.clickSfxEnabled) return;
-    resumeSfxContext();
-    playTone({ freq: 880, durationMs: 28, type: 'square', volume: 0.03 });
+    const effectiveVolume = getEffectiveSfxVolume();
+    if (effectiveVolume <= 0) return;
+    
+    initClickAudio();
+    if (!clickAudio) {
+        // Fallback to synthesized tone
+        resumeSfxContext();
+        playTone({ freq: 880, durationMs: 28, type: 'square', volume: 0.03 });
+        return;
+    }
+    
+    try {
+        // Clone the audio to allow overlapping plays
+        const sound = clickAudio.cloneNode();
+        sound.volume = clamp01(effectiveVolume * 0.5); // Base volume 50% of SFX slider
+        sound.play().catch(() => {});
+    } catch (e) {
+        // Fallback to synthesized tone
+        resumeSfxContext();
+        playTone({ freq: 880, durationMs: 28, type: 'square', volume: 0.03 });
+    }
 }
 
 function playEliminationSfx() {
-    if (!optionsState.eliminationSfxEnabled) return;
+    if (getEffectiveSfxVolume() <= 0) return;
     resumeSfxContext();
     // Two quick tones for a "hit" feel
     playTone({ freq: 140, durationMs: 90, type: 'sawtooth', volume: 0.05 });
@@ -323,7 +393,7 @@ function playEliminationSfx() {
 
 // Victory sound effect - triumphant ascending tones
 function playVictorySfx() {
-    if (!optionsState.eliminationSfxEnabled) return; // Use same toggle as elimination
+    if (getEffectiveSfxVolume() <= 0) return;
     resumeSfxContext();
     // Ascending triumphant chord
     const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
@@ -341,7 +411,7 @@ function playVictorySfx() {
 
 // Quest complete sound effect - satisfying ding
 function playQuestCompleteSfx() {
-    if (!optionsState.clickSfxEnabled) return;
+    if (getEffectiveSfxVolume() <= 0) return;
     resumeSfxContext();
     // Two-tone satisfying ding
     playTone({ freq: 880, durationMs: 80, type: 'sine', volume: 0.05 });
@@ -352,7 +422,7 @@ function playQuestCompleteSfx() {
 
 // Rank up sound effect - fanfare-like sequence
 function playRankUpSfx() {
-    if (!optionsState.eliminationSfxEnabled) return;
+    if (getEffectiveSfxVolume() <= 0) return;
     resumeSfxContext();
     // Dramatic ascending fanfare
     const fanfare = [
@@ -380,7 +450,7 @@ function playRankUpSfx() {
 
 // MMR change sound effect
 function playMMRChangeSfx(isGain) {
-    if (!optionsState.clickSfxEnabled) return;
+    if (getEffectiveSfxVolume() <= 0) return;
     resumeSfxContext();
     if (isGain) {
         // Ascending positive tone
@@ -1368,18 +1438,23 @@ document.getElementById('opt-chat-enabled')?.addEventListener('change', (e) => {
     saveOptions();
     applyOptionsToUI();
 });
-document.getElementById('opt-music-enabled')?.addEventListener('change', (e) => {
-    optionsState.musicEnabled = Boolean(e.target.checked);
+document.getElementById('opt-music-volume')?.addEventListener('input', (e) => {
+    const volume = parseInt(e.target.value, 10) || 0;
+    optionsState.musicVolume = volume;
+    const display = document.getElementById('music-volume-display');
+    if (display) display.textContent = `${volume}%`;
     saveOptions();
     applyOptionsToUI();
 });
-document.getElementById('opt-click-sfx-enabled')?.addEventListener('change', (e) => {
-    optionsState.clickSfxEnabled = Boolean(e.target.checked);
+document.getElementById('opt-sfx-volume')?.addEventListener('input', (e) => {
+    const volume = parseInt(e.target.value, 10) || 0;
+    optionsState.sfxVolume = volume;
+    const display = document.getElementById('sfx-volume-display');
+    if (display) display.textContent = `${volume}%`;
     saveOptions();
-    applyOptionsToUI();
 });
-document.getElementById('opt-elim-sfx-enabled')?.addEventListener('change', (e) => {
-    optionsState.eliminationSfxEnabled = Boolean(e.target.checked);
+document.getElementById('opt-turn-notifications')?.addEventListener('change', (e) => {
+    optionsState.turnNotificationsEnabled = Boolean(e.target.checked);
     saveOptions();
     applyOptionsToUI();
 });
@@ -4854,41 +4929,22 @@ async function runSingleplayerAiTurns(initialGame) {
     singleplayerAiRunnerActive = true;
 
     try {
-        // Use the passed game state instead of re-fetching
-        let game = initialGame;
-        
-        while (isAiTurn(game)) {
-            const currentAi = game.players.find(p => p.id === game.current_player_id);
-            const turnText = document.getElementById('turn-text');
-            if (turnText && currentAi) {
-                turnText.textContent = `${currentAi.name} is thinking...`;
-            }
+        // Show thinking message
+        const turnText = document.getElementById('turn-text');
+        if (turnText) {
+            turnText.textContent = 'Bots are playing...';
+        }
 
-            // Process AI move - server returns updated game state with think_time_ms
-            const updated = await apiCall(`/api/games/${gameState.code}/ai-step`, 'POST', {
-                player_id: gameState.playerId,
-                session_token: gameState.sessionToken,
-            });
-            
-            // Use minimal thinking time for fast response (capped at 150ms)
-            const thinkTimeMs = Math.min(updated.ai_think_time_ms || 100, 150);
-            
-            // Wait for the AI's "thinking" time for natural feel
-            await sleep(thinkTimeMs);
-            
-            // Show AI chat message if any
-            if (updated.ai_chat) {
-                showAiChatMessage(currentAi?.name || 'AI', updated.ai_chat);
-            }
-            
-            // Use the returned game state directly (no second fetch needed)
-            game = updated;
-            
-            if (game.status === 'finished') {
-                clearInterval(gameState.pollingInterval);
-                showGameOver(game);
-                break;
-            }
+        // One call processes ALL AI turns until human turn or game over
+        const game = await apiCall(`/api/games/${gameState.code}/ai-step`, 'POST', {
+            player_id: gameState.playerId,
+            session_token: gameState.sessionToken,
+        });
+        
+        if (game.status === 'finished') {
+            clearInterval(gameState.pollingInterval);
+            showGameOver(game);
+        } else {
             updateGame(game);
         }
     } finally {
@@ -5211,7 +5267,40 @@ function showGameOver(game) {
     
     // Generate and display share results
     generateShareResults(game, isWinner);
+    
+    // Show support prompt for non-donors after 3+ games
+    showSupportPromptIfEligible();
 }
+
+// Check if user should see support prompt
+function showSupportPromptIfEligible() {
+    const prompt = document.getElementById('gameover-support-prompt');
+    if (!prompt) return;
+    
+    // Hide by default
+    prompt.classList.add('hidden');
+    
+    // Don't show if user is a donor
+    if (gameState.authUser?.is_donor) return;
+    
+    // Don't show if user dismissed it recently (stored in localStorage)
+    const dismissedUntil = localStorage.getItem('support_prompt_dismissed');
+    if (dismissedUntil && Date.now() < parseInt(dismissedUntil, 10)) return;
+    
+    // Show after 3+ games played
+    const gamesPlayed = gameState.authUser?.stats?.mp_games_played || 0;
+    if (gamesPlayed >= 3) {
+        prompt.classList.remove('hidden');
+    }
+}
+
+// Dismiss support prompt handler
+document.getElementById('dismiss-support-prompt')?.addEventListener('click', () => {
+    const prompt = document.getElementById('gameover-support-prompt');
+    if (prompt) prompt.classList.add('hidden');
+    // Don't show again for 7 days
+    localStorage.setItem('support_prompt_dismissed', String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+});
 
 // Generate share results
 function generateShareResults(game, isWinner) {

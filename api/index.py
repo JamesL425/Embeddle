@@ -7889,7 +7889,7 @@ class handler(BaseHTTPRequestHandler):
                 "errors": errors,
             })
 
-        # POST /api/games/{code}/ai-step - Singleplayer: process exactly ONE AI turn
+        # POST /api/games/{code}/ai-step - Singleplayer: process ALL AI turns until human turn or game over
         if '/ai-step' in path and path.startswith('/api/games/'):
             # Rate limit: reuse guess limiter (AI can only act when it's their turn)
             if not check_rate_limit(get_ratelimit_guess(), f"ai_step:{client_ip}"):
@@ -7924,61 +7924,66 @@ class handler(BaseHTTPRequestHandler):
             if not game.get('players'):
                 return self._send_error("No players in game", 400)
             
-            current_ai = game['players'][game['current_turn']]
-            if not current_ai.get('is_ai'):
+            current_player = game['players'][game['current_turn']]
+            if not current_player.get('is_ai'):
                 return self._send_error("Not an AI turn", 400)
-            if not current_ai.get('is_alive'):
-                return self._send_error("AI is eliminated", 400)
             
-            # Process a single AI turn (guess + history + eliminations)
-            ai_result = process_ai_turn(game, current_ai)
-            if not ai_result:
-                return self._send_error("AI failed to make a move", 500)
+            # Process ALL AI turns until it's human's turn or game over
+            max_ai_turns = len(game['players']) * 2  # Safety limit
+            turns_processed = 0
             
-            # If AI eliminated someone, auto-handle its word change immediately
-            word_changed = False
-            if ai_result.get('eliminations') and current_ai.get('can_change_word'):
-                word_changed = process_ai_word_change(game, current_ai)
-            
-            # Advance turn / check for game over
-            alive_players = [p for p in game['players'] if p.get('is_alive')]
-            game_over = False
-            if len(alive_players) <= 1:
-                game['status'] = 'finished'
-                game_over = True
-                if alive_players:
-                    game['winner'] = alive_players[0]['id']
-                update_game_stats(game)
-            else:
+            while turns_processed < max_ai_turns:
+                current_ai = game['players'][game['current_turn']]
+                
+                # Stop if not AI turn
+                if not current_ai.get('is_ai'):
+                    break
+                
+                # Skip dead AI
+                if not current_ai.get('is_alive'):
+                    num_players = len(game['players'])
+                    next_turn = (game['current_turn'] + 1) % num_players
+                    while not game['players'][next_turn].get('is_alive'):
+                        next_turn = (next_turn + 1) % num_players
+                    game['current_turn'] = next_turn
+                    continue
+                
+                # Process AI turn
+                ai_result = process_ai_turn(game, current_ai)
+                if not ai_result:
+                    break
+                
+                turns_processed += 1
+                
+                # If AI eliminated someone, auto-handle its word change immediately
+                if ai_result.get('eliminations') and current_ai.get('can_change_word'):
+                    process_ai_word_change(game, current_ai)
+                
+                # Check for game over
+                alive_players = [p for p in game['players'] if p.get('is_alive')]
+                if len(alive_players) <= 1:
+                    game['status'] = 'finished'
+                    if alive_players:
+                        game['winner'] = alive_players[0]['id']
+                    update_game_stats(game)
+                    break
+                
+                # Advance turn
                 num_players = len(game['players'])
                 next_turn = (game['current_turn'] + 1) % num_players
                 while not game['players'][next_turn].get('is_alive'):
                     next_turn = (next_turn + 1) % num_players
                 game['current_turn'] = next_turn
-                # Reset turn timer for new player (AI turns don't have time limits but still reset for human)
                 game['turn_started_at'] = time.time()
             
             save_game(code, game)
             
-            # Return full game state with AI-specific data
+            # Return full game state
             game_response = self._build_game_response(game, player_id, code)
             if game_response:
-                # Add AI realism data to response
-                game_response['ai_think_time_ms'] = ai_result.get('think_time_ms', 350)
-                game_response['ai_chat'] = ai_result.get('ai_chat')
                 return self._send_json(game_response)
             
-            # Fallback to minimal response if helper fails
-            return self._send_json({
-                "status": "ai_step",
-                "ai_player_id": current_ai.get('id'),
-                "ai_player_name": current_ai.get('name'),
-                "word": ai_result.get('word'),
-                "eliminations": ai_result.get('eliminations', []),
-                "word_changed": word_changed,
-                "game_over": game_over,
-                "winner": game.get('winner'),
-            })
+            return self._send_json({"status": "ai_step_batch", "turns_processed": turns_processed})
 
         # POST /api/games/{code}/guess
         if '/guess' in path:

@@ -132,18 +132,20 @@
                 <input type="checkbox" id="opt-chat-enabled">
                 <span>Text chat</span>
             </label>
-            <label class="option-row">
-                <input type="checkbox" id="opt-music-enabled">
-                <span>Music</span>
-            </label>
-            <label class="option-row">
-                <input type="checkbox" id="opt-click-sfx-enabled">
-                <span>Button click SFX (placeholder)</span>
-            </label>
-            <label class="option-row">
-                <input type="checkbox" id="opt-elim-sfx-enabled">
-                <span>Elimination SFX</span>
-            </label>
+            <div class="option-row option-row-slider">
+                <span>🎵 Music</span>
+                <div class="volume-control">
+                    <input type="range" id="opt-music-volume" min="0" max="100" value="12">
+                    <span class="volume-value" id="music-volume-display">12%</span>
+                </div>
+            </div>
+            <div class="option-row option-row-slider">
+                <span>🔊 Sound Effects</span>
+                <div class="volume-control">
+                    <input type="range" id="opt-sfx-volume" min="0" max="100" value="50">
+                    <span class="volume-value" id="sfx-volume-display">50%</span>
+                </div>
+            </div>
             <label class="option-row">
                 <input type="checkbox" id="opt-turn-notifications">
                 <span>Turn notifications</span>
@@ -205,40 +207,49 @@
             <hr class="option-divider">
             <div class="support-section">
                 <h3 class="support-title">☕ Support Embeddle</h3>
-                <p class="support-desc">Embeddle is free to play! Here's how cosmetics work:</p>
-                
-                <div class="unlock-table">
-                    <div class="unlock-row">
-                        <span class="unlock-type free">FREE</span>
-                        <span class="unlock-desc">Default cosmetics available to all</span>
-                    </div>
-                    <div class="unlock-row">
-                        <span class="unlock-type progression">PLAY</span>
-                        <span class="unlock-desc">Earn through multiplayer games, wins, and eliminations</span>
-                    </div>
-                    <div class="unlock-row">
-                        <span class="unlock-type shop">SHOP</span>
-                        <span class="unlock-desc">Buy with credits from daily/weekly quests</span>
-                    </div>
-                    <div class="unlock-row">
-                        <span class="unlock-type premium">SUPPORTER</span>
-                        <span class="unlock-desc">Exclusive items for Ko-fi supporters</span>
-                    </div>
-                </div>
+                <p class="support-desc">Embeddle is free to play! Your support helps cover AI API costs and keeps the game running.</p>
                 
                 <div class="premium-perks">
-                    <h4>Supporter Perks</h4>
-                    <ul>
-                        <li>Holographic & rainbow effects</li>
-                        <li>Supporter badges (☕ 💎)</li>
-                        <li>Exclusive titles & banners</li>
-                        <li>Premium backgrounds & overlays</li>
-                        <li>Special elimination effects</li>
-                    </ul>
+                    <h4>🎁 Supporter Exclusive Cosmetics</h4>
+                    <div class="premium-items-grid">
+                        <div class="premium-item">
+                            <span class="premium-item-icon">🌈</span>
+                            <span class="premium-item-name">Holographic Border</span>
+                        </div>
+                        <div class="premium-item">
+                            <span class="premium-item-icon">✨</span>
+                            <span class="premium-item-name">Rainbow Name</span>
+                        </div>
+                        <div class="premium-item">
+                            <span class="premium-item-icon">🔥</span>
+                            <span class="premium-item-name">Fire Ring Turn</span>
+                        </div>
+                        <div class="premium-item">
+                            <span class="premium-item-icon">💫</span>
+                            <span class="premium-item-name">Disintegrate Effect</span>
+                        </div>
+                        <div class="premium-item">
+                            <span class="premium-item-icon">🌌</span>
+                            <span class="premium-item-name">Aurora Victory</span>
+                        </div>
+                        <div class="premium-item">
+                            <span class="premium-item-icon">⭐</span>
+                            <span class="premium-item-name">Starfield Overlay</span>
+                        </div>
+                        <div class="premium-item">
+                            <span class="premium-item-icon">☕</span>
+                            <span class="premium-item-name">Supporter Badge</span>
+                        </div>
+                        <div class="premium-item">
+                            <span class="premium-item-icon">🌀</span>
+                            <span class="premium-item-name">Void Walker Title</span>
+                        </div>
+                    </div>
+                    <p class="premium-note">+ Gold Rush matrix, Aurora background, Fireworks theme, and more!</p>
                 </div>
                 
-                <a href="https://ko-fi.com/jamesleung425" target="_blank" class="btn btn-primary support-btn">☕ Support on Ko-fi</a>
-                <p class="support-note">One-time donation unlocks all premium cosmetics forever!</p>
+                <a href="https://ko-fi.com/embeddle" target="_blank" class="btn btn-primary support-btn">☕ Support on Ko-fi</a>
+                <p class="support-note">One-time donation of any amount unlocks ALL premium cosmetics forever!</p>
             </div>
         </div>
     </div>
@@ -450,6 +461,11 @@
                     </div>
                     <div class="home-links-row">
                         <span id="ranked-signin-note" class="home-note">Ranked requires Google sign-in.</span>
+                    </div>
+                    <div class="home-support-row">
+                        <a href="https://ko-fi.com/embeddle" target="_blank" rel="noopener" class="home-support-link">
+                            ☕ Enjoying Embeddle? Support development
+                        </a>
                     </div>
                 </div>
             </div>
@@ -935,6 +951,13 @@
                     </div>
                 </div>
                 
+                <!-- Support Prompt (shown for non-donors after 3+ games) -->
+                <div id="gameover-support-prompt" class="gameover-support-prompt hidden">
+                    <p>☕ Enjoying Embeddle? Your support keeps it free!</p>
+                    <a href="https://ko-fi.com/embeddle" target="_blank" rel="noopener" class="btn btn-small btn-support">Support on Ko-fi</a>
+                    <button id="dismiss-support-prompt" class="btn btn-ghost btn-tiny" title="Dismiss">×</button>
+                </div>
+                
                 <div class="gameover-buttons">
                     <button id="back-to-lobby-btn" class="btn btn-primary">&gt; RETURN_TO_BASE</button>
                 </div>
@@ -1029,7 +1052,7 @@
             <div class="footer-content">
                 <span class="footer-text">// EMBEDDLE v1.0</span>
                 <div class="footer-links">
-                    <a href="https://ko-fi.com/jamesleung425" target="_blank" rel="noopener" class="footer-link support-link">
+                    <a href="https://ko-fi.com/embeddle" target="_blank" rel="noopener" class="footer-link support-link">
                         ☕ Support Development
                     </a>
                     <a href="/privacy" class="footer-link">Privacy</a>
