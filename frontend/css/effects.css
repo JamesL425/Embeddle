@@ -226,92 +226,186 @@
 
 /* ============ CARD BORDER COSMETICS ============ */
 
+/* Neon Glow - Gameplay unlock (25 games) */
+.player-card.border-neon_glow {
+    border-color: #00ffff;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    animation: neonGlowPulse 2s ease-in-out infinite;
+}
+
+@keyframes neonGlowPulse {
+    0%, 100% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.5); }
+    50% { box-shadow: 0 0 25px rgba(0, 255, 255, 0.8), 0 0 35px rgba(0, 255, 255, 0.4); }
+}
+
+/* Fire - Gameplay unlock (50 eliminations) */
+.player-card.border-fire {
+    border-color: #ff4500;
+    box-shadow: 0 0 15px rgba(255, 69, 0, 0.4);
+    animation: fireBorderPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes fireBorderPulse {
+    0%, 100% { box-shadow: 0 0 15px rgba(255, 69, 0, 0.4); }
+    50% { box-shadow: 0 0 20px rgba(255, 69, 0, 0.6), 0 0 30px rgba(255, 140, 0, 0.3); }
+}
+
+/* Gold Elite - Rank unlock (Gold 1400 MMR) */
 .player-card.border-gold_elite {
     border-color: #ffd700;
     box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
 }
 
-.player-card.border-fire {
-    border-color: #ff4500;
-    box-shadow: 0 0 15px rgba(255, 69, 0, 0.4);
+/* Void Pulse - Shop (500 credits) */
+.player-card.border-void_pulse {
+    border-color: #8b00ff;
+    box-shadow: 0 0 15px rgba(139, 0, 255, 0.5);
+    animation: voidPulse 2.5s ease-in-out infinite;
 }
 
-.player-card.border-ice {
-    border-color: #00bfff;
-    box-shadow: 0 0 15px rgba(0, 191, 255, 0.4);
+@keyframes voidPulse {
+    0%, 100% { 
+        box-shadow: 0 0 15px rgba(139, 0, 255, 0.5);
+        border-color: #8b00ff;
+    }
+    50% { 
+        box-shadow: 0 0 25px rgba(139, 0, 255, 0.8), 0 0 40px rgba(75, 0, 130, 0.4);
+        border-color: #9932cc;
+    }
 }
 
-.player-card.border-electric {
-    border-color: #ffff00;
-    box-shadow: 0 0 15px rgba(255, 255, 0, 0.4);
+/* Holographic - Premium (Ko-fi supporter) */
+.player-card.border-holographic {
+    border: 2px solid transparent;
+    background: 
+        linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
+        linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff, #ff0000) border-box;
+    background-size: 100% 100%, 600% 100%;
+    animation: holographicShift 4s linear infinite;
+}
+
+@keyframes holographicShift {
+    0% { background-position: 100% 100%, 0% 50%; }
+    100% { background-position: 100% 100%, 600% 50%; }
+}
+
+/* Godframe - Admin only */
+.player-card.border-godframe {
+    border: 3px solid transparent;
+    background: 
+        linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
+        linear-gradient(45deg, #ffd700, #ffffff, #ffd700, #ff8c00, #ffd700) border-box;
+    background-size: 100% 100%, 400% 400%;
+    box-shadow: 
+        0 0 30px rgba(255, 215, 0, 0.8),
+        0 0 60px rgba(255, 215, 0, 0.4),
+        inset 0 0 30px rgba(255, 215, 0, 0.2);
+    animation: godframeAura 3s ease-in-out infinite, godframeBorderFlow 4s linear infinite;
+}
+
+@keyframes godframeAura {
+    0%, 100% { 
+        box-shadow: 
+            0 0 30px rgba(255, 215, 0, 0.8),
+            0 0 60px rgba(255, 215, 0, 0.4),
+            inset 0 0 30px rgba(255, 215, 0, 0.2);
+    }
+    50% { 
+        box-shadow: 
+            0 0 50px rgba(255, 215, 0, 1),
+            0 0 100px rgba(255, 215, 0, 0.6),
+            inset 0 0 50px rgba(255, 215, 0, 0.4);
+    }
+}
+
+@keyframes godframeBorderFlow {
+    0% { background-position: 100% 100%, 0% 50%; }
+    100% { background-position: 100% 100%, 400% 50%; }
 }
 
 /* ============ NAME COLOR COSMETICS ============ */
 
-.name.name-gold { color: #ffd700; }
-.name.name-fire { color: #ff4500; }
-.name.name-ice { color: #00bfff; }
-.name.name-shadow { color: #8b008b; }
+/* Cyan - Gameplay unlock (10 wins) */
+.name.name-cyan { 
+    color: #00ffff;
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+/* Fire - Gameplay unlock (50 eliminations) */
+.name.name-fire { 
+    color: #ff4500;
+    text-shadow: 0 0 8px rgba(255, 69, 0, 0.4);
+}
+
+/* Gold - Rank unlock (Gold 1400 MMR) */
+.name.name-gold { 
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+}
+
+/* Void - Shop (600 credits) */
+.name.name-void_text { 
+    color: #8b00ff;
+    text-shadow: 0 0 10px rgba(139, 0, 255, 0.6);
+}
+
+/* Rainbow - Premium (Ko-fi supporter) */
 .name.name-rainbow {
-    background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff);
+    background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff, #ff0000);
+    background-size: 200% 100%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    animation: rainbowShift 3s linear infinite;
 }
 
-/* ============ CARD BACKGROUND COSMETICS ============ */
-
-.player-card.bg-gradient_gold {
-    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), var(--bg-card));
+@keyframes rainbowShift {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
 }
 
-.player-card.bg-gradient_ice {
-    background: linear-gradient(135deg, rgba(0, 191, 255, 0.1), var(--bg-card));
+/* Omniscient - Admin only */
+.name.name-omniscient {
+    background: linear-gradient(90deg, #ff00ff, #00ffff, #ffd700, #ff00ff);
+    background-size: 400% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: omniscientShift 4s linear infinite;
+    filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.6));
 }
 
-.player-card.bg-matrix_code {
-    background: var(--bg-card);
-    position: relative;
+@keyframes omniscientShift {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 400% 50%; }
 }
 
-.player-card.bg-matrix_code::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 255, 65, 0.03) 2px,
-        rgba(0, 255, 65, 0.03) 4px
-    );
-    pointer-events: none;
+/* ============ PROFILE TITLES ============ */
+
+.player-title {
+    display: inline-block;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-left: 0.25rem;
+    font-style: italic;
 }
 
-/* ============ PARTICLE OVERLAYS ============ */
-
-body[data-particles="sparkles"]::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    pointer-events: none;
-    z-index: 9997;
-    background-image: radial-gradient(2px 2px at 20% 30%, rgba(255, 255, 255, 0.3), transparent),
-                      radial-gradient(2px 2px at 40% 70%, rgba(255, 255, 255, 0.2), transparent),
-                      radial-gradient(2px 2px at 60% 20%, rgba(255, 255, 255, 0.3), transparent),
-                      radial-gradient(2px 2px at 80% 60%, rgba(255, 255, 255, 0.2), transparent);
-    animation: sparkleFloat 4s ease-in-out infinite;
+/* The Creator - Admin only */
+.player-title.title-the-creator {
+    background: linear-gradient(90deg, #ffd700, #ffffff, #ffd700);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: creatorTitleShift 3s linear infinite;
+    font-weight: bold;
+    font-style: normal;
+    filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8));
 }
 
-@keyframes sparkleFloat {
-    0%, 100% { opacity: 0.5; }
-    50% { opacity: 1; }
+@keyframes creatorTitleShift {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
 }
 
 /* ============ MMR BAR SYSTEM ============ */

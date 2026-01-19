@@ -9,47 +9,23 @@
       "name": "Neon Glow",
       "description": "Animated neon pulse",
       "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 10}]
+      "requirements": [{"metric": "mp_games_played", "min": 25}]
     },
     "fire": {
       "name": "Fire",
       "description": "Animated flame edge",
       "premium": false,
-      "requirements": [{"metric": "mp_eliminations", "min": 25}]
-    },
-    "plasma": {
-      "name": "Plasma",
-      "description": "Swirling plasma energy",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 100}]
+      "requirements": [{"metric": "mp_eliminations", "min": 50}]
     },
     "gold_elite": {
       "name": "Gold Elite",
       "description": "Prestige golden frame",
       "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 50}, {"metric": "mp_eliminations", "min": 100}]
-    },
-    "diamond_edge": {
-      "name": "Diamond Edge",
-      "description": "Ultimate prestige",
-      "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 150}]
+      "requirements": [{"metric": "peak_mmr", "min": 1400}]
     },
     "void_pulse": {
       "name": "Void Pulse",
       "description": "Pulsing dark energy",
-      "premium": false,
-      "price": 800
-    },
-    "chromatic": {
-      "name": "Chromatic",
-      "description": "Shifting rainbow edge",
-      "premium": false,
-      "price": 1200
-    },
-    "glitch_edge": {
-      "name": "Glitch Edge",
-      "description": "Corrupted digital artifacts",
       "premium": false,
       "price": 500
     },
@@ -61,120 +37,6 @@
     "godframe": {
       "name": "Godframe",
       "description": "Divine golden aura with celestial particles",
-      "premium": false,
-      "admin_only": true
-    }
-  },
-  "card_backgrounds": {
-    "default": {
-      "name": "Default",
-      "description": "Standard background",
-      "premium": false
-    },
-    "circuit_board": {
-      "name": "Circuit Board",
-      "description": "Tech circuit overlay",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 20}]
-    },
-    "gradient_fire": {
-      "name": "Gradient Fire",
-      "description": "Red-orange gradient",
-      "premium": false,
-      "requirements": [{"metric": "mp_eliminations", "min": 40}]
-    },
-    "matrix_code": {
-      "name": "Matrix Code",
-      "description": "Deep matrix sheen",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 75}]
-    },
-    "nebula": {
-      "name": "Nebula",
-      "description": "Cosmic swirl",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 150}]
-    },
-    "spell_book": {
-      "name": "Spell Book",
-      "description": "Ancient tome with runes",
-      "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 25}]
-    },
-    "neural_network": {
-      "name": "Neural Network",
-      "description": "AI neural patterns",
-      "premium": false,
-      "price": 900
-    },
-    "quantum_field": {
-      "name": "Quantum Field",
-      "description": "Quantum particle effects",
-      "premium": false,
-      "price": 1500
-    },
-    "holographic": {
-      "name": "Holographic",
-      "description": "Shifting rainbow",
-      "premium": true
-    },
-    "reality_tear": {
-      "name": "Reality Tear",
-      "description": "A rift in spacetime revealing the void beyond",
-      "premium": false,
-      "admin_only": true
-    }
-  },
-  "name_colors": {
-    "default": {
-      "name": "Default",
-      "description": "Standard green",
-      "premium": false
-    },
-    "cyan": {
-      "name": "Cyan",
-      "description": "Cool cyan",
-      "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 1}]
-    },
-    "fire": {
-      "name": "Fire",
-      "description": "Hot red glow",
-      "premium": false,
-      "requirements": [{"metric": "mp_eliminations", "min": 20}]
-    },
-    "shadow": {
-      "name": "Shadow",
-      "description": "Purple shadow",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 40}]
-    },
-    "gold": {
-      "name": "Gold",
-      "description": "Prestige gold",
-      "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 50}]
-    },
-    "crimson": {
-      "name": "Crimson",
-      "description": "Deep crimson",
-      "premium": false,
-      "requirements": [{"metric": "mp_eliminations", "min": 150}]
-    },
-    "void_text": {
-      "name": "Void",
-      "description": "Dark matter text",
-      "premium": false,
-      "price": 600
-    },
-    "rainbow": {
-      "name": "Rainbow",
-      "description": "Animated spectrum",
-      "premium": true
-    },
-    "omniscient": {
-      "name": "Omniscient",
-      "description": "All-seeing cosmic eye glow",
       "premium": false,
       "admin_only": true
     }
@@ -200,41 +62,6 @@
       "icon": "⚔️",
       "requirements": [{"metric": "mp_eliminations", "min": 50}]
     },
-    "assassin": {
-      "name": "Assassin",
-      "description": "150 eliminations",
-      "premium": false,
-      "icon": "🗡️",
-      "requirements": [{"metric": "mp_eliminations", "min": 150}]
-    },
-    "victor": {
-      "name": "Victor",
-      "description": "25 wins",
-      "premium": false,
-      "icon": "🎖️",
-      "requirements": [{"metric": "mp_wins", "min": 25}]
-    },
-    "champion": {
-      "name": "Champion",
-      "description": "50 wins",
-      "premium": false,
-      "icon": "🏆",
-      "requirements": [{"metric": "mp_wins", "min": 50}]
-    },
-    "legend": {
-      "name": "Legend",
-      "description": "150 wins",
-      "premium": false,
-      "icon": "👑",
-      "requirements": [{"metric": "mp_wins", "min": 150}]
-    },
-    "veteran": {
-      "name": "Veteran",
-      "description": "100 games played",
-      "premium": false,
-      "icon": "🎗️",
-      "requirements": [{"metric": "mp_games_played", "min": 100}]
-    },
     "rank_gold": {
       "name": "Gold Rank",
       "description": "Peak MMR 1400+",
@@ -249,33 +76,12 @@
       "icon": "🔷",
       "requirements": [{"metric": "peak_mmr", "min": 1800}]
     },
-    "rank_master": {
-      "name": "Master Rank",
-      "description": "Peak MMR 2000+",
-      "premium": false,
-      "icon": "⚜️",
-      "requirements": [{"metric": "peak_mmr", "min": 2000}]
-    },
     "dragon": {
       "name": "Dragon",
       "description": "Mythical beast",
       "premium": false,
       "icon": "🐉",
       "price": 1000
-    },
-    "wizard": {
-      "name": "Wizard",
-      "description": "Master of words",
-      "premium": false,
-      "icon": "🧙",
-      "requirements": [{"metric": "mp_wins", "min": 75}]
-    },
-    "ninja": {
-      "name": "Ninja",
-      "description": "Silent eliminator",
-      "premium": false,
-      "icon": "🥷",
-      "requirements": [{"metric": "mp_eliminations", "min": 100}]
     },
     "coffee": {
       "name": "Supporter",
@@ -291,147 +97,44 @@
       "icon": "♾️"
     }
   },
-  "elimination_effects": {
-    "classic": {
-      "name": "Classic",
-      "description": "Simple fade out",
+  "name_colors": {
+    "default": {
+      "name": "Default",
+      "description": "Standard green",
       "premium": false
     },
-    "shatter": {
-      "name": "Shatter",
-      "description": "Break into shards",
+    "cyan": {
+      "name": "Cyan",
+      "description": "Cool cyan",
       "premium": false,
-      "requirements": [{"metric": "mp_eliminations", "min": 10}]
+      "requirements": [{"metric": "mp_wins", "min": 10}]
     },
-    "explosion": {
-      "name": "Explosion",
-      "description": "Explosive elimination",
+    "fire": {
+      "name": "Fire",
+      "description": "Hot red glow",
       "premium": false,
-      "requirements": [{"metric": "mp_eliminations", "min": 40}]
+      "requirements": [{"metric": "mp_eliminations", "min": 50}]
     },
-    "glitch_out": {
-      "name": "Glitch Out",
-      "description": "Digital corruption",
+    "gold": {
+      "name": "Gold",
+      "description": "Prestige gold",
       "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 30}]
+      "requirements": [{"metric": "peak_mmr", "min": 1400}]
     },
-    "vaporize": {
-      "name": "Vaporize",
-      "description": "Instant vaporization",
+    "void_text": {
+      "name": "Void",
+      "description": "Dark matter text",
       "premium": false,
-      "requirements": [{"metric": "mp_eliminations", "min": 80}]
+      "price": 600
     },
-    "black_hole": {
-      "name": "Black Hole",
-      "description": "Sucked into singularity",
-      "premium": false,
-      "price": 800
-    },
-    "lightning_strike": {
-      "name": "Lightning Strike",
-      "description": "Zapped by bolt",
-      "premium": false,
-      "requirements": [{"metric": "mp_eliminations", "min": 120}]
-    },
-    "disintegrate": {
-      "name": "Disintegrate",
-      "description": "Dust to void",
+    "rainbow": {
+      "name": "Rainbow",
+      "description": "Animated spectrum",
       "premium": true
     },
-    "annihilate": {
-      "name": "Annihilate",
-      "description": "Complete erasure from existence",
-      "premium": false,
-      "admin_only": true
-    }
-  },
-  "guess_effects": {
-    "classic": {
-      "name": "Classic",
-      "description": "Simple submit",
-      "premium": false
-    },
-    "pulse_wave": {
-      "name": "Pulse Wave",
-      "description": "Ripple outward",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 5}]
-    },
-    "spark_burst": {
-      "name": "Spark Burst",
-      "description": "Quick spark burst",
-      "premium": false,
-      "requirements": [{"metric": "mp_eliminations", "min": 10}]
-    },
-    "energy_ring": {
-      "name": "Energy Ring",
-      "description": "Expanding energy",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 25}]
-    },
-    "shockwave": {
-      "name": "Shockwave",
-      "description": "Powerful shockwave",
-      "premium": false,
-      "price": 500
-    },
-    "magic_cast": {
-      "name": "Magic Cast",
-      "description": "Wand wave with sparkles",
-      "premium": false,
-      "price": 350
-    },
-    "reality_warp": {
-      "name": "Reality Warp",
-      "description": "Your guess bends the fabric of spacetime",
-      "premium": false,
-      "admin_only": true
-    }
-  },
-  "turn_indicators": {
-    "classic": {
-      "name": "Classic",
-      "description": "Standard highlight",
-      "premium": false
-    },
-    "spotlight": {
-      "name": "Spotlight",
-      "description": "Bright spotlight",
-      "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 3}]
-    },
-    "pulse_glow": {
-      "name": "Pulse Glow",
-      "description": "Breathing glow",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 15}]
-    },
-    "danger_zone": {
-      "name": "Danger Zone",
-      "description": "Red alert",
-      "premium": false,
-      "requirements": [{"metric": "mp_eliminations", "min": 40}]
-    },
-    "magic_circle": {
-      "name": "Magic Circle",
-      "description": "Rotating spell sigil",
-      "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 20}]
-    },
-    "target_lock": {
-      "name": "Target Lock",
-      "description": "Targeting reticle",
-      "premium": false,
-      "price": 400
-    },
-    "fire_ring": {
-      "name": "Fire Ring",
-      "description": "Ring of fire",
-      "premium": true
-    },
-    "divine_mandate": {
-      "name": "Divine Mandate",
-      "description": "Golden light descends from above",
+    "omniscient": {
+      "name": "Omniscient",
+      "description": "All-seeing cosmic eye glow",
       "premium": false,
       "admin_only": true
     }
@@ -446,43 +149,25 @@
       "name": "Fireworks",
       "description": "Fireworks burst",
       "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 5}]
+      "requirements": [{"metric": "mp_wins", "min": 10}]
     },
     "gold_rain": {
       "name": "Gold Rain",
       "description": "Golden downpour",
       "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 20}]
-    },
-    "supernova": {
-      "name": "Supernova",
-      "description": "Blinding nova",
-      "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 60}]
+      "requirements": [{"metric": "mp_wins", "min": 50}]
     },
     "champion_crown": {
       "name": "Champion Crown",
       "description": "Crown descent",
       "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 100}]
-    },
-    "matrix_cascade": {
-      "name": "Matrix Cascade",
-      "description": "Green code rain victory",
-      "premium": false,
-      "price": 1200
+      "requirements": [{"metric": "peak_mmr", "min": 1800}]
     },
     "dragon_roar": {
       "name": "Dragon Roar",
       "description": "Dragon flies across screen",
       "premium": false,
       "price": 1000
-    },
-    "spell_cast": {
-      "name": "Spell Cast",
-      "description": "Magic circles and sparkles",
-      "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 75}]
     },
     "aurora": {
       "name": "Aurora",
@@ -494,251 +179,6 @@
       "description": "The universe explodes into existence",
       "premium": false,
       "admin_only": true
-    }
-  },
-  "matrix_colors": {
-    "classic": {
-      "name": "Classic",
-      "description": "Default green",
-      "premium": false,
-      "colors": ["#00ff41"]
-    },
-    "ocean": {
-      "name": "Ocean",
-      "description": "Deep blue",
-      "premium": false,
-      "colors": ["#0077be", "#00a8e8"],
-      "requirements": [{"metric": "mp_games_played", "min": 1}]
-    },
-    "cyber_blue": {
-      "name": "Cyber Blue",
-      "description": "Blue/cyan",
-      "premium": false,
-      "colors": ["#00ccff", "#0066ff"],
-      "requirements": [{"metric": "mp_games_played", "min": 10}]
-    },
-    "crimson": {
-      "name": "Crimson",
-      "description": "Red/dark red",
-      "premium": false,
-      "colors": ["#ff3333", "#990000"],
-      "requirements": [{"metric": "mp_eliminations", "min": 40}]
-    },
-    "royal_purple": {
-      "name": "Royal Purple",
-      "description": "Purple/violet",
-      "premium": false,
-      "colors": ["#9933ff", "#6600cc"],
-      "requirements": [{"metric": "mp_wins", "min": 15}]
-    },
-    "dragon_fire": {
-      "name": "Dragon Fire",
-      "description": "Orange/gold flames",
-      "premium": false,
-      "colors": ["#ff4500", "#ffd700"],
-      "requirements": [{"metric": "mp_eliminations", "min": 60}]
-    },
-    "synthwave": {
-      "name": "Synthwave",
-      "description": "Pink/cyan 80s",
-      "premium": false,
-      "colors": ["#ff00ff", "#00ffff"],
-      "price": 400
-    },
-    "gold_rush": {
-      "name": "Gold Rush",
-      "description": "Gold/amber",
-      "premium": true,
-      "colors": ["#ffd700", "#ff9900"]
-    },
-    "event_horizon": {
-      "name": "Event Horizon",
-      "description": "Colors from beyond the singularity",
-      "premium": false,
-      "admin_only": true,
-      "colors": ["#000000", "#ff00ff", "#00ffff", "#ffffff"]
-    }
-  },
-  "particle_overlays": {
-    "none": {
-      "name": "None",
-      "description": "No particles",
-      "premium": false
-    },
-    "scan_lines": {
-      "name": "Scan Lines",
-      "description": "CRT scan lines",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 5}]
-    },
-    "sparks": {
-      "name": "Sparks",
-      "description": "Ember sparks",
-      "premium": false,
-      "requirements": [{"metric": "mp_eliminations", "min": 20}]
-    },
-    "rain": {
-      "name": "Rain",
-      "description": "Digital rain",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 50}]
-    },
-    "embers": {
-      "name": "Embers",
-      "description": "Rising fire particles",
-      "premium": false,
-      "requirements": [{"metric": "mp_eliminations", "min": 60}]
-    },
-    "magic_dust": {
-      "name": "Magic Dust",
-      "description": "Floating sparkle particles",
-      "premium": false,
-      "price": 400
-    },
-    "starfield": {
-      "name": "Starfield",
-      "description": "Twinkling stars",
-      "premium": true
-    },
-    "cosmic_dust": {
-      "name": "Cosmic Dust",
-      "description": "Stardust from dying galaxies",
-      "premium": false,
-      "admin_only": true
-    }
-  },
-  "seasonal_themes": {
-    "none": {
-      "name": "None",
-      "description": "No seasonal theme",
-      "premium": false
-    },
-    "snowfall": {
-      "name": "Snowfall",
-      "description": "Winter snow",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 10}]
-    },
-    "heartbeat": {
-      "name": "Heartbeat",
-      "description": "Hearts",
-      "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 5}]
-    },
-    "spooky": {
-      "name": "Spooky",
-      "description": "Halloween ghost",
-      "premium": false,
-      "requirements": [{"metric": "mp_eliminations", "min": 20}]
-    },
-    "sakura": {
-      "name": "Sakura",
-      "description": "Cherry blossom petals",
-      "premium": false,
-      "price": 500
-    },
-    "northern_lights": {
-      "name": "Northern Lights",
-      "description": "Aurora borealis",
-      "premium": false,
-      "price": 800
-    },
-    "fireworks": {
-      "name": "Fireworks",
-      "description": "Celebration overlay",
-      "premium": true
-    },
-    "eclipse": {
-      "name": "Eclipse",
-      "description": "The sun and moon align in eternal darkness",
-      "premium": false,
-      "admin_only": true
-    }
-  },
-  "alt_backgrounds": {
-    "matrix": {
-      "name": "Matrix Rain",
-      "description": "Default matrix rain",
-      "premium": false
-    },
-    "deep_space": {
-      "name": "Deep Space",
-      "description": "Nebula background",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 15}]
-    },
-    "fireflies": {
-      "name": "Fireflies",
-      "description": "Forest glow",
-      "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 10}]
-    },
-    "void": {
-      "name": "Void",
-      "description": "Dark void",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 75}]
-    },
-    "cyberpunk_city": {
-      "name": "Cyberpunk City",
-      "description": "Neon cityscape",
-      "premium": false,
-      "price": 800
-    },
-    "binary_rain": {
-      "name": "Binary Rain",
-      "description": "Falling binary code",
-      "premium": false,
-      "price": 600
-    },
-    "aurora": {
-      "name": "Aurora",
-      "description": "Aurora waves",
-      "premium": true
-    },
-    "multiverse": {
-      "name": "Multiverse",
-      "description": "Glimpses of infinite parallel realities",
-      "premium": false,
-      "admin_only": true
-    }
-  },
-  "bundles": {
-    "starter_pack": {
-      "name": "Starter Pack",
-      "description": "Void Pulse border + Neural Network bg + Void name",
-      "premium": false,
-      "price": 1500,
-      "contents": {
-        "card_border": "void_pulse",
-        "card_background": "neural_network",
-        "name_color": "void_text"
-      },
-      "value": 2300
-    },
-    "destruction_pack": {
-      "name": "Destruction Pack",
-      "description": "Black Hole elim + Shockwave guess + Dragon badge",
-      "premium": false,
-      "price": 1800,
-      "contents": {
-        "elimination_effect": "black_hole",
-        "guess_effect": "shockwave",
-        "badge": "dragon"
-      },
-      "value": 2300
-    },
-    "matrix_pack": {
-      "name": "Matrix Pack",
-      "description": "Matrix Cascade victory + Binary Rain bg + Synthwave matrix",
-      "premium": false,
-      "price": 1800,
-      "contents": {
-        "victory_effect": "matrix_cascade",
-        "alt_background": "binary_rain",
-        "matrix_color": "synthwave"
-      },
-      "value": 2200
     }
   },
   "profile_titles": {
@@ -755,13 +195,6 @@
       "text": "Word Hunter",
       "requirements": [{"metric": "mp_eliminations", "min": 25}]
     },
-    "semantic_scholar": {
-      "name": "Semantic Scholar",
-      "description": "Student of meaning",
-      "premium": false,
-      "text": "Semantic Scholar",
-      "requirements": [{"metric": "mp_games_played", "min": 50}]
-    },
     "embedding_master": {
       "name": "Embedding Master",
       "description": "Master of vectors",
@@ -769,26 +202,12 @@
       "text": "Embedding Master",
       "requirements": [{"metric": "mp_wins", "min": 75}]
     },
-    "the_eliminator": {
-      "name": "The Eliminator",
-      "description": "Fear the eliminator",
-      "premium": false,
-      "text": "The Eliminator",
-      "requirements": [{"metric": "mp_eliminations", "min": 150}]
-    },
     "archmage": {
       "name": "Archmage",
       "description": "Master of semantic magic",
       "premium": false,
       "text": "Archmage",
-      "requirements": [{"metric": "mp_wins", "min": 100}]
-    },
-    "dragon_slayer": {
-      "name": "Dragon Slayer",
-      "description": "Legendary hunter",
-      "premium": false,
-      "text": "Dragon Slayer",
-      "requirements": [{"metric": "mp_eliminations", "min": 250}]
+      "requirements": [{"metric": "peak_mmr", "min": 2000}]
     },
     "apex_predator": {
       "name": "Apex Predator",
@@ -809,123 +228,6 @@
       "premium": false,
       "admin_only": true,
       "text": "The Creator"
-    }
-  },
-  "profile_banners": {
-    "none": {
-      "name": "None",
-      "description": "No banner",
-      "premium": false
-    },
-    "circuit_pattern": {
-      "name": "Circuit",
-      "description": "Tech circuitry pattern",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 10}]
-    },
-    "hexagon_grid": {
-      "name": "Hexagon",
-      "description": "Honeycomb pattern",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 25}]
-    },
-    "wave_pattern": {
-      "name": "Wave",
-      "description": "Flowing waves",
-      "premium": false,
-      "requirements": [{"metric": "mp_wins", "min": 10}]
-    },
-    "cosmic_dust": {
-      "name": "Cosmic",
-      "description": "Stardust particles",
-      "premium": false,
-      "requirements": [{"metric": "mp_games_played", "min": 50}]
-    },
-    "neon_grid": {
-      "name": "Neon Grid",
-      "description": "Retro neon lines",
-      "premium": false,
-      "price": 600
-    },
-    "plasma_field": {
-      "name": "Plasma Field",
-      "description": "Swirling energy",
-      "premium": false,
-      "price": 800
-    },
-    "aurora_waves": {
-      "name": "Aurora",
-      "description": "Northern lights",
-      "premium": true
-    },
-    "genesis": {
-      "name": "Genesis",
-      "description": "The birth of a universe",
-      "premium": false,
-      "admin_only": true
-    }
-  },
-  "profile_accents": {
-    "default": {
-      "name": "Matrix Green",
-      "description": "Default accent",
-      "premium": false,
-      "color": "#00ff41"
-    },
-    "cyber_cyan": {
-      "name": "Cyber Cyan",
-      "description": "Cool cyan accent",
-      "premium": false,
-      "color": "#00e5ff",
-      "requirements": [{"metric": "mp_games_played", "min": 5}]
-    },
-    "neon_pink": {
-      "name": "Neon Pink",
-      "description": "Hot pink accent",
-      "premium": false,
-      "color": "#ff00ff",
-      "requirements": [{"metric": "mp_games_played", "min": 15}]
-    },
-    "solar_gold": {
-      "name": "Solar Gold",
-      "description": "Golden accent",
-      "premium": false,
-      "color": "#ffd700",
-      "requirements": [{"metric": "mp_wins", "min": 20}]
-    },
-    "toxic_green": {
-      "name": "Toxic Green",
-      "description": "Radioactive green",
-      "premium": false,
-      "color": "#39ff14",
-      "requirements": [{"metric": "mp_eliminations", "min": 40}]
-    },
-    "blood_red": {
-      "name": "Blood Red",
-      "description": "Crimson accent",
-      "premium": false,
-      "color": "#dc143c",
-      "price": 400
-    },
-    "royal_purple": {
-      "name": "Royal Purple",
-      "description": "Majestic purple",
-      "premium": false,
-      "color": "#9933ff",
-      "price": 400
-    },
-    "sunset_orange": {
-      "name": "Sunset Orange",
-      "description": "Warm sunset",
-      "premium": true,
-      "color": "#ff6b35"
-    },
-    "singularity": {
-      "name": "Singularity",
-      "description": "A color beyond the visible spectrum",
-      "premium": false,
-      "admin_only": true,
-      "color": "singularity"
     }
   }
 }

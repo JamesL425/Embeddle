@@ -4892,7 +4892,7 @@ body.nerd-mode .nerd-sim {
 }
 
 .cosmetics-panel { --drawer-width: 380px; }
-.options-panel { --drawer-width: 340px; }
+.options-panel { --drawer-width: 420px; }
 .chat-panel { --drawer-width: 340px; }
 .daily-panel { --drawer-width: 380px; }
 
@@ -5660,18 +5660,18 @@ body.nerd-mode .nerd-sim {
 .premium-items-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
+    gap: 0.5rem 0.75rem;
     margin-bottom: 0.5rem;
 }
 
 .premium-item {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.35rem 0.5rem;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
     background: rgba(0, 0, 0, 0.2);
     border-radius: 4px;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
 }
 
 .premium-item-icon {

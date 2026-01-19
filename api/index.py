@@ -564,68 +564,22 @@ KOFI_SKIP_VERIFICATION = env_bool('KOFI_SKIP_VERIFICATION', False)
 # Default cosmetics for new users
 DEFAULT_COSMETICS = {
     "card_border": "classic",
-    "card_background": "default",
     "name_color": "default",
     "badge": "none",
-    "elimination_effect": "classic",
-    "guess_effect": "classic",
-    "turn_indicator": "classic",
     "victory_effect": "classic",
-    "matrix_color": "classic",
-    "particle_overlay": "none",
-    "seasonal_theme": "none",
-    "alt_background": "matrix",
     "profile_title": "none",
-    "profile_banner": "none",
-    "profile_accent": "default",
 }
 
 # Cosmetics schema version for stored user cosmetics payload.
-COSMETICS_SCHEMA_VERSION = 2
+COSMETICS_SCHEMA_VERSION = 3
 
 # Map category keys stored on users -> catalog keys in api/cosmetics.json
 COSMETIC_CATEGORY_TO_CATALOG_KEY = {
     'card_border': 'card_borders',
-    'card_background': 'card_backgrounds',
     'name_color': 'name_colors',
     'badge': 'badges',
-    'elimination_effect': 'elimination_effects',
-    'guess_effect': 'guess_effects',
-    'turn_indicator': 'turn_indicators',
     'victory_effect': 'victory_effects',
-    'matrix_color': 'matrix_colors',
-    'particle_overlay': 'particle_overlays',
-    'seasonal_theme': 'seasonal_themes',
-    'alt_background': 'alt_backgrounds',
     'profile_title': 'profile_titles',
-    'profile_banner': 'profile_banners',
-    'profile_accent': 'profile_accents',
-}
-
-# Legacy cosmetic ID migrations for hard restarts.
-# NOTE: Badge remaps are handled conditionally (supporter vs non-supporter) at runtime.
-LEGACY_COSMETIC_ID_MAP = {
-    'card_background': {
-        'starfield': 'default',
-    },
-    'guess_effect': {
-        'data_stream': 'classic',
-        'fire_trail': 'classic',
-        'ice_crystals': 'classic',
-        'glitch_pulse': 'classic',
-    },
-    'victory_effect': {
-        'glitch_victory': 'classic',
-        'matrix_cascade': 'classic',
-    },
-    'badge': {
-        # v1 supporter-style badges -> v2 supporter badge (coffee) when allowed
-        'star': 'coffee',
-        'heart': 'coffee',
-        'crown': 'coffee',
-        'lightning': 'coffee',
-        'flame': 'coffee',
-    },
 }
 
 # Default stats stored on authenticated (Google) users.
@@ -1007,12 +961,12 @@ def create_ai_player(difficulty: str, existing_names: list) -> dict:
     
     # Give different difficulties distinct "agent" vibes in the UI
     ai_cosmetics_by_difficulty = {
-        "rookie": {"card_border": "classic", "card_background": "default", "name_color": "default"},
-        "analyst": {"card_border": "ice", "card_background": "gradient_ice", "name_color": "ice"},
-        "field-agent": {"card_border": "synthwave", "card_background": "matrix_code", "name_color": "fire"},
-        "spymaster": {"card_border": "gold_elite", "card_background": "circuit_board", "name_color": "gold"},
-        "ghost": {"card_border": "plasma", "card_background": "nebula", "name_color": "shadow"},
-        "nemesis": {"card_border": "void", "card_background": "void", "name_color": "void"},
+        "rookie": {"card_border": "classic", "name_color": "default", "badge": "none"},
+        "analyst": {"card_border": "classic", "name_color": "cyan", "badge": "star"},
+        "field-agent": {"card_border": "neon_glow", "name_color": "fire", "badge": "hunter"},
+        "spymaster": {"card_border": "gold_elite", "name_color": "gold", "badge": "rank_gold"},
+        "ghost": {"card_border": "fire", "name_color": "cyan", "badge": "hunter"},
+        "nemesis": {"card_border": "void_pulse", "name_color": "void_text", "badge": "dragon"},
     }
     selected_cosmetics = ai_cosmetics_by_difficulty.get(difficulty, ai_cosmetics_by_difficulty["rookie"])
 
@@ -1030,9 +984,8 @@ def create_ai_player(difficulty: str, existing_names: list) -> dict:
         "is_ready": True,  # AI is always ready
         "cosmetics": {
             "card_border": selected_cosmetics["card_border"],
-            "card_background": selected_cosmetics["card_background"],
             "name_color": selected_cosmetics["name_color"],
-            "badge": config["badge"],
+            "badge": selected_cosmetics.get("badge", config["badge"]),
         },
         "ai_memory": {
             "high_similarity_targets": {},  # player_id -> [(word, similarity)]
@@ -2046,8 +1999,16 @@ def _ai_self_similarity(ai_player: dict, word: str, game: dict = None) -> Option
                 if sim is not None:
                     return float(sim)
         
-        # Fallback: compute similarity from embeddings
-        secret_emb = ai_player.get("secret_embedding")
+        # Fallback: compute similarity from embeddings (lookup from cache)
+        if not my_secret:
+            return None
+        
+        try:
+            secret_emb = get_embedding(my_secret)
+        except Exception:
+            # Legacy fallback: use stored embedding if cache miss
+            secret_emb = ai_player.get("secret_embedding")
+        
         if not secret_emb:
             return None
         
@@ -2291,7 +2252,12 @@ def _ai_maybe_bluff(ai_player: dict, game: dict, available_words: list) -> Optio
         return None
     
     try:
-        my_embedding = ai_player.get("secret_embedding")
+        # Look up embedding from cache (or legacy stored embedding)
+        try:
+            my_embedding = get_embedding(my_secret)
+        except Exception:
+            my_embedding = ai_player.get("secret_embedding")
+        
         if not my_embedding:
             return None
         
@@ -2551,7 +2517,14 @@ def process_ai_turn(game: dict, ai_player: dict) -> Optional[dict]:
                 guess_emb = get_embedding(guess_word)
             except Exception:
                 continue
-        secret_emb = p.get("secret_embedding")
+        
+        # Look up secret embedding from cache
+        try:
+            secret_emb = get_embedding(secret)
+        except Exception:
+            # Legacy fallback
+            secret_emb = p.get("secret_embedding")
+        
         if secret_emb:
             sim = cosine_similarity(guess_emb, secret_emb)
             similarities[p["id"]] = round(sim, 4)
@@ -2621,9 +2594,8 @@ def process_ai_word_change(game: dict, ai_player: dict) -> bool:
             new_word = _ai_select_counter_intel_word(ai_player, game, available_words)
             if new_word:
                 try:
-                    embedding = get_embedding(new_word)
+                    get_embedding(new_word)  # Ensure cached
                     ai_player["secret_word"] = new_word.lower()
-                    ai_player["secret_embedding"] = embedding
                     
                     # Record word change in history
                     game["history"].append({
@@ -2666,9 +2638,8 @@ def process_ai_word_change(game: dict, ai_player: dict) -> bool:
         new_word = ai_change_word(ai_player, game)
         if new_word:
             try:
-                embedding = get_embedding(new_word)
+                get_embedding(new_word)  # Ensure cached
                 ai_player["secret_word"] = new_word.lower()
-                ai_player["secret_embedding"] = embedding
                 
                 # Record word change in history
                 game["history"].append({
@@ -3247,25 +3218,9 @@ def get_user_cosmetics(user: dict) -> dict:
 
         item = get_cosmetic_item(catalog_key, desired)
         if not item:
-            # Try legacy ID mapping (for hard restarts)
-            mapped = (LEGACY_COSMETIC_ID_MAP.get(category_key) or {}).get(desired)
-            if mapped:
-                # If we mapped into a supporter badge, only keep it when allowed.
-                if (
-                    category_key == 'badge'
-                    and mapped == 'coffee'
-                    and COSMETICS_PAYWALL_ENABLED
-                    and not (is_donor or is_admin)
-                ):
-                    mapped = 'none'
-                desired = mapped
-                item = get_cosmetic_item(catalog_key, desired)
-
-            # If still invalid, reset to default
-            if not item:
-                desired = DEFAULT_COSMETICS.get(category_key)
-                item = get_cosmetic_item(catalog_key, desired)
-
+            # Invalid cosmetic ID, reset to default
+            desired = DEFAULT_COSMETICS.get(category_key)
+            item = get_cosmetic_item(catalog_key, desired)
             result[category_key] = desired
             changed = True
 
@@ -4082,13 +4037,10 @@ def get_visible_cosmetics(user: dict) -> dict:
     cosmetics = get_user_cosmetics(user)
     return {
         "card_border": cosmetics.get("card_border", "classic"),
-        "card_background": cosmetics.get("card_background", "default"),
         "name_color": cosmetics.get("name_color", "default"),
         "badge": cosmetics.get("badge", "none"),
-        "elimination_effect": cosmetics.get("elimination_effect", "classic"),
-        "guess_effect": cosmetics.get("guess_effect", "classic"),
-        "turn_indicator": cosmetics.get("turn_indicator", "classic"),
         "victory_effect": cosmetics.get("victory_effect", "classic"),
+        "profile_title": cosmetics.get("profile_title", "none"),
     }
 
 
@@ -7389,14 +7341,15 @@ class handler(BaseHTTPRequestHandler):
             if player_word_pool and secret_word.lower() not in [w.lower() for w in player_word_pool]:
                 return self._send_error("Please choose a word from your word pool", 400)
             
+            # Embedding should already be cached from /start - just verify it exists
             try:
-                embedding = get_embedding(secret_word)
+                get_embedding(secret_word)  # Will hit cache; raises if word processing fails
             except Exception as e:
                 print(f"Embedding error for set-word: {e}")  # Log server-side only
                 return self._send_error("Word processing service unavailable. Please try again.", 503)
             
             player['secret_word'] = secret_word.lower()
-            player['secret_embedding'] = embedding
+            # NOTE: We don't store secret_embedding anymore - it's in Redis cache as emb:{word}
             
             save_game(code, game)
             return self._send_json({
@@ -7532,18 +7485,14 @@ class handler(BaseHTTPRequestHandler):
             game['word_selection_started_at'] = time.time()  # Start word selection timer
             game['word_selection_time'] = get_word_selection_time(bool(game.get('is_ranked', False)))
             
-            # Pre-cache theme embeddings in Redis in background thread
-            # This warms the cache so lookups during gameplay are fast
-            # NOTE: We do NOT block on this - embeddings will be ready by the time players pick words
+            # Pre-cache theme embeddings in Redis BLOCKING
+            # This ensures word selection is instant (cache hits only)
             theme_words = game.get('theme', {}).get('words', [])
             if theme_words:
-                import threading
-                def precache_embeddings():
-                    try:
-                        batch_get_embeddings(theme_words)
-                    except Exception as e:
-                        print(f"Theme embedding pre-cache error (start): {e}")
-                threading.Thread(target=precache_embeddings, daemon=True).start()
+                try:
+                    batch_get_embeddings(theme_words)
+                except Exception as e:
+                    print(f"Theme embedding pre-cache error (start): {e}")
             
             save_game(code, game)
             return self._send_json({"status": "word_selection", "theme": game['theme']['name']})
@@ -7574,7 +7523,7 @@ class handler(BaseHTTPRequestHandler):
                 for p in game.get('players', []):
                     if not p.get('is_ai'):
                         continue
-                    if p.get('secret_word') and p.get('secret_embedding'):
+                    if p.get('secret_word'):
                         continue
                     pool = p.get('word_pool', []) or game.get('theme', {}).get('words', [])
                     if not pool:
@@ -7583,9 +7532,8 @@ class handler(BaseHTTPRequestHandler):
                     if not selected_word:
                         continue
                     try:
-                        embedding = get_embedding(selected_word)
+                        get_embedding(selected_word)  # Ensure it's cached
                         p['secret_word'] = selected_word.lower()
-                        p['secret_embedding'] = embedding
                     except Exception as e:
                         print(f"AI word selection error (begin): {e}")
             
@@ -7678,9 +7626,8 @@ class handler(BaseHTTPRequestHandler):
                         selected_word = ai_select_secret_word(p, pool)
                         if selected_word:
                             try:
-                                embedding = get_embedding(selected_word)
+                                get_embedding(selected_word)  # Ensure cached
                                 p['secret_word'] = selected_word.lower()
-                                p['secret_embedding'] = embedding
                                 auto_assigned.append({"id": p['id'], "name": p['name'], "is_ai": True})
                             except Exception as e:
                                 print(f"AI word selection error (timeout): {e}")
@@ -7691,9 +7638,8 @@ class handler(BaseHTTPRequestHandler):
                 if pool:
                     selected_word = random.choice(pool)
                     try:
-                        embedding = get_embedding(selected_word)
+                        get_embedding(selected_word)  # Ensure cached
                         p['secret_word'] = selected_word.lower()
-                        p['secret_embedding'] = embedding
                         auto_assigned.append({"id": p['id'], "name": p['name'], "is_ai": False})
                     except Exception as e:
                         print(f"Auto-assign word error (timeout): {e}")
@@ -7744,7 +7690,7 @@ class handler(BaseHTTPRequestHandler):
                     break
                 if not p.get('is_ai'):
                     continue
-                if p.get('secret_word') and p.get('secret_embedding'):
+                if p.get('secret_word'):
                     continue
                 pool = p.get('word_pool', []) or game.get('theme', {}).get('words', [])
                 if not pool:
@@ -7753,9 +7699,8 @@ class handler(BaseHTTPRequestHandler):
                 if not selected_word:
                     continue
                 try:
-                    embedding = get_embedding(selected_word)
+                    get_embedding(selected_word)  # Ensure cached
                     p['secret_word'] = selected_word.lower()
-                    p['secret_embedding'] = embedding
                     picked += 1
                 except Exception as e:
                     errors += 1
@@ -7924,8 +7869,19 @@ class handler(BaseHTTPRequestHandler):
             
             similarities = {}
             for p in game['players']:
-                sim = cosine_similarity(guess_embedding, p['secret_embedding'])
-                similarities[p['id']] = round(sim, 4)
+                # Look up secret embedding from cache (not stored in player object)
+                secret_word = p.get('secret_word')
+                if not secret_word:
+                    continue
+                try:
+                    secret_emb = get_embedding(secret_word)
+                    sim = cosine_similarity(guess_embedding, secret_emb)
+                    similarities[p['id']] = round(sim, 4)
+                except Exception:
+                    # Fallback to stored embedding if cache miss (legacy games)
+                    if p.get('secret_embedding'):
+                        sim = cosine_similarity(guess_embedding, p['secret_embedding'])
+                        similarities[p['id']] = round(sim, 4)
             
             # Eliminate players whose exact word was guessed
             eliminations = []
@@ -8100,13 +8056,12 @@ class handler(BaseHTTPRequestHandler):
                 return self._send_error("That word has already been guessed! Pick a different one.", 400)
             
             try:
-                embedding = get_embedding(new_word)
+                get_embedding(new_word)  # Ensure cached
             except Exception as e:
                 print(f"Embedding error for change-word: {e}")  # Log server-side only
                 return self._send_error("Word processing service unavailable. Please try again.", 503)
             
             player['secret_word'] = new_word.lower()
-            player['secret_embedding'] = embedding
             player['can_change_word'] = False
             player.pop('word_change_options', None)
             
@@ -8267,9 +8222,8 @@ class handler(BaseHTTPRequestHandler):
             # Update the player's word
             if new_word and new_word.lower() != (player.get('secret_word') or '').lower():
                 try:
-                    embedding = get_embedding(new_word)
+                    get_embedding(new_word)  # Ensure cached
                     player['secret_word'] = new_word.lower()
-                    player['secret_embedding'] = embedding
                 except Exception as e:
                     print(f"Embedding error for word-change-timeout: {e}")
                     # Keep current word on error

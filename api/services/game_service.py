@@ -88,14 +88,16 @@ def remove_player(game: dict, player_id: str) -> bool:
     return True
 
 
-def set_player_word(game: dict, player_id: str, word: str, embedding: List[float]) -> bool:
-    """Set a player's secret word."""
+def set_player_word(game: dict, player_id: str, word: str, embedding: List[float] = None) -> bool:
+    """Set a player's secret word. Embedding is optional (looked up from cache)."""
     player = next((p for p in game["players"] if p["id"] == player_id), None)
     if not player:
         return False
     
     player["secret_word"] = word
-    player["secret_embedding"] = embedding
+    # NOTE: We no longer store secret_embedding - it's in Redis cache as emb:{word}
+    if embedding:
+        player["secret_embedding"] = embedding  # Legacy support
     player["is_ready"] = True
     
     # Check if all players have words

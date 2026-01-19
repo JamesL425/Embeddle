@@ -167,13 +167,13 @@ def handle_game_action(handler, method: str, code: str, action: Optional[str], b
         if not player:
             return 404, {"detail": "Player not found"}
         
-        # Get embedding
+        # Ensure embedding is cached (should already be from /start)
         try:
-            embedding = get_embedding(secret_word)
+            get_embedding(secret_word)
         except Exception as e:
             return 500, {"detail": f"Failed to get embedding: {str(e)}"}
         
-        set_player_word(game, player_id, secret_word, embedding)
+        set_player_word(game, player_id, secret_word, None)  # No embedding needed
         # Return full game state for immediate UI update
         return 200, get_game_for_player(game, player_id)
     
@@ -201,10 +201,21 @@ def handle_game_action(handler, method: str, code: str, action: Optional[str], b
         for player in game["players"]:
             if not player.get("is_alive", True):
                 continue
-            if not player.get("secret_embedding"):
+            secret_word = player.get("secret_word")
+            if not secret_word:
                 continue
             
-            sim = cosine_similarity(guess_embedding, player["secret_embedding"])
+            # Look up secret embedding from cache
+            try:
+                secret_emb = get_embedding(secret_word)
+            except Exception:
+                # Legacy fallback
+                secret_emb = player.get("secret_embedding")
+            
+            if not secret_emb:
+                continue
+            
+            sim = cosine_similarity(guess_embedding, secret_emb)
             similarities[player["id"]] = round(sim, 4)
             
             # Check for elimination (90% threshold)
