@@ -434,72 +434,14 @@ def load_themes():
     return themes
 
 
-def load_theme_registry():
-    """Load the theme registry for rotation metadata."""
-    registry_path = Path(__file__).parent / "themes" / "theme_registry.json"
-    if registry_path.exists():
-        try:
-            with open(registry_path) as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {"themes": [], "themes_per_day": 12}
-
-
-def get_themes_for_current_rotation() -> list:
-    """
-    Return the list of theme names available for the current 3-hour rotation window.
-    Uses deterministic rotation to ensure all players see the same themes.
-    Rotations occur at 00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, 21:00 UTC.
-    """
-    import random
-    from datetime import datetime
-    
-    registry = load_theme_registry()
-    all_theme_names = [t["name"] for t in registry.get("themes", [])]
-    themes_per_rotation = registry.get("themes_per_day", 12)
-    
-    # Fallback if registry is empty
-    if not all_theme_names:
-        all_theme_names = list(PREGENERATED_THEMES.keys())
-    
-    # If we have fewer themes than themes_per_rotation, return all
-    if len(all_theme_names) <= themes_per_rotation:
-        return all_theme_names
-    
-    # Use UTC date + 3-hour window as seed for deterministic rotation
-    now = datetime.utcnow()
-    rotation_window = now.hour // 3  # 0-7 for each 3-hour window
-    rotation_key = f"{now.strftime('%Y-%m-%d')}:{rotation_window}"
-    rng = random.Random(f"theme_rotation:{rotation_key}")
-    
-    # Shuffle and select themes_per_rotation themes
-    shuffled = all_theme_names.copy()
-    rng.shuffle(shuffled)
-    return shuffled[:themes_per_rotation]
-
-
 PREGENERATED_THEMES = load_themes()
-# THEME_CATEGORIES now uses 3-hour rotation instead of all themes
-THEME_CATEGORIES = get_themes_for_current_rotation() if PREGENERATED_THEMES else CONFIG.get("theme_categories", [])
+# THEME_CATEGORIES contains all available themes (no rotation)
+THEME_CATEGORIES = list(PREGENERATED_THEMES.keys()) if PREGENERATED_THEMES else CONFIG.get("theme_categories", [])
 
 # Backwards-compatible theme aliases:
 # Old lobbies can have theme names persisted in Redis that no longer exist in api/themes.json.
 # Map them to the closest current theme so /start doesn't fail with an empty word list.
-THEME_ALIASES = {
-    "science & space": "Space Adventure",
-    "music & instruments": "Music & Concerts",
-    "movies & tv shows": "Superheroes & Comics",
-    "movies & entertainment": "Superheroes & Comics",
-    "superheroes": "Superheroes & Comics",
-    "food & cooking": "Kitchen Chaos",
-    "sports & games": "Video Games",
-    "technology & gadgets": "Internet & Memes",
-    "ocean & marine life": "Pirates & Treasure",
-    "beach & summer": "Pirates & Treasure",
-    "history & ancient civilizations": "Mythology & Legends",
-    "history & ancient": "Mythology & Legends",
-}
+THEME_ALIASES = {}
 
 # Load cosmetics catalog
 def load_cosmetics_catalog():
@@ -2371,6 +2313,7 @@ def ai_choose_guess(ai_player: dict, game: dict) -> Optional[str]:
     - Look at game history for high-similarity clues
     - Pick words similar to those clues
     - Avoid guessing own secret word
+    - Avoid guessing words that have already been guessed
     - Higher difficulty = smarter targeting
     """
     import random
@@ -2387,8 +2330,16 @@ def ai_choose_guess(ai_player: dict, game: dict) -> Optional[str]:
     my_secret = (ai_player.get("secret_word") or "").lower().strip()
     matrix = game.get('theme_similarity_matrix', {})
     
-    # Build available words (exclude own secret)
-    available_words = [w for w in theme_words if w.lower() != my_secret]
+    # Get all previously guessed words from history
+    guessed_words = set()
+    for entry in game.get('history', []):
+        word = entry.get('word', '').lower()
+        if word:
+            guessed_words.add(word)
+    
+    # Build available words (exclude own secret and already guessed words)
+    available_words = [w for w in theme_words 
+                       if w.lower() != my_secret and w.lower() not in guessed_words]
     if not available_words:
         return None
     
@@ -2439,25 +2390,34 @@ def ai_change_word(ai_player: dict, game: dict) -> Optional[str]:
     """AI chooses a new secret word after eliminating someone.
     
     If the AI's original word pool is exhausted, regenerate a fresh sample from the theme.
-    Only exclude current secret words of OTHER players - guessed words and previous secret words are allowed.
+    Excludes current secret words of OTHER players AND previously guessed words.
     """
     import random
     
-    # Get current secret words of OTHER players (these are the only words we must exclude)
+    # Get current secret words of OTHER players
     current_secrets = set()
     ai_id = ai_player.get("id")
     for p in game.get("players", []):
         if p.get("id") != ai_id and p.get("secret_word"):
             current_secrets.add(p["secret_word"].lower())
     
-    # First try: use AI's existing word pool, filtered to exclude current secrets
+    # Get all previously guessed words from history
+    guessed_words = set()
+    for entry in game.get('history', []):
+        word = entry.get('word', '').lower()
+        if word:
+            guessed_words.add(word)
+    
+    # First try: use AI's existing word pool, filtered to exclude current secrets and guessed words
     word_pool = ai_player.get("word_pool", [])
-    available_words = [w for w in word_pool if w.lower() not in current_secrets]
+    available_words = [w for w in word_pool 
+                       if w.lower() not in current_secrets and w.lower() not in guessed_words]
     
     # If pool exhausted, regenerate from theme
     if not available_words:
         all_theme_words = (game.get("theme", {}) or {}).get("words", [])
-        available_words = [w for w in all_theme_words if w.lower() not in current_secrets]
+        available_words = [w for w in all_theme_words 
+                          if w.lower() not in current_secrets and w.lower() not in guessed_words]
         
         # Update AI's word pool with a fresh sample
         if len(available_words) > WORDS_PER_PLAYER:
@@ -2578,12 +2538,21 @@ def process_ai_word_change(game: dict, ai_player: dict) -> bool:
             if p.get("id") != ai_id and p.get("secret_word"):
                 current_secrets.add(p["secret_word"].lower())
         
-        available_words = [w for w in word_pool if w.lower() not in current_secrets]
+        # Get all previously guessed words from history
+        guessed_words = set()
+        for entry in game.get('history', []):
+            word = entry.get('word', '').lower()
+            if word:
+                guessed_words.add(word)
+        
+        available_words = [w for w in word_pool 
+                          if w.lower() not in current_secrets and w.lower() not in guessed_words]
         
         # If pool exhausted, regenerate from theme
         if not available_words:
             all_theme_words = (game.get("theme", {}) or {}).get("words", [])
-            available_words = [w for w in all_theme_words if w.lower() not in current_secrets]
+            available_words = [w for w in all_theme_words 
+                              if w.lower() not in current_secrets and w.lower() not in guessed_words]
             if len(available_words) > WORDS_PER_PLAYER:
                 new_pool = random.sample(available_words, WORDS_PER_PLAYER)
                 ai_player["word_pool"] = sorted(new_pool)
@@ -4142,9 +4111,8 @@ def build_word_change_options(player: dict, game: dict) -> list:
     """
     Build a random sample of words offered when a player earns a word change.
     
-    Generates a fresh sample of WORD_CHANGE_SAMPLE_SIZE (10) words from the full theme (120 words).
-    Only excludes current secret words of OTHER players.
-    Previously guessed words and previous secret words are allowed.
+    Generates a fresh sample of WORD_CHANGE_SAMPLE_SIZE words from the full theme.
+    Excludes current secret words of OTHER players AND previously guessed words.
     """
     import random
     
@@ -4156,15 +4124,23 @@ def build_word_change_options(player: dict, game: dict) -> list:
         current = player.get('secret_word')
         return [current] if current else []
     
-    # Get current secret words of OTHER players (only these are excluded)
+    # Get current secret words of OTHER players
     player_id = player.get('id')
     current_secrets = set()
     for p in game.get('players', []):
         if p.get('id') != player_id and p.get('secret_word'):
             current_secrets.add(p['secret_word'].lower())
     
-    # Filter to exclude only current secrets of other players
-    available = [w for w in all_theme_words if w.lower() not in current_secrets]
+    # Get all previously guessed words from history
+    guessed_words = set()
+    for entry in game.get('history', []):
+        word = entry.get('word', '').lower()
+        if word:
+            guessed_words.add(word)
+    
+    # Filter to exclude current secrets of other players AND guessed words
+    available = [w for w in all_theme_words 
+                 if w.lower() not in current_secrets and w.lower() not in guessed_words]
     
     if not available:
         # Fallback: allow keeping current word
@@ -5305,14 +5281,6 @@ class handler(BaseHTTPRequestHandler):
                     # Placeholder for future asset-based SFX (frontend currently uses WebAudio tones).
                     "sfx": sfx_cfg,
                 }
-            })
-
-        # GET /api/themes/today - Get current rotation's available themes
-        if path == '/api/themes/today':
-            themes_current = get_themes_for_current_rotation()
-            return self._send_json({
-                "themes": themes_current,
-                "count": len(themes_current),
             })
 
         # ============== DEBUG (ADMIN ONLY) ==============
@@ -7341,12 +7309,8 @@ class handler(BaseHTTPRequestHandler):
             if player_word_pool and secret_word.lower() not in [w.lower() for w in player_word_pool]:
                 return self._send_error("Please choose a word from your word pool", 400)
             
-            # Embedding should already be cached from /start - just verify it exists
-            try:
-                get_embedding(secret_word)  # Will hit cache; raises if word processing fails
-            except Exception as e:
-                print(f"Embedding error for set-word: {e}")  # Log server-side only
-                return self._send_error("Word processing service unavailable. Please try again.", 503)
+            # Word is from player's pool, which came from theme words pre-cached in /start
+            # No need to verify embedding exists - it's guaranteed to be in cache
             
             player['secret_word'] = secret_word.lower()
             # NOTE: We don't store secret_embedding anymore - it's in Redis cache as emb:{word}
