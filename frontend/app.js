@@ -2885,12 +2885,8 @@ function updateQueueCountDisplay(mode, count) {
     const el = document.getElementById(elementId);
     if (!el) return;
     
-    if (count > 0) {
-        el.textContent = `${count} in queue`;
-        el.classList.remove('hidden');
-    } else {
-        el.classList.add('hidden');
-    }
+    el.textContent = count === 1 ? '1 in queue' : `${count} in queue`;
+    el.classList.remove('hidden');
 }
 
 function startQueueCountPolling() {
