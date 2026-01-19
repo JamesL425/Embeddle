@@ -67,24 +67,24 @@
     },
     "ranked": {
       "initial_time": 120,
-      "increment": 3
+      "increment": 2
     },
     "casual_presets": {
       "bullet": {
         "initial_time": 60,
-        "increment": 2
+        "increment": 1
       },
       "blitz": {
         "initial_time": 120,
-        "increment": 3
+        "increment": 2
       },
       "rapid": {
         "initial_time": 300,
-        "increment": 5
+        "increment": 3
       },
       "classical": {
         "initial_time": 600,
-        "increment": 10
+        "increment": 5
       },
       "none": {
         "initial_time": 0,
