@@ -118,10 +118,14 @@ def handle_game_action(handler, method: str, code: str, action: Optional[str], b
             return 400, {"detail": "Player ID required"}
         
         remove_player(game, player_id)
-        return 200, {"ok": True}
+        # Return full game state for immediate UI update
+        return 200, get_game_for_player(game, player_id)
     
     # POST /api/games/:code/start - Start the game (host only)
     if action == "start" and method == "POST":
+        from ..services import batch_get_embeddings
+        import threading
+        
         player_id = body.get("player_id")
         if game["host_id"] != player_id:
             return 403, {"detail": "Only host can start the game"}
@@ -136,8 +140,20 @@ def handle_game_action(handler, method: str, code: str, action: Optional[str], b
             game["current_player_id"] = game["players"][0]["id"]
             game["current_player_index"] = 0
         
+        # Pre-cache theme embeddings in background thread
+        # This warms the cache so lookups during gameplay are fast
+        theme_words = game.get('theme', {}).get('words', [])
+        if theme_words:
+            def precache_embeddings():
+                try:
+                    batch_get_embeddings(theme_words)
+                except Exception as e:
+                    print(f"Theme embedding pre-cache error (start): {e}")
+            threading.Thread(target=precache_embeddings, daemon=True).start()
+        
         save_game(code, game)
-        return 200, {"ok": True}
+        # Return full game state for immediate UI update
+        return 200, get_game_for_player(game, player_id)
     
     # POST /api/games/:code/set-word - Set secret word
     if action == "set-word" and method == "POST":
@@ -158,7 +174,8 @@ def handle_game_action(handler, method: str, code: str, action: Optional[str], b
             return 500, {"detail": f"Failed to get embedding: {str(e)}"}
         
         set_player_word(game, player_id, secret_word, embedding)
-        return 200, {"ok": True}
+        # Return full game state for immediate UI update
+        return 200, get_game_for_player(game, player_id)
     
     # POST /api/games/:code/guess - Submit a guess
     if action == "guess" and method == "POST":
@@ -215,11 +232,12 @@ def handle_game_action(handler, method: str, code: str, action: Optional[str], b
         
         save_game(code, game)
         
-        return 200, {
-            "similarities": similarities,
-            "eliminations": [{"id": eid, "name": next((p["name"] for p in game["players"] if p["id"] == eid), "Unknown")} for eid in eliminations],
-            "game_over": result is not None,
-        }
+        # Return full game state for immediate UI update
+        # Include elimination info for toast notifications
+        response = get_game_for_player(game, player_id)
+        response["eliminations"] = [{"id": eid, "name": next((p["name"] for p in game["players"] if p["id"] == eid), "Unknown")} for eid in eliminations]
+        response["game_over"] = result is not None
+        return 200, response
     
     # POST /api/games/:code/vote - Vote for theme
     if action == "vote" and method == "POST":
@@ -232,7 +250,8 @@ def handle_game_action(handler, method: str, code: str, action: Optional[str], b
         game["theme_votes"][player_id] = theme
         save_game(code, game)
         
-        return 200, {"ok": True}
+        # Return full game state for immediate UI update
+        return 200, get_game_for_player(game, player_id)
     
     return 404, {"detail": "Unknown action"}
 

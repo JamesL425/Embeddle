@@ -98,22 +98,49 @@ export async function lockWord() {
         return;
     }
     
+    // Optimistic UI update - show locked state immediately before API call
+    const wordSelectControls = document.getElementById('word-select-controls');
+    const wordLockedNotice = document.getElementById('word-locked-notice');
+    const lockedWordDisplay = document.getElementById('locked-word-display');
+    const wordOptions = document.querySelectorAll('.word-option');
+    
+    // Store original state for rollback
+    const wasControlsHidden = wordSelectControls?.classList.contains('hidden');
+    const wasNoticeHidden = wordLockedNotice?.classList.contains('hidden');
+    const originalStyles = Array.from(wordOptions).map(el => ({
+        pointerEvents: el.style.pointerEvents,
+        opacity: el.style.opacity
+    }));
+    
+    // Apply optimistic update
+    wordSelectControls?.classList.add('hidden');
+    wordLockedNotice?.classList.remove('hidden');
+    if (lockedWordDisplay) lockedWordDisplay.textContent = word.toUpperCase();
+    
+    wordOptions.forEach(el => {
+        el.style.pointerEvents = 'none';
+        if (el.dataset.word.toLowerCase() !== word.toLowerCase()) {
+            el.style.opacity = '0.3';
+        }
+    });
+    
     try {
-        await games.setWord(gameState.code, gameState.playerId, word);
+        const result = await games.setWord(gameState.code, gameState.playerId, word);
         
-        // Show locked notice
-        document.getElementById('word-select-controls').classList.add('hidden');
-        document.getElementById('word-locked-notice').classList.remove('hidden');
-        document.getElementById('locked-word-display').textContent = word.toUpperCase();
-        
-        // Disable word selection
-        document.querySelectorAll('.word-option').forEach(el => {
-            el.style.pointerEvents = 'none';
-            if (el.dataset.word.toLowerCase() !== word.toLowerCase()) {
-                el.style.opacity = '0.3';
-            }
-        });
+        // Use returned game state for immediate UI update (no waiting for poll)
+        if (result.players) {
+            updateStatus(result);
+        }
     } catch (error) {
+        // Rollback optimistic update on error
+        if (!wasControlsHidden) wordSelectControls?.classList.remove('hidden');
+        if (wasNoticeHidden) wordLockedNotice?.classList.add('hidden');
+        
+        wordOptions.forEach((el, i) => {
+            el.style.pointerEvents = originalStyles[i].pointerEvents;
+            el.style.opacity = originalStyles[i].opacity;
+        });
+        
         showError(error.message);
     }
 }
@@ -162,7 +189,8 @@ export function init() {
     // Begin game button (host only)
     document.getElementById('begin-game-btn')?.addEventListener('click', async () => {
         try {
-            await games.begin(gameState.code, gameState.playerId);
+            const result = await games.begin(gameState.code, gameState.playerId);
+            // Game state returned will trigger screen transition via main.js handleGameUpdate
         } catch (error) {
             showError(error.message);
         }
