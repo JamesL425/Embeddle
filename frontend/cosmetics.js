@@ -369,7 +369,13 @@ function getBadgeHtml(cosmetics) {
         dragon: '🐉',
         infinity: '♾️',
     };
-    return badges[cosmetics.badge] ? `<span class="player-badge">${badges[cosmetics.badge]}</span>` : '';
+    if (!badges[cosmetics.badge]) return '';
+    
+    // Special styling for admin infinity badge
+    if (cosmetics.badge === 'infinity') {
+        return `<span class="player-badge player-badge-infinity">${badges[cosmetics.badge]}</span>`;
+    }
+    return `<span class="player-badge">${badges[cosmetics.badge]}</span>`;
 }
 
 function getTitleHtml(cosmetics) {
@@ -538,6 +544,7 @@ function createAuroraEffect(container) {
 function createBigBangEffect(container) {
     container.innerHTML = '';
     
+    // Initial blinding flash
     const flash = document.createElement('div');
     flash.style.cssText = `
         position: absolute;
@@ -547,18 +554,42 @@ function createBigBangEffect(container) {
         bottom: 0;
         background: #ffffff;
         opacity: 0;
-        animation: bigBangFlash 0.5s ease-out forwards;
+        animation: bigBangFlash 0.8s ease-out forwards;
         z-index: 100;
     `;
     container.appendChild(flash);
     
+    // Singularity core - the point of creation
+    setTimeout(() => {
+        const singularity = document.createElement('div');
+        singularity.className = 'big-bang-singularity';
+        container.appendChild(singularity);
+    }, 100);
+    
+    // Main expanding universe
     setTimeout(() => {
         const bang = document.createElement('div');
         bang.className = 'big-bang-effect';
         container.appendChild(bang);
     }, 200);
     
-    const ringColors = ['#ffffff', '#ffd700', '#ff8c00', '#ff4500', '#ff00ff', '#00ffff', '#0000ff'];
+    // Cosmic strings - energy lines radiating outward
+    const stringCount = 24;
+    for (let i = 0; i < stringCount; i++) {
+        setTimeout(() => {
+            const string = document.createElement('div');
+            string.className = 'big-bang-string';
+            const angle = (360 / stringCount) * i;
+            const length = 200 + Math.random() * 400;
+            string.style.setProperty('--angle', `${angle}deg`);
+            string.style.setProperty('--length', `${length}px`);
+            string.style.setProperty('--delay', `${Math.random() * 0.3}s`);
+            container.appendChild(string);
+        }, 300 + i * 20);
+    }
+    
+    // Expanding ring shockwaves
+    const ringColors = ['#ffffff', '#ffd700', '#ff8c00', '#ff4500', '#ff00ff', '#8b00ff', '#00ffff', '#0066ff'];
     for (let i = 0; i < ringColors.length; i++) {
         setTimeout(() => {
             const ring = document.createElement('div');
@@ -569,49 +600,231 @@ function createBigBangEffect(container) {
                 width: 10px;
                 height: 10px;
                 border-radius: 50%;
-                border: 4px solid ${ringColors[i]};
+                border: ${4 - i * 0.3}px solid ${ringColors[i]};
                 transform: translate(-50%, -50%);
-                animation: bigBangRing 2.5s ease-out forwards;
+                animation: bigBangRing ${2.5 + i * 0.2}s ease-out forwards;
                 box-shadow: 0 0 20px ${ringColors[i]}, inset 0 0 20px ${ringColors[i]};
+                opacity: ${1 - i * 0.08};
             `;
             container.appendChild(ring);
-        }, 300 + i * 150);
+        }, 300 + i * 120);
     }
     
+    // Galaxy spiral particles
     setTimeout(() => {
-        const particleColors = ['#ffffff', '#ffd700', '#ff00ff', '#00ffff', '#ff4500', '#00ff00'];
-        for (let i = 0; i < 200; i++) {
-            const star = document.createElement('div');
-            const color = particleColors[Math.floor(Math.random() * particleColors.length)];
+        const galaxyColors = ['#ffffff', '#ffd700', '#ff00ff', '#00ffff', '#ff4500', '#00ff88', '#ff66aa'];
+        const particleCount = 150;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'big-bang-galaxy-particle';
+            const color = galaxyColors[Math.floor(Math.random() * galaxyColors.length)];
             const size = 2 + Math.random() * 6;
-            const angle = Math.random() * Math.PI * 2;
-            const distance = 100 + Math.random() * 400;
-            const duration = 1.5 + Math.random() * 2;
+            const rotation = 360 + Math.random() * 1080; // 1-3 full rotations
+            const distance = 100 + Math.random() * 500;
+            const duration = 2 + Math.random() * 2;
+            const delay = Math.random() * 0.5;
             
-            star.style.cssText = `
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                width: ${size}px;
-                height: ${size}px;
-                border-radius: 50%;
-                background: ${color};
-                box-shadow: 0 0 ${size * 2}px ${color};
-                transform: translate(-50%, -50%);
-                --tx: ${Math.cos(angle) * distance}px;
-                --ty: ${Math.sin(angle) * distance}px;
-                animation: bigBangStar ${duration}s ease-out forwards;
-                animation-delay: ${Math.random() * 0.3}s;
-            `;
-            container.appendChild(star);
+            particle.style.setProperty('--color', color);
+            particle.style.setProperty('--size', `${size}px`);
+            particle.style.setProperty('--rotation', `${rotation}deg`);
+            particle.style.setProperty('--distance', `${distance}px`);
+            particle.style.setProperty('--duration', `${duration}s`);
+            particle.style.setProperty('--delay', `${delay}s`);
+            
+            container.appendChild(particle);
+        }
+    }, 500);
+    
+    // Nebula clouds forming
+    setTimeout(() => {
+        const nebulaColors = [
+            'rgba(138, 43, 226, 0.5)',  // Purple
+            'rgba(0, 255, 255, 0.4)',    // Cyan
+            'rgba(255, 0, 128, 0.4)',    // Pink
+            'rgba(0, 100, 255, 0.4)',    // Blue
+            'rgba(255, 100, 0, 0.3)',    // Orange
+        ];
+        
+        for (let i = 0; i < nebulaColors.length; i++) {
+            const nebula = document.createElement('div');
+            nebula.className = 'big-bang-nebula';
+            nebula.style.setProperty('--nebula-color', nebulaColors[i]);
+            nebula.style.setProperty('--rotation', `${i * 72}deg`);
+            nebula.style.setProperty('--duration', `${3 + i * 0.5}s`);
+            nebula.style.setProperty('--delay', `${0.8 + i * 0.2}s`);
+            nebula.style.setProperty('--final-size', `${300 + i * 100}px`);
+            container.appendChild(nebula);
         }
     }, 600);
     
-    setTimeout(() => container.innerHTML = '', 5000);
+    // Star formation at the end - new stars being born
+    setTimeout(() => {
+        const starColors = ['#ffffff', '#ffd700', '#ff88aa', '#88ffff', '#ffaa44'];
+        const starCount = 80;
+        
+        for (let i = 0; i < starCount; i++) {
+            const star = document.createElement('div');
+            star.className = 'big-bang-star';
+            const color = starColors[Math.floor(Math.random() * starColors.length)];
+            const size = 2 + Math.random() * 5;
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 50 + Math.random() * 400;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance;
+            const duration = 2 + Math.random() * 1.5;
+            const delay = Math.random() * 0.8;
+            
+            star.style.setProperty('--color', color);
+            star.style.setProperty('--size', `${size}px`);
+            star.style.setProperty('--tx', `${tx}px`);
+            star.style.setProperty('--ty', `${ty}px`);
+            star.style.setProperty('--duration', `${duration}s`);
+            star.style.setProperty('--delay', `${delay}s`);
+            
+            container.appendChild(star);
+        }
+    }, 1200);
+    
+    // Final cosmic dust settling
+    setTimeout(() => {
+        const dustCount = 100;
+        for (let i = 0; i < dustCount; i++) {
+            const dust = document.createElement('div');
+            const size = 1 + Math.random() * 3;
+            const x = Math.random() * 100;
+            const y = Math.random() * 100;
+            const opacity = 0.3 + Math.random() * 0.5;
+            const duration = 3 + Math.random() * 2;
+            
+            dust.style.cssText = `
+                position: absolute;
+                left: ${x}%;
+                top: ${y}%;
+                width: ${size}px;
+                height: ${size}px;
+                background: #ffffff;
+                border-radius: 50%;
+                opacity: 0;
+                animation: cosmicDustSettle ${duration}s ease-out forwards;
+                box-shadow: 0 0 ${size * 2}px rgba(255, 255, 255, ${opacity});
+            `;
+            container.appendChild(dust);
+        }
+    }, 2000);
+    
+    setTimeout(() => container.innerHTML = '', 7000);
+}
+
+// Add the cosmic dust settle animation via JS (since it's dynamic)
+if (!document.getElementById('big-bang-dynamic-styles')) {
+    const style = document.createElement('style');
+    style.id = 'big-bang-dynamic-styles';
+    style.textContent = `
+        @keyframes cosmicDustSettle {
+            0% { opacity: 0; transform: scale(0); }
+            30% { opacity: 1; transform: scale(1.5); }
+            100% { opacity: 0; transform: scale(0.5); }
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 // Initialize cosmetics
 loadCosmeticsCatalog();
+
+// ============ GODFRAME PARTICLE SYSTEM ============
+// Spawns celestial particles around godframe borders
+
+let godframeParticleInterval = null;
+
+function initGodframeParticles() {
+    // Clear any existing interval
+    if (godframeParticleInterval) {
+        clearInterval(godframeParticleInterval);
+    }
+    
+    // Check for godframe cards periodically and spawn particles
+    godframeParticleInterval = setInterval(() => {
+        const godframeCards = document.querySelectorAll('.player-card.border-godframe');
+        godframeCards.forEach(card => {
+            // Only spawn if not too many particles already
+            const existingParticles = card.querySelectorAll('.godframe-particle');
+            if (existingParticles.length < 12) {
+                spawnGodframeParticle(card);
+            }
+        });
+    }, 400);
+}
+
+function spawnGodframeParticle(card) {
+    const particle = document.createElement('div');
+    particle.className = 'godframe-particle';
+    
+    // Random position around the card edges
+    const side = Math.floor(Math.random() * 4);
+    const rect = card.getBoundingClientRect();
+    let x, y;
+    
+    switch (side) {
+        case 0: // top
+            x = Math.random() * 100;
+            y = -10;
+            break;
+        case 1: // right
+            x = 105;
+            y = Math.random() * 100;
+            break;
+        case 2: // bottom
+            x = Math.random() * 100;
+            y = 105;
+            break;
+        case 3: // left
+            x = -5;
+            y = Math.random() * 100;
+            break;
+    }
+    
+    // Movement direction - float upward and slightly to the side
+    const startX = `${x}%`;
+    const startY = `${y}%`;
+    const endX = `${x + (Math.random() - 0.5) * 30}%`;
+    const endY = `${y - 20 - Math.random() * 30}%`;
+    
+    const duration = 2 + Math.random() * 2;
+    const delay = Math.random() * 0.5;
+    const opacity = 0.6 + Math.random() * 0.4;
+    const size = 3 + Math.random() * 4;
+    
+    particle.style.cssText = `
+        position: absolute;
+        left: ${startX};
+        top: ${startY};
+        width: ${size}px;
+        height: ${size}px;
+        --start-x: 0;
+        --start-y: 0;
+        --end-x: ${(Math.random() - 0.5) * 40}px;
+        --end-y: ${-30 - Math.random() * 40}px;
+        --duration: ${duration}s;
+        --delay: ${delay}s;
+        --opacity: ${opacity};
+    `;
+    
+    card.appendChild(particle);
+    
+    // Remove after animation completes
+    setTimeout(() => {
+        particle.remove();
+    }, (duration + delay) * 1000);
+}
+
+// Start the particle system when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGodframeParticles);
+} else {
+    initGodframeParticles();
+}
 
 // Preview/test harness
 document.getElementById('cosmetics-test-turn')?.addEventListener('click', () => {

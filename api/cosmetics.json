@@ -184,7 +184,7 @@
   "profile_avatars": {
     "default": {
       "name": "Default",
-      "description": "Use your Google profile picture",
+      "description": "Default placeholder avatar",
       "premium": false,
       "icon": "👤"
     },

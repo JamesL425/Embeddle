@@ -94,7 +94,6 @@ class TokenPayload:
     sub: str  # User ID
     email: str
     name: str
-    avatar: str
     iat: int  # Issued at
     exp: int  # Expiry
     jti: str  # JWT ID (for revocation)
@@ -104,7 +103,6 @@ class TokenPayload:
             'sub': self.sub,
             'email': self.email,
             'name': self.name,
-            'avatar': self.avatar,
             'iat': self.iat,
             'exp': self.exp,
             'jti': self.jti,
@@ -116,7 +114,7 @@ def create_jwt_token(user_data: Dict[str, Any], custom_expiry_hours: Optional[in
     Create a JWT token for authenticated user.
     
     Args:
-        user_data: Dict with 'id', 'email', 'name', 'avatar' keys
+        user_data: Dict with 'id', 'email', 'name' keys
         custom_expiry_hours: Optional custom expiry (default: JWT_EXPIRY_HOURS)
     
     Returns:
@@ -132,7 +130,6 @@ def create_jwt_token(user_data: Dict[str, Any], custom_expiry_hours: Optional[in
         'sub': user_data['id'],
         'email': user_data.get('email', ''),
         'name': user_data.get('name', ''),
-        'avatar': user_data.get('avatar', ''),
         'iat': now,
         'exp': now + (expiry_hours * 3600),
         'jti': jti,
@@ -197,7 +194,6 @@ def refresh_jwt_token(token: str) -> Optional[str]:
         'id': payload.get('sub'),
         'email': payload.get('email', ''),
         'name': payload.get('name', ''),
-        'avatar': payload.get('avatar', ''),
     }
     
     return create_jwt_token(user_data)
@@ -260,7 +256,6 @@ class AuthenticatedUser:
     id: str
     email: str
     name: str
-    avatar: str
     is_admin: bool
     token_payload: Dict[str, Any]
 
@@ -295,7 +290,6 @@ def get_current_user(headers: Dict[str, str]) -> Optional[AuthenticatedUser]:
         id=user_id,
         email=email,
         name=payload.get('name', ''),
-        avatar=payload.get('avatar', ''),
         is_admin=is_admin,
         token_payload=payload,
     )

@@ -233,7 +233,7 @@ def create_user_jwt(user_data: Dict[str, Any]) -> str:
     Create JWT token for authenticated user.
     
     Args:
-        user_data: Dict with 'id', 'email', 'name', 'avatar' keys
+        user_data: Dict with 'id', 'email', 'name' keys
         
     Returns:
         Encoded JWT token string
@@ -429,7 +429,6 @@ def _handle_oauth_callback(
     email = user_info.get('email', '').lower()
     google_id = user_info.get('id', '')
     name = user_info.get('name', email.split('@')[0])
-    avatar = user_info.get('picture', '')
     
     if not email:
         log_auth_failure(client_ip, "no_email")
@@ -439,12 +438,11 @@ def _handle_oauth_callback(
     user = get_user_by_email(email)
     
     if not user:
-        # Create new user
+        # Create new user (no Google avatar stored)
         user = {
             'id': google_id,
             'email': email,
             'name': name,
-            'avatar': avatar,
             'created_at': int(time.time()),
             'stats': {},
             'cosmetics': {},
@@ -454,17 +452,15 @@ def _handle_oauth_callback(
     else:
         # Update existing user
         user['name'] = name
-        user['avatar'] = avatar
         user['last_login'] = int(time.time())
     
     save_user(user)
     
-    # Create JWT
+    # Create JWT (no avatar in token)
     jwt_token = create_user_jwt({
         'id': user['id'],
         'email': email,
         'name': name,
-        'avatar': avatar,
     })
     
     log_auth_success(client_ip, user['id'], 'google')
@@ -512,7 +508,6 @@ def _handle_get_current_user(headers: Dict[str, str]) -> Tuple[int, Any]:
         'id': user['id'],
         'email': user.get('email', ''),
         'name': user.get('name', ''),
-        'avatar': user.get('avatar', ''),
         'is_admin': is_admin,
         'is_donor': user.get('is_donor', False),
         'stats': user.get('stats', {}),

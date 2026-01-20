@@ -1091,11 +1091,10 @@ function setLoggedInWithAuth(user) {
     // Update topbar toggle username for mobile collapsed state
     updateTopbarState();
     
-    // Show avatar if available
+    // Hide user avatar element (we don't use Google profile photos)
     const avatarEl = document.getElementById('user-avatar');
-    if (avatarEl && user.avatar) {
-        avatarEl.src = user.avatar;
-        avatarEl.classList.remove('hidden');
+    if (avatarEl) {
+        avatarEl.classList.add('hidden');
     }
     
     // Load user cosmetics
@@ -1774,12 +1773,8 @@ async function openProfileModal(playerName) {
             }
             avatarEl.classList.add('hidden');
             placeholderEl.classList.add('hidden');
-        } else if (data.avatar) {
-            avatarEl.src = data.avatar;
-            avatarEl.classList.remove('hidden');
-            placeholderEl.classList.add('hidden');
-            if (emojiAvatarEl) emojiAvatarEl.classList.add('hidden');
         } else {
+            // No custom avatar - show placeholder (no Google avatar)
             avatarEl.classList.add('hidden');
             placeholderEl.classList.remove('hidden');
             if (emojiAvatarEl) emojiAvatarEl.classList.add('hidden');
@@ -2213,16 +2208,10 @@ async function selectAvatar(avatarId) {
             const placeholderEl = document.getElementById('profile-avatar-placeholder');
             
             if (avatarId === 'default') {
-                // Show Google avatar or placeholder
+                // Show placeholder (no Google avatar)
                 if (emojiAvatarEl) emojiAvatarEl.classList.add('hidden');
-                if (gameState.authUser?.avatar) {
-                    avatarEl.src = gameState.authUser.avatar;
-                    avatarEl.classList.remove('hidden');
-                    placeholderEl.classList.add('hidden');
-                } else {
-                    avatarEl.classList.add('hidden');
-                    placeholderEl.classList.remove('hidden');
-                }
+                avatarEl.classList.add('hidden');
+                placeholderEl.classList.remove('hidden');
             } else {
                 // Show emoji avatar
                 const icon = avatarPickerCatalog?.[avatarId]?.icon || '👤';

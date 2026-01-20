@@ -118,7 +118,13 @@ export function getBadgeHtml(cosmetics) {
         // Legacy v1 IDs
         heart: '❤️', crown: '👑', lightning: '⚡', flame: '🔥'
     };
-    return badges[cosmetics.badge] ? `<span class="player-badge">${badges[cosmetics.badge]}</span>` : '';
+    if (!badges[cosmetics.badge]) return '';
+    
+    // Special styling for admin infinity badge
+    if (cosmetics.badge === 'infinity') {
+        return `<span class="player-badge player-badge-infinity">${badges[cosmetics.badge]}</span>`;
+    }
+    return `<span class="player-badge">${badges[cosmetics.badge]}</span>`;
 }
 
 /**

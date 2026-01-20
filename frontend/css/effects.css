@@ -1567,79 +1567,152 @@ body[data-particles="runes"]::before {
     50% { box-shadow: 0 0 50px rgba(255, 215, 0, 0.8), 0 0 80px rgba(255, 255, 255, 0.5); }
 }
 
-/* Card Borders - Legendary Admin */
+/* Card Borders - Legendary Admin: GODFRAME */
+/* The ultimate divine border - radiates celestial power with orbiting particles */
 .player-card.border-godframe {
     border: 3px solid transparent;
     background: 
         linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
-        linear-gradient(45deg, #ffd700, #ffffff, #ffd700, #ff8c00, #ffd700) border-box;
-    background-size: 100% 100%, 400% 400%;
+        conic-gradient(from var(--godframe-angle, 0deg) at 50% 50%, 
+            #ffd700, #ffffff, #ffeaa7, #f39c12, #ffd700, 
+            #ffffff, #ffd700, #f1c40f, #ffffff, #ffd700) border-box;
+    background-size: 100% 100%, 100% 100%;
     box-shadow: 
-        0 0 30px rgba(255, 215, 0, 0.8),
+        0 0 20px rgba(255, 215, 0, 0.9),
+        0 0 40px rgba(255, 215, 0, 0.6),
         0 0 60px rgba(255, 215, 0, 0.4),
-        0 0 90px rgba(255, 255, 255, 0.3),
-        inset 0 0 30px rgba(255, 215, 0, 0.2);
-    animation: godframeAura 3s ease-in-out infinite, godframeBorderFlow 4s linear infinite;
+        0 0 80px rgba(255, 255, 255, 0.3),
+        0 0 120px rgba(255, 215, 0, 0.2),
+        inset 0 0 25px rgba(255, 215, 0, 0.15);
+    animation: 
+        godframeAura 2.5s ease-in-out infinite,
+        godframeBorderSpin 8s linear infinite;
     position: relative;
     overflow: visible;
+    z-index: 1;
 }
 
+/* Divine halo - outer ethereal glow */
 .player-card.border-godframe::before {
     content: '';
     position: absolute;
-    top: -10px;
-    left: -10px;
-    right: -10px;
-    bottom: -10px;
-    background: radial-gradient(ellipse at center, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
-    animation: godframeHalo 2s ease-in-out infinite;
+    top: -20px;
+    left: -20px;
+    right: -20px;
+    bottom: -20px;
+    background: 
+        radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.4) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 100%, rgba(255, 215, 0, 0.3) 0%, transparent 50%),
+        radial-gradient(ellipse at 0% 50%, rgba(255, 200, 100, 0.2) 0%, transparent 40%),
+        radial-gradient(ellipse at 100% 50%, rgba(255, 200, 100, 0.2) 0%, transparent 40%),
+        radial-gradient(circle at center, rgba(255, 215, 0, 0.25) 0%, transparent 60%);
+    animation: godframeHalo 3s ease-in-out infinite;
     pointer-events: none;
     z-index: -1;
+    border-radius: inherit;
 }
 
+/* Celestial ornaments - divine symbols orbiting the card */
 .player-card.border-godframe::after {
-    content: '✦';
+    content: '✦ ✧ ✦ ✧';
     position: absolute;
-    top: -8px;
-    right: -8px;
-    font-size: 16px;
+    top: 50%;
+    left: 50%;
+    width: 200%;
+    height: 200%;
+    font-size: 14px;
     color: #ffd700;
-    text-shadow: 0 0 10px #ffd700, 0 0 20px #ffffff;
-    animation: godframeStar 1.5s ease-in-out infinite;
+    text-shadow: 
+        0 0 8px #ffd700, 
+        0 0 16px #ffffff,
+        0 0 24px rgba(255, 215, 0, 0.8);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    transform: translate(-50%, -50%);
+    animation: godframeOrbit 12s linear infinite;
+    pointer-events: none;
+    z-index: 10;
+    letter-spacing: 60px;
+    opacity: 0.9;
 }
 
 @keyframes godframeAura {
     0%, 100% { 
         box-shadow: 
-            0 0 30px rgba(255, 215, 0, 0.8),
+            0 0 20px rgba(255, 215, 0, 0.9),
+            0 0 40px rgba(255, 215, 0, 0.6),
             0 0 60px rgba(255, 215, 0, 0.4),
-            0 0 90px rgba(255, 255, 255, 0.3),
-            inset 0 0 30px rgba(255, 215, 0, 0.2);
-        filter: brightness(1);
+            0 0 80px rgba(255, 255, 255, 0.3),
+            0 0 120px rgba(255, 215, 0, 0.2),
+            inset 0 0 25px rgba(255, 215, 0, 0.15);
+        filter: brightness(1) saturate(1);
     }
     50% { 
         box-shadow: 
-            0 0 50px rgba(255, 215, 0, 1),
-            0 0 100px rgba(255, 215, 0, 0.6),
-            0 0 150px rgba(255, 255, 255, 0.5),
-            inset 0 0 50px rgba(255, 215, 0, 0.4);
-        filter: brightness(1.15);
+            0 0 35px rgba(255, 215, 0, 1),
+            0 0 70px rgba(255, 215, 0, 0.8),
+            0 0 100px rgba(255, 215, 0, 0.5),
+            0 0 140px rgba(255, 255, 255, 0.4),
+            0 0 180px rgba(255, 215, 0, 0.3),
+            inset 0 0 40px rgba(255, 215, 0, 0.25);
+        filter: brightness(1.1) saturate(1.1);
     }
 }
 
-@keyframes godframeBorderFlow {
-    0% { background-position: 100% 100%, 0% 50%; }
-    100% { background-position: 100% 100%, 400% 50%; }
+@keyframes godframeBorderSpin {
+    0% { --godframe-angle: 0deg; }
+    100% { --godframe-angle: 360deg; }
+}
+
+/* Register the custom property for animation */
+@property --godframe-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
 }
 
 @keyframes godframeHalo {
-    0%, 100% { opacity: 0.5; transform: scale(1); }
-    50% { opacity: 0.8; transform: scale(1.1); }
+    0%, 100% { 
+        opacity: 0.6; 
+        transform: scale(1);
+        filter: blur(0px);
+    }
+    50% { 
+        opacity: 0.9; 
+        transform: scale(1.05);
+        filter: blur(2px);
+    }
 }
 
-@keyframes godframeStar {
-    0%, 100% { transform: rotate(0deg) scale(1); opacity: 1; }
-    50% { transform: rotate(180deg) scale(1.3); opacity: 0.7; }
+@keyframes godframeOrbit {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Godframe particles - spawned via JS but styled here */
+.godframe-particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: radial-gradient(circle, #ffffff 0%, #ffd700 50%, transparent 100%);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: godframeParticleFloat var(--duration, 3s) ease-in-out infinite;
+    animation-delay: var(--delay, 0s);
+    opacity: var(--opacity, 0.8);
+    box-shadow: 0 0 6px #ffd700, 0 0 12px rgba(255, 215, 0, 0.5);
+}
+
+@keyframes godframeParticleFloat {
+    0%, 100% {
+        transform: translate(var(--start-x, 0), var(--start-y, 0)) scale(1);
+        opacity: var(--opacity, 0.8);
+    }
+    50% {
+        transform: translate(var(--end-x, 10px), var(--end-y, -20px)) scale(1.5);
+        opacity: 1;
+    }
 }
 
 /* Card Backgrounds - Expensive Shop */
@@ -1750,39 +1823,116 @@ body[data-particles="runes"]::before {
     50% { text-shadow: 0 0 20px #ffffff, 0 0 40px #ffd700, 0 0 60px #ff8c00, 0 0 80px #ff4500; }
 }
 
-/* Name Colors - Legendary Admin */
+/* Name Colors - Legendary Admin: OMNISCIENT */
+/* The all-seeing cosmic name - pulses with universal knowledge */
 .name.name-omniscient {
     background: linear-gradient(90deg, 
-        #ff00ff, #00ffff, #ffd700, #ff00ff, #00ff00, #ff0000, #00ffff, #ff00ff);
-    background-size: 800% 100%;
+        #ff00ff, #00ffff, #ffd700, #ff00ff, 
+        #00ff88, #ff3366, #00ffff, #ffd700, #ff00ff);
+    background-size: 1000% 100%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    animation: omniscientShift 6s linear infinite;
-    filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.6)) drop-shadow(0 0 15px rgba(0, 255, 255, 0.4));
+    animation: 
+        omniscientShift 8s linear infinite,
+        omniscientPulse 2s ease-in-out infinite;
+    filter: 
+        drop-shadow(0 0 4px rgba(255, 0, 255, 0.8))
+        drop-shadow(0 0 8px rgba(0, 255, 255, 0.6))
+        drop-shadow(0 0 12px rgba(255, 215, 0, 0.4));
     position: relative;
+    font-weight: bold;
+    letter-spacing: 0.5px;
 }
 
+/* The All-Seeing Eye - mystical eye icon before the name */
 .name.name-omniscient::before {
     content: '👁';
     position: absolute;
-    left: -20px;
+    left: -24px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 0.8em;
-    animation: omniscientEye 2s ease-in-out infinite;
-    filter: drop-shadow(0 0 5px rgba(255, 0, 255, 0.8));
+    font-size: 0.9em;
+    animation: omniscientEye 3s ease-in-out infinite;
+    filter: 
+        drop-shadow(0 0 6px rgba(255, 0, 255, 1))
+        drop-shadow(0 0 12px rgba(0, 255, 255, 0.8));
     -webkit-text-fill-color: initial;
+}
+
+/* Cosmic trail after the name */
+.name.name-omniscient::after {
+    content: '✧';
+    position: absolute;
+    right: -18px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7em;
+    color: #00ffff;
+    animation: omniscientTrail 2s ease-in-out infinite;
+    -webkit-text-fill-color: initial;
+    text-shadow: 
+        0 0 8px #00ffff,
+        0 0 16px #ff00ff;
 }
 
 @keyframes omniscientShift {
     0% { background-position: 0% 50%; }
-    100% { background-position: 800% 50%; }
+    100% { background-position: 1000% 50%; }
+}
+
+@keyframes omniscientPulse {
+    0%, 100% { 
+        filter: 
+            drop-shadow(0 0 4px rgba(255, 0, 255, 0.8))
+            drop-shadow(0 0 8px rgba(0, 255, 255, 0.6))
+            drop-shadow(0 0 12px rgba(255, 215, 0, 0.4));
+        transform: scale(1);
+    }
+    50% { 
+        filter: 
+            drop-shadow(0 0 8px rgba(255, 0, 255, 1))
+            drop-shadow(0 0 16px rgba(0, 255, 255, 0.8))
+            drop-shadow(0 0 24px rgba(255, 215, 0, 0.6));
+        transform: scale(1.02);
+    }
 }
 
 @keyframes omniscientEye {
-    0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
-    50% { opacity: 0.6; transform: translateY(-50%) scale(1.2); }
+    0%, 100% { 
+        opacity: 1; 
+        transform: translateY(-50%) scale(1);
+        filter: 
+            drop-shadow(0 0 6px rgba(255, 0, 255, 1))
+            drop-shadow(0 0 12px rgba(0, 255, 255, 0.8));
+    }
+    25% {
+        opacity: 0.7;
+        transform: translateY(-50%) scale(0.9);
+    }
+    50% { 
+        opacity: 1; 
+        transform: translateY(-50%) scale(1.15);
+        filter: 
+            drop-shadow(0 0 10px rgba(255, 0, 255, 1))
+            drop-shadow(0 0 20px rgba(0, 255, 255, 1))
+            drop-shadow(0 0 30px rgba(255, 215, 0, 0.8));
+    }
+    75% {
+        opacity: 0.8;
+        transform: translateY(-50%) scale(1.05);
+    }
+}
+
+@keyframes omniscientTrail {
+    0%, 100% {
+        opacity: 0.6;
+        transform: translateY(-50%) rotate(0deg);
+    }
+    50% {
+        opacity: 1;
+        transform: translateY(-50%) rotate(180deg) scale(1.2);
+    }
 }
 
 /* Elimination Effects - Expensive Shop */
@@ -2038,7 +2188,8 @@ body[data-particles="runes"]::before {
     100% { opacity: 0; transform: translate(-50%, -150%) scale(1.5); }
 }
 
-/* Victory Effects - Legendary Admin */
+/* Victory Effects - Legendary Admin: BIG BANG */
+/* The ultimate victory - the universe itself explodes into existence */
 .big-bang-effect {
     position: absolute;
     top: 50%;
@@ -2048,8 +2199,100 @@ body[data-particles="runes"]::before {
     background: #ffffff;
     border-radius: 50%;
     transform: translate(-50%, -50%);
-    animation: bigBangExpand 4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    box-shadow: 0 0 100px 50px #ffffff;
+    animation: bigBangExpand 5s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+    box-shadow: 
+        0 0 50px 25px #ffffff,
+        0 0 100px 50px rgba(255, 255, 200, 0.8),
+        0 0 150px 75px rgba(255, 215, 0, 0.6);
+}
+
+/* Singularity core - the point of creation */
+.big-bang-singularity {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: radial-gradient(circle, 
+        #ffffff 0%, 
+        #ffffcc 20%, 
+        #ffd700 40%, 
+        #ff8c00 60%, 
+        transparent 80%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: singularityPulse 0.5s ease-out forwards;
+    box-shadow: 
+        0 0 100px 50px #ffffff,
+        0 0 200px 100px rgba(255, 215, 0, 0.8);
+}
+
+@keyframes singularityPulse {
+    0% { width: 0; height: 0; opacity: 0; }
+    50% { width: 60px; height: 60px; opacity: 1; }
+    100% { width: 30px; height: 30px; opacity: 1; }
+}
+
+/* Galaxy arm particles */
+.big-bang-galaxy-particle {
+    position: absolute;
+    width: var(--size, 4px);
+    height: var(--size, 4px);
+    background: var(--color, #ffffff);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: galaxySpiral var(--duration, 3s) ease-out forwards;
+    animation-delay: var(--delay, 0s);
+    box-shadow: 0 0 calc(var(--size, 4px) * 2) var(--color, #ffffff);
+}
+
+@keyframes galaxySpiral {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg) translateX(0);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) rotate(var(--rotation, 720deg)) translateX(var(--distance, 300px));
+        opacity: 0;
+    }
+}
+
+/* Nebula clouds forming */
+.big-bang-nebula {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(ellipse at center,
+        var(--nebula-color, rgba(138, 43, 226, 0.4)) 0%,
+        transparent 70%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) rotate(var(--rotation, 0deg));
+    animation: nebulaExpand var(--duration, 3s) ease-out forwards;
+    animation-delay: var(--delay, 0.5s);
+    opacity: 0;
+    filter: blur(10px);
+}
+
+@keyframes nebulaExpand {
+    0% {
+        width: 50px;
+        height: 50px;
+        opacity: 0;
+    }
+    30% {
+        opacity: 0.8;
+    }
+    100% {
+        width: var(--final-size, 400px);
+        height: var(--final-size, 400px);
+        opacity: 0;
+        transform: translate(-50%, -50%) rotate(calc(var(--rotation, 0deg) + 45deg));
+    }
 }
 
 @keyframes bigBangExpand {
@@ -2058,43 +2301,69 @@ body[data-particles="runes"]::before {
         height: 5px; 
         opacity: 1; 
         background: #ffffff;
-        box-shadow: 0 0 100px 50px #ffffff;
+        box-shadow: 
+            0 0 50px 25px #ffffff,
+            0 0 100px 50px rgba(255, 255, 200, 0.8),
+            0 0 150px 75px rgba(255, 215, 0, 0.6);
     }
-    10% { 
-        width: 50px; 
-        height: 50px; 
-        background: #ffffcc;
-        box-shadow: 0 0 150px 75px #ffd700;
+    5% { 
+        width: 30px; 
+        height: 30px; 
+        background: #ffffee;
+        box-shadow: 
+            0 0 80px 40px #ffffff,
+            0 0 160px 80px rgba(255, 215, 0, 0.9);
     }
-    25% { 
-        width: 150px; 
-        height: 150px; 
+    15% { 
+        width: 80px; 
+        height: 80px; 
         background: #ffd700;
-        box-shadow: 0 0 200px 100px #ff8c00;
+        box-shadow: 
+            0 0 100px 50px #ffd700,
+            0 0 200px 100px #ff8c00;
     }
-    40% { 
-        width: 350px; 
-        height: 350px; 
+    30% { 
+        width: 200px; 
+        height: 200px; 
+        background: #ff8c00;
+        box-shadow: 
+            0 0 120px 60px #ff4500,
+            0 0 240px 120px rgba(255, 0, 100, 0.6);
+    }
+    45% { 
+        width: 400px; 
+        height: 400px; 
         background: #ff4500;
-        box-shadow: 0 0 250px 125px #ff0000;
+        box-shadow: 
+            0 0 150px 75px #ff0066,
+            0 0 300px 150px rgba(138, 43, 226, 0.5);
     }
-    55% { 
-        width: 600px; 
-        height: 600px; 
-        background: #ff00ff;
-        box-shadow: 0 0 300px 150px #8b00ff;
+    60% { 
+        width: 700px; 
+        height: 700px; 
+        background: linear-gradient(45deg, #ff00ff, #8b00ff);
+        box-shadow: 
+            0 0 180px 90px #8b00ff,
+            0 0 360px 180px rgba(0, 255, 255, 0.4);
+        opacity: 0.8;
     }
-    70% { 
-        width: 900px; 
-        height: 900px; 
-        background: #00ffff;
-        box-shadow: 0 0 350px 175px #0000ff;
-        opacity: 0.7;
+    75% {
+        width: 1000px;
+        height: 1000px;
+        background: linear-gradient(45deg, #8b00ff, #00ffff);
+        box-shadow: 
+            0 0 200px 100px rgba(0, 255, 255, 0.6),
+            0 0 400px 200px rgba(0, 100, 255, 0.3);
+        opacity: 0.6;
     }
-    85% {
+    90% {
         width: 150vmax;
         height: 150vmax;
-        background: linear-gradient(45deg, #ff00ff, #00ffff, #ffd700);
+        background: radial-gradient(circle, 
+            rgba(0, 255, 255, 0.3) 0%,
+            rgba(100, 0, 255, 0.2) 30%,
+            rgba(0, 0, 50, 0.3) 60%,
+            transparent 80%);
         opacity: 0.4;
     }
     100% { 
@@ -2102,6 +2371,74 @@ body[data-particles="runes"]::before {
         height: 250vmax; 
         opacity: 0;
         background: transparent;
+    }
+}
+
+/* Cosmic strings - energy lines radiating outward */
+.big-bang-string {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 0;
+    background: linear-gradient(to bottom, 
+        #ffffff 0%, 
+        #ffd700 30%, 
+        #ff00ff 60%, 
+        transparent 100%);
+    transform-origin: top center;
+    transform: translate(-50%, 0) rotate(var(--angle, 0deg));
+    animation: cosmicString 2s ease-out forwards;
+    animation-delay: var(--delay, 0.2s);
+    opacity: 0;
+}
+
+@keyframes cosmicString {
+    0% {
+        height: 0;
+        opacity: 0;
+    }
+    20% {
+        height: 50px;
+        opacity: 1;
+    }
+    100% {
+        height: var(--length, 400px);
+        opacity: 0;
+    }
+}
+
+/* Star formation particles at the end */
+.big-bang-star {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--size, 3px);
+    height: var(--size, 3px);
+    background: var(--color, #ffffff);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 calc(var(--size, 3px) * 3) var(--color, #ffffff);
+    animation: starFormation var(--duration, 2.5s) ease-out forwards;
+    animation-delay: var(--delay, 1s);
+    opacity: 0;
+}
+
+@keyframes starFormation {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.5);
+    }
+    40% {
+        transform: translate(calc(-50% + var(--tx, 0px)), calc(-50% + var(--ty, 0px))) scale(1);
+    }
+    100% {
+        transform: translate(calc(-50% + var(--tx, 0px)), calc(-50% + var(--ty, 0px))) scale(0.5);
+        opacity: 0;
     }
 }
 
@@ -2442,45 +2779,118 @@ body.accent-singularity [style*="--profile-accent"] {
     100% { --profile-accent: #ff00ff; filter: hue-rotate(360deg); }
 }
 
-/* Profile Titles - Legendary Admin */
+/* Profile Titles - Legendary Admin: THE CREATOR */
+/* The divine title of one who shapes reality itself */
 .player-title.title-the-creator {
-    background: linear-gradient(90deg, #ffd700, #ffffff, #ffd700, #ff8c00, #ffd700);
-    background-size: 400% 100%;
+    background: linear-gradient(90deg, 
+        #ffd700, #ffffff, #ffd700, #ff8c00, 
+        #ffd700, #ffffff, #ffeaa7, #ffd700);
+    background-size: 600% 100%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    animation: creatorTitleShift 4s linear infinite, creatorTitleGlow 2s ease-in-out infinite;
+    animation: 
+        creatorTitleShift 5s linear infinite,
+        creatorTitleGlow 2s ease-in-out infinite;
     font-weight: bold;
-    letter-spacing: 1px;
-    filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8));
+    font-style: normal;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    filter: 
+        drop-shadow(0 0 4px rgba(255, 215, 0, 1))
+        drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
     position: relative;
 }
 
+/* Divine star decorations */
 .player-title.title-the-creator::before {
-    content: '✦ ';
+    content: '✦';
     -webkit-text-fill-color: #ffd700;
+    margin-right: 4px;
     animation: creatorStar 1.5s ease-in-out infinite;
+    text-shadow: 
+        0 0 6px #ffd700,
+        0 0 12px #ffffff,
+        0 0 18px rgba(255, 215, 0, 0.6);
 }
 
 .player-title.title-the-creator::after {
-    content: ' ✦';
+    content: '✦';
     -webkit-text-fill-color: #ffd700;
+    margin-left: 4px;
     animation: creatorStar 1.5s ease-in-out infinite 0.75s;
+    text-shadow: 
+        0 0 6px #ffd700,
+        0 0 12px #ffffff,
+        0 0 18px rgba(255, 215, 0, 0.6);
 }
 
 @keyframes creatorTitleShift {
     0% { background-position: 0% 50%; }
-    100% { background-position: 400% 50%; }
+    100% { background-position: 600% 50%; }
 }
 
 @keyframes creatorTitleGlow {
-    0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8)); }
-    50% { filter: drop-shadow(0 0 15px rgba(255, 215, 0, 1)) drop-shadow(0 0 25px rgba(255, 255, 255, 0.5)); }
+    0%, 100% { 
+        filter: 
+            drop-shadow(0 0 4px rgba(255, 215, 0, 1))
+            drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
+    }
+    50% { 
+        filter: 
+            drop-shadow(0 0 8px rgba(255, 215, 0, 1))
+            drop-shadow(0 0 16px rgba(255, 255, 255, 1))
+            drop-shadow(0 0 24px rgba(255, 215, 0, 0.6));
+    }
 }
 
 @keyframes creatorStar {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(1.2); }
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1) rotate(0deg);
+    }
+    50% { 
+        opacity: 0.7; 
+        transform: scale(1.3) rotate(180deg);
+    }
+}
+
+/* ============ ADMIN BADGE: INFINITY ============ */
+/* The infinite symbol pulses with universal power */
+.player-badge-infinity {
+    display: inline-block;
+    animation: 
+        infinityPulse 2s ease-in-out infinite,
+        infinityRotate 8s linear infinite;
+    filter: 
+        drop-shadow(0 0 4px rgba(255, 0, 255, 0.8))
+        drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
+    transform-origin: center;
+}
+
+@keyframes infinityPulse {
+    0%, 100% {
+        filter: 
+            drop-shadow(0 0 4px rgba(255, 0, 255, 0.8))
+            drop-shadow(0 0 8px rgba(0, 255, 255, 0.6));
+        transform: scale(1);
+    }
+    50% {
+        filter: 
+            drop-shadow(0 0 8px rgba(255, 0, 255, 1))
+            drop-shadow(0 0 16px rgba(0, 255, 255, 0.9))
+            drop-shadow(0 0 24px rgba(255, 215, 0, 0.5));
+        transform: scale(1.15);
+    }
+}
+
+@keyframes infinityRotate {
+    0% { filter: hue-rotate(0deg) drop-shadow(0 0 4px rgba(255, 0, 255, 0.8)); }
+    25% { filter: hue-rotate(90deg) drop-shadow(0 0 6px rgba(0, 255, 255, 0.8)); }
+    50% { filter: hue-rotate(180deg) drop-shadow(0 0 8px rgba(255, 215, 0, 0.8)); }
+    75% { filter: hue-rotate(270deg) drop-shadow(0 0 6px rgba(255, 100, 0, 0.8)); }
+    100% { filter: hue-rotate(360deg) drop-shadow(0 0 4px rgba(255, 0, 255, 0.8)); }
 }
 
 /* Profile Banners - Legendary Admin */
@@ -2626,4 +3036,5 @@ body.accent-singularity [style*="--profile-accent"] {
         transform: none !important;
     }
 }
+
 

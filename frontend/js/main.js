@@ -101,10 +101,8 @@ function updateLoginUI(user) {
         loginBox?.classList.add('hidden');
         loggedInBox?.classList.remove('hidden');
         if (nameDisplay) nameDisplay.textContent = user.name;
-        if (avatarImg && user.avatar) {
-            avatarImg.src = user.avatar;
-            avatarImg.classList.remove('hidden');
-        }
+        // Hide avatar image (we don't use Google profile photos)
+        if (avatarImg) avatarImg.classList.add('hidden');
     } else if (user?.isGuest) {
         loginBox?.classList.add('hidden');
         loggedInBox?.classList.remove('hidden');

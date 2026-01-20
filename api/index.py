@@ -3098,9 +3098,8 @@ def get_or_create_user(google_user: dict) -> dict:
     existing = redis.get(user_key)
     if existing:
         user = json.loads(existing)
-        # Update name/avatar in case they changed
+        # Update name in case it changed (don't store Google avatar)
         user['name'] = google_user.get('name', user['name'])
-        user['avatar'] = google_user.get('picture', user.get('avatar', ''))
         # Ensure cosmetics field exists for existing users
         if 'cosmetics' not in user:
             user['cosmetics'] = DEFAULT_COSMETICS.copy()
@@ -6193,7 +6192,6 @@ class handler(BaseHTTPRequestHandler):
                 'username': username,
                 'needs_username': username is None,  # True if user hasn't set a username yet
                 'email': user.get('email', ''),
-                'avatar': user.get('avatar', ''),
                 'stats': get_user_stats(user),
                 'is_donor': user.get('is_donor', False),
                 'is_admin': user.get('is_admin', False),
@@ -6492,7 +6490,6 @@ class handler(BaseHTTPRequestHandler):
                     "rank": rank,
                     "id": user.get('id'),
                     "name": get_user_display_name(user),
-                    "avatar": user.get('avatar', ''),
                     "mmr": int(stats.get('mmr', mmr) or mmr),
                     "peak_mmr": int(stats.get('peak_mmr', mmr) or mmr),
                     "ranked_games": ranked_games,
@@ -6559,7 +6556,6 @@ class handler(BaseHTTPRequestHandler):
             # Get cosmetics from user if available
             cosmetics = None
             badge = None
-            avatar = None
             custom_avatar = None
             if user_data:
                 cosmetics = user_data.get('cosmetics', {})
@@ -6575,9 +6571,6 @@ class handler(BaseHTTPRequestHandler):
                         custom_avatar = avatar_data.get('icon', '')
                     except Exception:
                         pass
-                # Fall back to Google avatar if no custom avatar
-                if not custom_avatar:
-                    avatar = user_data.get('avatar', '')
             
             return self._send_json({
                 "name": stats.get('name', player_name),
@@ -6589,8 +6582,7 @@ class handler(BaseHTTPRequestHandler):
                 "best_streak": stats.get('best_streak', 0),
                 "created_at": created_at,  # None if not a Google user
                 "has_google_account": user_data is not None,
-                "avatar": avatar,
-                "custom_avatar": custom_avatar,  # Emoji avatar (takes precedence over Google avatar)
+                "custom_avatar": custom_avatar,  # Emoji avatar
                 "badge": badge,
                 "cosmetics": cosmetics,
                 "ranked": ranked_stats,
