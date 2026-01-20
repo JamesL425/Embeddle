@@ -1,6 +1,14 @@
 """
 Services Module
 Re-exports all service modules
+
+This module provides centralized access to all business logic services:
+- embedding_service: OpenAI embedding calls with caching
+- ai_service: AI player logic for singleplayer mode
+- economy_service: Credits, quests, and streak management
+- game_service: Core game operations
+- theme_service: Theme management and word pools
+- ranked_service: ELO/MMR calculations
 """
 
 from .embedding_service import (
@@ -43,6 +51,40 @@ from .game_service import (
     get_game_for_player,
 )
 
+from .theme_service import (
+    load_themes,
+    get_theme_categories,
+    get_theme_words,
+    validate_theme_name,
+    select_random_theme_options,
+    resolve_theme_votes,
+    generate_word_pool,
+    generate_non_overlapping_pools,
+    generate_word_change_options,
+    build_theme_data,
+    get_theme_word_count,
+    reload_themes,
+    THEME_ALIASES,
+)
+
+from .ranked_service import (
+    init_ranked_config,
+    get_config as get_ranked_config,
+    RankedPlayer,
+    MMRResult,
+    calculate_expected_score,
+    get_k_factor,
+    calculate_mmr_change,
+    calculate_multiplayer_mmr,
+    calculate_elimination_order_placements,
+    get_tier,
+    get_tier_info,
+    is_placement_complete,
+    is_provisional,
+    format_leaderboard_entry,
+    calculate_peak_mmr,
+)
+
 __all__ = [
     # Embedding service
     "get_embedding",
@@ -76,5 +118,35 @@ __all__ = [
     "eliminate_player",
     "check_game_over",
     "get_game_for_player",
+    # Theme service
+    "load_themes",
+    "get_theme_categories",
+    "get_theme_words",
+    "validate_theme_name",
+    "select_random_theme_options",
+    "resolve_theme_votes",
+    "generate_word_pool",
+    "generate_non_overlapping_pools",
+    "generate_word_change_options",
+    "build_theme_data",
+    "get_theme_word_count",
+    "reload_themes",
+    "THEME_ALIASES",
+    # Ranked service
+    "init_ranked_config",
+    "get_ranked_config",
+    "RankedPlayer",
+    "MMRResult",
+    "calculate_expected_score",
+    "get_k_factor",
+    "calculate_mmr_change",
+    "calculate_multiplayer_mmr",
+    "calculate_elimination_order_placements",
+    "get_tier",
+    "get_tier_info",
+    "is_placement_complete",
+    "is_provisional",
+    "format_leaderboard_entry",
+    "calculate_peak_mmr",
 ]
 

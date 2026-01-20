@@ -4338,6 +4338,35 @@ def get_theme_embeddings(game: dict) -> dict:
     return result
 
 
+# Cache TTL for precomputed similarity matrices (7 days)
+SIMILARITY_MATRIX_CACHE_SECONDS = 86400 * 7
+
+
+def _theme_similarity_cache_key(theme_name: str) -> str:
+    """Get Redis cache key for a theme's similarity matrix."""
+    return f"theme_sim:{theme_name.lower().replace(' ', '_').replace('&', 'and')}"
+
+
+def get_cached_theme_similarity_matrix(theme_name: str) -> dict | None:
+    """
+    Get pre-computed similarity matrix for a theme from Redis cache.
+    
+    This is much faster than computing on-the-fly since the matrix is
+    pre-computed by api/precompute_embeddings.py and cached for 7 days.
+    
+    Returns dict mapping word -> {word: similarity} or None if not cached.
+    """
+    try:
+        redis = get_redis()
+        cache_key = _theme_similarity_cache_key(theme_name)
+        cached = redis.get(cache_key)
+        if cached:
+            return json.loads(cached)
+    except Exception as e:
+        print(f"Error loading cached similarity matrix for {theme_name}: {e}")
+    return None
+
+
 def precompute_theme_similarities(game: dict, theme_embeddings: dict) -> dict:
     """
     Pre-compute similarity matrix for all theme words using vectorized numpy operations.
@@ -8309,25 +8338,31 @@ class handler(BaseHTTPRequestHandler):
             for p in game['players']:
                 p['time_remaining'] = initial_time
 
-            # Embeddings should already be cached from /start phase
-            # Pre-compute similarity matrix in background if not already done
-            # (This is fast if embeddings are cached, ~100ms for 100 words)
+            # Load pre-computed similarity matrix from cache (fast path)
+            # or compute in background if not cached (fallback)
+            theme_name = game.get('theme', {}).get('name', '')
             theme_words = game.get('theme', {}).get('words', [])
             if theme_words and not game.get('theme_similarity_matrix'):
-                import threading
-                def compute_similarity_matrix():
-                    try:
-                        theme_embeddings = batch_get_embeddings(theme_words)
-                        if theme_embeddings:
-                            matrix = precompute_theme_similarities(game, theme_embeddings)
-                            # Update game state with matrix (need to reload/save)
-                            g = load_game(code)
-                            if g and not g.get('theme_similarity_matrix'):
-                                g['theme_similarity_matrix'] = matrix
-                                save_game(code, g)
-                    except Exception as e:
-                        print(f"Theme similarity matrix error: {e}")
-                threading.Thread(target=compute_similarity_matrix, daemon=True).start()
+                # Try to load pre-computed matrix from Redis cache
+                cached_matrix = get_cached_theme_similarity_matrix(theme_name) if theme_name else None
+                if cached_matrix:
+                    game['theme_similarity_matrix'] = cached_matrix
+                else:
+                    # Fallback: compute in background thread (slower, ~100ms)
+                    import threading
+                    def compute_similarity_matrix():
+                        try:
+                            theme_embeddings = batch_get_embeddings(theme_words)
+                            if theme_embeddings:
+                                matrix = precompute_theme_similarities(game, theme_embeddings)
+                                # Update game state with matrix (need to reload/save)
+                                g = load_game(code)
+                                if g and not g.get('theme_similarity_matrix'):
+                                    g['theme_similarity_matrix'] = matrix
+                                    save_game(code, g)
+                        except Exception as e:
+                            print(f"Theme similarity matrix error: {e}")
+                    threading.Thread(target=compute_similarity_matrix, daemon=True).start()
 
             game['status'] = 'playing'
             game['turn_started_at'] = time.time()  # Start the turn timer
