@@ -514,15 +514,15 @@ header h1 {
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 1.5rem 2rem;
-    font-size: 1.3rem;
+    padding: 2rem 2.5rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    min-height: 80px;
+    min-height: 110px;
     gap: 0.25rem;
 }
 
 .btn-xlarge .btn-text {
-    font-size: 1.3rem;
+    font-size: 1.6rem;
     letter-spacing: 0.08em;
 }
 
@@ -1238,40 +1238,103 @@ header h1 {
     width: 150px;
 }
 
-/* Game Layout - Two Column */
+/* Game Layout - Clean Three Column */
+
+/* Top bar - minimal, always visible */
+.game-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+    gap: 1rem;
+}
+
+.game-topbar-left,
+.game-topbar-center,
+.game-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.game-topbar-left {
+    min-width: 0;
+}
+
+.game-topbar-center {
+    flex-shrink: 0;
+}
+
+.game-topbar-right {
+    justify-content: flex-end;
+}
+
+.game-meta {
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.your-secret-label {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.your-secret-value {
+    color: var(--success);
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.round-display {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.round-display span {
+    color: var(--accent-primary);
+    font-weight: 700;
+}
+
+/* Main game grid */
 .game-layout {
     display: grid;
-    gap: 1.5rem;
-    max-width: 1200px;
+    gap: 1rem;
+    padding: 1rem;
+    height: calc(100vh - 3.5rem);
+    grid-template-columns: 280px 1fr 300px;
+    grid-template-areas: "players center log";
+    max-width: 1600px;
     margin: 0 auto;
-    height: calc(100vh - 4rem);
-    grid-template-areas: "main log";
-    grid-template-columns: minmax(0, 1fr) clamp(280px, 30vw, 380px);
 }
 
-/* Tablet: stack log below main */
-@media (max-width: 1024px) {
-    .game-layout {
-        grid-template-areas:
-            "main"
-            "log";
-        grid-template-columns: 1fr;
-        grid-template-rows: minmax(0, 1fr) clamp(200px, 30vh, 320px);
-        height: calc(100vh - 4rem);
-    }
+/* Players column */
+.game-players {
+    grid-area: players;
+    overflow-y: auto;
+    padding-right: 0.5rem;
 }
 
-/* Mobile: single column, log in tabs */
-@media (max-width: 768px) {
-    .game-layout {
-        grid-template-areas: "main";
-        grid-template-columns: 1fr;
-        grid-template-rows: auto;
-        height: auto;
-    }
+.players-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
-/* Transmission Log Column */
+/* Center column - guess area */
+.game-center {
+    grid-area: center;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow: hidden;
+}
+
+/* Log column */
 .game-log {
     grid-area: log;
     background: var(--bg-card);
@@ -1282,152 +1345,254 @@ header h1 {
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
-    max-height: 100%;
 }
 
-/* The host container must fill the log column */
 #game-log-host {
     display: flex;
     flex-direction: column;
-    flex: 1 1 0;
+    flex: 1;
     min-height: 0;
     overflow: hidden;
 }
 
-/* Let the log fill its container and scroll internally (desktop + tablet) */
 .game-log #history-section {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    flex: 1 1 0;
+    gap: 0.5rem;
+    flex: 1;
     min-height: 0;
     overflow: hidden;
 }
 
+.game-log #history-section h3 {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
 .game-log .history-log {
-    flex: 1 1 0;
+    flex: 1;
     min-height: 0;
-    max-height: 100%;
     overflow-y: auto;
     scroll-behavior: smooth;
 }
 
-/* Game Main Area */
-.game-main {
-    grid-area: main;
+/* Turn indicator */
+.turn-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.turn-indicator .turn-timer {
+    color: var(--warning);
+    font-weight: 700;
+}
+
+/* Guess section */
+.guess-section {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    overflow-y: auto;
-    padding-right: 0.5rem;
+    gap: 0.75rem;
     min-height: 0;
 }
 
-/* Compact Game Header */
-.game-header {
+.guess-word-grid {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-content: flex-start;
+    padding: 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-y: auto;
+}
+
+.guess-word {
+    padding: 0.5rem 0.875rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    cursor: default;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.guess-word.selectable {
+    cursor: pointer;
+}
+
+.guess-word.selectable:hover {
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+}
+
+.guess-word.selected {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: var(--bg-primary);
+    font-weight: 600;
+}
+
+.guess-word.guessed {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.3);
+    color: var(--accent-secondary);
+    opacity: 0.7;
+}
+
+.guess-word.eliminated {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: var(--danger);
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.guess-word.your-word {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: var(--success);
+    color: var(--success);
+    cursor: not-allowed;
+}
+
+.guess-word:disabled:not(.your-word) {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Selection bar */
+.guess-selection-bar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 1rem;
     padding: 0.75rem 1rem;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    flex-wrap: wrap;
 }
 
-.game-header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.theme-label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.theme-name {
-    font-size: 0.9rem;
-    color: var(--accent-primary);
-    font-weight: 700;
-}
-
-.game-header-center {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.round-label {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-}
-
-.round-label span {
-    color: var(--accent-primary);
-    font-weight: 700;
-}
-
-.game-header-right {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.game-header .your-word {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-}
-
-.game-header .your-word span:first-child {
+.guess-selected-word {
+    flex: 1;
+    font-size: 1rem;
     color: var(--text-muted);
 }
 
-.game-header .your-word .secret {
-    color: var(--success);
-    font-weight: 700;
-    font-family: 'JetBrains Mono', monospace;
+.guess-selected-word.has-selection {
+    color: var(--accent-primary);
+    font-weight: 600;
 }
 
-/* Mobile docked game panels (GUESS / LOG) */
+#guess-submit-btn {
+    min-width: 100px;
+}
+
+#guess-submit-btn:disabled {
+    opacity: 0.5;
+}
+
+/* Mobile: hide tabs on desktop */
 .game-mobile-tabs,
 .game-mobile-panels {
     display: none;
 }
 
-@media (max-width: 768px) {
-    .game-log {
-        display: none;
-    }
-
-    .game-main {
-        overflow-y: visible;
-        padding-right: 0;
+/* Tablet: two columns */
+@media (max-width: 1200px) {
+    .game-layout {
+        grid-template-columns: 1fr 280px;
+        grid-template-rows: auto 1fr;
+        grid-template-areas: 
+            "players log"
+            "center log";
     }
     
-    .game-header {
-        flex-direction: column;
-        align-items: stretch;
+    .game-players {
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: visible;
+        padding-right: 0;
+        padding-bottom: 0.5rem;
+    }
+    
+    .players-grid {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 0.75rem;
+    }
+    
+    .players-grid .player-card {
+        min-width: 180px;
+        flex-shrink: 0;
+    }
+}
+
+/* Mobile: single column with tabs */
+@media (max-width: 768px) {
+    .game-topbar {
+        flex-wrap: wrap;
         gap: 0.5rem;
         padding: 0.5rem 0.75rem;
     }
     
-    .game-header-left,
-    .game-header-center,
-    .game-header-right {
+    .game-topbar-center {
+        order: -1;
+        width: 100%;
         justify-content: center;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border);
     }
     
-    .game-header-right {
-        flex-wrap: wrap;
-        gap: 0.5rem;
+    .game-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        height: auto;
+        padding: 0.75rem;
     }
-
+    
+    .game-players {
+        order: 1;
+    }
+    
+    .players-grid {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+    
+    .players-grid .player-card {
+        min-width: 140px;
+        flex-shrink: 0;
+    }
+    
+    .game-center {
+        order: 2;
+    }
+    
+    .game-log {
+        display: none;
+    }
+    
     .game-mobile-tabs {
         display: flex;
         gap: 0.25rem;
@@ -1435,76 +1600,55 @@ header h1 {
         background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: var(--radius);
-        align-items: stretch;
-        margin-top: 1rem;
+        order: 3;
     }
 
     .game-mobile-tab {
         flex: 1;
-        border: 1px solid var(--border-light);
+        border: 1px solid var(--border);
         background: var(--bg-secondary);
         color: var(--text-secondary);
-        font-family: 'Courier Prime', 'Courier New', monospace;
-        font-weight: 700;
-        font-size: 0.85rem;
-        padding: 0.65rem 0.75rem;
-        letter-spacing: 0.08em;
+        font-weight: 600;
+        font-size: 0.8rem;
+        padding: 0.6rem;
         text-transform: uppercase;
+        letter-spacing: 0.05em;
         border-radius: var(--radius-sm);
         cursor: pointer;
-        transition: all var(--transition);
+        transition: all 0.15s ease;
     }
 
     .game-mobile-tab.active {
         background: var(--accent-primary);
         border-color: var(--accent-primary);
         color: var(--bg-primary);
-        text-shadow: none;
-        box-shadow: 0 0 12px var(--accent-glow);
     }
 
     .game-mobile-panels {
         display: block;
+        order: 4;
     }
 
     .game-mobile-panel {
-        margin-top: 0.75rem;
         padding: 0.75rem;
-        background: var(--bg-secondary);
+        background: var(--bg-card);
         border: 1px solid var(--border);
         border-radius: var(--radius);
-        max-height: clamp(220px, 35vh, 420px);
+        max-height: 40vh;
         overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    /* Guess section in mobile panel */
-    #mobile-words-panel .guess-section {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
     }
     
-    #mobile-words-panel .guess-word-grid {
-        max-height: none;
-        overflow: visible;
+    .guess-word-grid {
+        max-height: 200px;
     }
-
-    /* Let the panel be the scroll container (avoid nested scrollbars) */
-    #mobile-log-panel .history-log {
-        max-height: none;
-        overflow: visible;
+    
+    .guess-word {
+        padding: 0.6rem 0.75rem;
+        font-size: 0.9rem;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
     }
-}
-
-/* (Handled above for desktop + tablet; keep media block reserved for future tweaks) */
-
-/* Players Grid */
-.players-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--space-lg);
-    margin-bottom: var(--space-xl);
 }
 
 .player-card {

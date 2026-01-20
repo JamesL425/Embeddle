@@ -434,10 +434,6 @@
         <!-- Home Screen -->
         <div id="home-screen" class="screen active home-screen">
             <div class="card hero-card">
-                <div class="hero-content">
-                    <p class="hero-description">A word-guessing game where you hide your secret word while trying to figure out everyone else's.</p>
-                </div>
-                
                 <!-- Main Action Buttons - Big Stacked -->
                 <div class="home-actions">
                     <button id="quickplay-btn" class="btn btn-primary btn-xlarge home-action">
@@ -766,51 +762,49 @@
 
         <!-- Game Screen -->
         <div id="game-screen" class="screen">
+            <!-- Minimal top bar -->
+            <div class="game-topbar">
+                <div class="game-topbar-left">
+                    <span id="game-mode-badge" class="mode-badge casual">CASUAL</span>
+                    <span class="game-meta"><span id="game-theme-name">-</span></span>
+                </div>
+                <div class="game-topbar-center">
+                    <span class="your-secret-label">Your word:</span>
+                    <span id="your-secret-word" class="your-secret-value">???</span>
+                </div>
+                <div class="game-topbar-right">
+                    <span class="round-display">R<span id="turn-number">1</span></span>
+                    <button id="leave-game-btn" class="btn btn-ghost btn-tiny">✕</button>
+                </div>
+            </div>
+            
             <div class="game-layout">
-                <!-- Main game area -->
-                <main class="game-main">
-                    <!-- Compact game header -->
-                    <div class="game-header">
-                        <div class="game-header-left">
-                            <span class="theme-label">THEME:</span>
-                            <span id="game-theme-name" class="theme-name">-</span>
-                        </div>
-                        <div class="game-header-center">
-                            <span id="game-mode-badge" class="mode-badge casual">CASUAL</span>
-                            <span class="round-label">ROUND <span id="turn-number">1</span></span>
-                        </div>
-                        <div class="game-header-right">
-                            <div class="your-word">
-                                <span>YOUR WORD:</span>
-                                <span id="your-secret-word" class="secret">???</span>
-                            </div>
-                            <button id="leave-game-btn" class="btn btn-ghost btn-small">LEAVE</button>
-                        </div>
+                <!-- Left: Players -->
+                <section class="game-players">
+                    <div class="players-grid" id="players-grid">
+                        <!-- Player cards will be added here -->
                     </div>
-                    
+                </section>
+
+                <!-- Center: Guess area -->
+                <main class="game-center">
                     <div id="change-word-container" class="change-word-container hidden">
                         <div class="change-word-header">
-                            <p class="change-word-label">🎯 YOU ELIMINATED SOMEONE! PICK A NEW SECRET WORD:</p>
+                            <p class="change-word-label">🎯 Pick a new secret word:</p>
                             <div id="word-change-timer" class="word-change-timer hidden">
                                 <span id="word-change-countdown">30</span>s
                             </div>
                         </div>
-                        <div id="word-pool-options" class="word-pool-options">
-                            <!-- Available words will be shown here -->
-                        </div>
+                        <div id="word-pool-options" class="word-pool-options"></div>
                         <div class="change-word-input-row">
-                            <span id="new-word-display" class="selected-word-display">👆 Click a word above to select it</span>
-                            <button id="change-word-btn" class="btn btn-small btn-accent">CONFIRM NEW WORD</button>
-                            <button id="skip-word-change-btn" class="btn btn-small btn-ghost">KEEP CURRENT</button>
+                            <span id="new-word-display" class="selected-word-display">Click a word above</span>
+                            <button id="change-word-btn" class="btn btn-small btn-accent">CONFIRM</button>
+                            <button id="skip-word-change-btn" class="btn btn-small btn-ghost">KEEP</button>
                         </div>
                     </div>
                     
                     <div id="waiting-for-change" class="waiting-notice hidden">
-                        ⏳ <span id="waiting-player-name">Operative</span> is picking a new secret word...
-                    </div>
-
-                    <div class="players-grid" id="players-grid">
-                        <!-- Player cards will be added here -->
+                        ⏳ <span id="waiting-player-name">Operative</span> is picking a new word...
                     </div>
 
                     <div class="turn-indicator" id="turn-indicator">
@@ -823,48 +817,33 @@
                             <!-- Theme words will be rendered here by JS -->
                         </div>
                         <div class="guess-selection-bar" id="guess-selection-bar">
-                            <span class="guess-selected-label">Selected:</span>
-                            <span class="guess-selected-word" id="guess-selected-word">Click a word above</span>
-                            <button type="button" class="btn btn-primary" id="guess-submit-btn" disabled>&gt; TRANSMIT</button>
+                            <span class="guess-selected-word" id="guess-selected-word">Select a word</span>
+                            <button type="button" class="btn btn-primary" id="guess-submit-btn" disabled>GUESS</button>
                         </div>
-                    </div>
-                    
-                    <!-- Mobile-only tabs (GUESS / LOG) -->
-                    <div class="game-mobile-tabs" id="game-mobile-tabs" role="tablist" aria-label="Game panels">
-                        <button
-                            type="button"
-                            class="game-mobile-tab active"
-                            id="game-mobile-tab-words"
-                            role="tab"
-                            aria-selected="true"
-                            aria-controls="mobile-words-panel"
-                        >GUESS</button>
-                        <button
-                            type="button"
-                            class="game-mobile-tab"
-                            id="game-mobile-tab-log"
-                            role="tab"
-                            aria-selected="false"
-                            aria-controls="mobile-log-panel"
-                        >LOG</button>
-                    </div>
-                    <div class="game-mobile-panels" id="game-mobile-panels">
-                        <div id="mobile-words-panel" class="game-mobile-panel" role="tabpanel" aria-labelledby="game-mobile-tab-words"></div>
-                        <div id="mobile-log-panel" class="game-mobile-panel hidden" role="tabpanel" aria-labelledby="game-mobile-tab-log"></div>
                     </div>
                 </main>
 
-                <!-- Transmission log (desktop right column / tablet below) -->
-                <aside class="game-log" aria-label="Transmission log">
+                <!-- Right: History log -->
+                <aside class="game-log" aria-label="History">
                     <div id="game-log-host">
                         <div id="history-section" class="history-section">
-                            <h3>// TRANSMISSION_LOG</h3>
+                            <h3>History</h3>
                             <div id="history-log" class="history-log">
                                 <!-- History entries will be added here -->
                             </div>
                         </div>
                     </div>
                 </aside>
+            </div>
+            
+            <!-- Mobile-only tabs -->
+            <div class="game-mobile-tabs" id="game-mobile-tabs" role="tablist">
+                <button type="button" class="game-mobile-tab active" id="game-mobile-tab-words" role="tab" aria-selected="true">GUESS</button>
+                <button type="button" class="game-mobile-tab" id="game-mobile-tab-log" role="tab" aria-selected="false">LOG</button>
+            </div>
+            <div class="game-mobile-panels" id="game-mobile-panels">
+                <div id="mobile-words-panel" class="game-mobile-panel" role="tabpanel"></div>
+                <div id="mobile-log-panel" class="game-mobile-panel hidden" role="tabpanel"></div>
             </div>
         </div>
 
