@@ -1097,47 +1097,7 @@ header h1 {
     color: var(--text-muted);
 }
 
-/* Game Screen */
-.game-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    padding: 1rem 1.5rem;
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-}
-
-.leave-game-btn {
-    border-color: var(--danger);
-    color: var(--danger);
-}
-
-.leave-game-btn:hover:not(:disabled) {
-    background: rgba(255, 51, 51, 0.12);
-    color: var(--danger);
-}
-
-.your-word {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    color: var(--text-secondary);
-}
-
-.your-word .secret {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--accent-primary);
-    padding: 0.5rem 1rem;
-    background: var(--bg-secondary);
-    border-radius: var(--radius-sm);
-}
-
+/* Game Screen - Word Change Container */
 .change-word-container {
     display: flex;
     flex-direction: column;
@@ -1297,56 +1257,37 @@ header h1 {
     width: 150px;
 }
 
-/* Game Layout with Sidebar */
+/* Game Layout - Two Column */
 .game-layout {
     display: grid;
     gap: 1.5rem;
-    max-width: 1400px;
+    max-width: 1200px;
     margin: 0 auto;
     height: calc(100vh - 4rem);
-    grid-template-areas: "sidebar main log";
-    grid-template-columns:
-        clamp(220px, 22vw, 280px)
-        minmax(0, 1fr)
-        clamp(280px, 28vw, 360px);
+    grid-template-areas: "main log";
+    grid-template-columns: minmax(0, 1fr) clamp(280px, 30vw, 380px);
 }
 
-/* Tablet: keep words on left, stack log below */
-@media (max-width: 1199px) {
+/* Tablet: stack log below main */
+@media (max-width: 1024px) {
     .game-layout {
         grid-template-areas:
-            "sidebar main"
-            "log log";
-        grid-template-columns: clamp(210px, 26vw, 260px) minmax(0, 1fr);
-        /* Fixed log band to avoid pushing critical gameplay off-screen */
-        grid-template-rows: minmax(0, 1fr) clamp(220px, 30vh, 360px);
+            "main"
+            "log";
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 1fr) clamp(200px, 30vh, 320px);
         height: calc(100vh - 4rem);
     }
 }
 
-/* Mobile: single column; log lives in the docked tabs */
-@media (max-width: 900px) {
+/* Mobile: single column, log in tabs */
+@media (max-width: 768px) {
     .game-layout {
-        grid-template-areas:
-            "sidebar"
-            "main";
+        grid-template-areas: "main";
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto;
+        grid-template-rows: auto;
         height: auto;
     }
-}
-
-/* Game Sidebar */
-.game-sidebar {
-    grid-area: sidebar;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    min-height: 0;
 }
 
 /* Transmission Log Column */
@@ -1390,133 +1331,95 @@ header h1 {
     scroll-behavior: smooth;
 }
 
-.sidebar-header {
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--border);
-}
-
-.sidebar-header h3 {
-    margin: 0;
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-}
-
-.sidebar-header h3 span {
-    color: var(--accent-primary);
-    font-weight: 700;
-}
-
-.sidebar-legend {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 0.75rem;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-}
-
-.sidebar-meta {
-    margin-bottom: 0.75rem;
-    padding: 0.75rem;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-}
-
-.sidebar-meta .meta-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.75rem;
-}
-
-.sidebar-meta .meta-row span:last-child {
-    color: var(--accent-primary);
-    font-weight: 700;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-}
-
-.legend-item .dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-}
-
-.legend-item .dot.guessed {
-    background: var(--accent-secondary);
-}
-
-.legend-item .dot.eliminated {
-    background: var(--danger);
-}
-
-.game-wordlist-sidebar {
-    flex: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-    align-content: flex-start;
-}
-
-.game-wordlist-sidebar .word-item {
-    padding: 0.25rem 0.5rem;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    transition: all 0.15s ease;
-}
-
-.game-wordlist-sidebar .word-item.guessed {
-    background: rgba(139, 92, 246, 0.2);
-    border-color: var(--accent-secondary);
-    color: var(--accent-secondary);
-}
-
-.game-wordlist-sidebar .word-item.eliminated {
-    background: rgba(239, 68, 68, 0.2);
-    border-color: var(--danger);
-    color: var(--danger);
-    text-decoration: line-through;
-}
-
-.game-wordlist-sidebar .word-item.your-word {
-    background: rgba(16, 185, 129, 0.2);
-    border-color: var(--success);
-    color: var(--success);
-    font-weight: 700;
-}
-
 /* Game Main Area */
 .game-main {
     grid-area: main;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1rem;
     overflow-y: auto;
     padding-right: 0.5rem;
     min-height: 0;
 }
 
-/* Mobile docked game panels (WORDS / LOG) */
+/* Compact Game Header */
+.game-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    flex-wrap: wrap;
+}
+
+.game-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.theme-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.theme-name {
+    font-size: 0.9rem;
+    color: var(--accent-primary);
+    font-weight: 700;
+}
+
+.game-header-center {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.round-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.round-label span {
+    color: var(--accent-primary);
+    font-weight: 700;
+}
+
+.game-header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.game-header .your-word {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.game-header .your-word span:first-child {
+    color: var(--text-muted);
+}
+
+.game-header .your-word .secret {
+    color: var(--success);
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Mobile docked game panels (GUESS / LOG) */
 .game-mobile-tabs,
 .game-mobile-panels {
     display: none;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 768px) {
     .game-log {
         display: none;
     }
@@ -1524,6 +1427,24 @@ header h1 {
     .game-main {
         overflow-y: visible;
         padding-right: 0;
+    }
+    
+    .game-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .game-header-left,
+    .game-header-center,
+    .game-header-right {
+        justify-content: center;
+    }
+    
+    .game-header-right {
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
 
     .game-mobile-tabs {
@@ -1534,6 +1455,7 @@ header h1 {
         border: 1px solid var(--border);
         border-radius: var(--radius);
         align-items: stretch;
+        margin-top: 1rem;
     }
 
     .game-mobile-tab {
@@ -4362,11 +4284,6 @@ body.nerd-mode .nerd-sim {
     
     .card {
         padding: 1.5rem;
-    }
-    
-    .game-header {
-        flex-direction: column;
-        align-items: flex-start;
     }
     
     .guess-section {

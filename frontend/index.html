@@ -872,33 +872,25 @@
         <!-- Game Screen -->
         <div id="game-screen" class="screen">
             <div class="game-layout">
-                <!-- Sidebar with word list -->
-                <aside class="game-sidebar">
-                    <div class="sidebar-header">
-                        <h3>DATABASE: <span id="game-theme-name">-</span></h3>
-                    </div>
-                    <div class="sidebar-legend">
-                        <span class="legend-item"><span class="dot guessed"></span> Scanned</span>
-                        <span class="legend-item"><span class="dot eliminated"></span> Breached</span>
-                    </div>
-                    <div class="sidebar-meta">
-                        <div class="meta-row"><span>MODE</span><span id="game-mode-badge" class="mode-badge casual">CASUAL</span></div>
-                        <div class="meta-row"><span>TURN</span><span id="turn-number">-</span></div>
-                        <div class="meta-row"><span>SPECTATORS</span><span id="spectator-count">0</span></div>
-                    </div>
-                    <div id="game-wordlist" class="game-wordlist-sidebar">
-                        <!-- All theme words for reference -->
-                    </div>
-                </aside>
-
                 <!-- Main game area -->
                 <main class="game-main">
+                    <!-- Compact game header -->
                     <div class="game-header">
-                        <div class="your-word">
-                            <span>YOUR CODEWORD:</span>
-                            <span id="your-secret-word" class="secret">???</span>
+                        <div class="game-header-left">
+                            <span class="theme-label">THEME:</span>
+                            <span id="game-theme-name" class="theme-name">-</span>
                         </div>
-                        <button id="leave-game-btn" class="btn btn-ghost btn-small leave-game-btn">LEAVE GAME</button>
+                        <div class="game-header-center">
+                            <span id="game-mode-badge" class="mode-badge casual">CASUAL</span>
+                            <span class="round-label">ROUND <span id="turn-number">1</span></span>
+                        </div>
+                        <div class="game-header-right">
+                            <div class="your-word">
+                                <span>YOUR WORD:</span>
+                                <span id="your-secret-word" class="secret">???</span>
+                            </div>
+                            <button id="leave-game-btn" class="btn btn-ghost btn-small">LEAVE</button>
+                        </div>
                     </div>
                     
                     <div id="change-word-container" class="change-word-container hidden">
@@ -922,30 +914,6 @@
                         ⏳ <span id="waiting-player-name">Operative</span> is picking a new secret word...
                     </div>
 
-                    <!-- Mobile-only docked tabs (WORDS / LOG) -->
-                    <div class="game-mobile-tabs" id="game-mobile-tabs" role="tablist" aria-label="Game panels">
-                        <button
-                            type="button"
-                            class="game-mobile-tab active"
-                            id="game-mobile-tab-words"
-                            role="tab"
-                            aria-selected="true"
-                            aria-controls="mobile-words-panel"
-                        >WORDS</button>
-                        <button
-                            type="button"
-                            class="game-mobile-tab"
-                            id="game-mobile-tab-log"
-                            role="tab"
-                            aria-selected="false"
-                            aria-controls="mobile-log-panel"
-                        >LOG</button>
-                    </div>
-                    <div class="game-mobile-panels" id="game-mobile-panels">
-                        <div id="mobile-words-panel" class="game-mobile-panel" role="tabpanel" aria-labelledby="game-mobile-tab-words"></div>
-                        <div id="mobile-log-panel" class="game-mobile-panel hidden" role="tabpanel" aria-labelledby="game-mobile-tab-log"></div>
-                    </div>
-
                     <div class="players-grid" id="players-grid">
                         <!-- Player cards will be added here -->
                     </div>
@@ -964,6 +932,30 @@
                             <span class="guess-selected-word" id="guess-selected-word">Click a word above</span>
                             <button type="button" class="btn btn-primary" id="guess-submit-btn" disabled>&gt; TRANSMIT</button>
                         </div>
+                    </div>
+                    
+                    <!-- Mobile-only tabs (GUESS / LOG) -->
+                    <div class="game-mobile-tabs" id="game-mobile-tabs" role="tablist" aria-label="Game panels">
+                        <button
+                            type="button"
+                            class="game-mobile-tab active"
+                            id="game-mobile-tab-words"
+                            role="tab"
+                            aria-selected="true"
+                            aria-controls="mobile-words-panel"
+                        >GUESS</button>
+                        <button
+                            type="button"
+                            class="game-mobile-tab"
+                            id="game-mobile-tab-log"
+                            role="tab"
+                            aria-selected="false"
+                            aria-controls="mobile-log-panel"
+                        >LOG</button>
+                    </div>
+                    <div class="game-mobile-panels" id="game-mobile-panels">
+                        <div id="mobile-words-panel" class="game-mobile-panel" role="tabpanel" aria-labelledby="game-mobile-tab-words"></div>
+                        <div id="mobile-log-panel" class="game-mobile-panel hidden" role="tabpanel" aria-labelledby="game-mobile-tab-log"></div>
                     </div>
                 </main>
 

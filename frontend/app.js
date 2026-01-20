@@ -2250,9 +2250,9 @@ const screens = {
 };
 
 // Utility functions
-// ============ RESPONSIVE IN-GAME PANELS (MOBILE WORDS/LOG DOCK) ============
+// ============ RESPONSIVE IN-GAME PANELS (MOBILE GUESS/LOG DOCK) ============
 
-const GAME_MOBILE_BREAKPOINT_PX = 900;
+const GAME_MOBILE_BREAKPOINT_PX = 768;
 let responsiveGamePanelsInitialized = false;
 
 function isGameMobileLayout() {
@@ -2290,10 +2290,10 @@ function setGameMobileActiveTab(which) {
 }
 
 function applyResponsiveGamePanelsLayout() {
-    const wordlist = document.getElementById('game-wordlist');
+    const guessSection = document.getElementById('guess-section');
     const historySection = document.getElementById('history-section');
 
-    const sidebar = document.querySelector('#game-screen .game-sidebar');
+    const gameMain = document.querySelector('#game-screen .game-main');
     const logHost = document.getElementById('game-log-host');
 
     const mobileWordsPanel = document.getElementById('mobile-words-panel');
@@ -2302,20 +2302,24 @@ function applyResponsiveGamePanelsLayout() {
     const mobile = isGameMobileLayout();
 
     if (mobile) {
-        // Default to WORDS tab when entering mobile layout
+        // Default to GUESS tab when entering mobile layout
         const wordsTabSelected = document.getElementById('game-mobile-tab-words')?.getAttribute('aria-selected') === 'true';
         const logTabSelected = document.getElementById('game-mobile-tab-log')?.getAttribute('aria-selected') === 'true';
         if (!wordsTabSelected && !logTabSelected) {
             setGameMobileActiveTab('words');
         }
 
-        moveElementTo(wordlist, mobileWordsPanel);
+        moveElementTo(guessSection, mobileWordsPanel);
         moveElementTo(historySection, mobileLogPanel);
         return;
     }
 
     // Desktop/tablet: move panels back to their primary homes
-    moveElementTo(wordlist, sidebar);
+    // Guess section goes back before mobile tabs in game-main
+    const mobileTabs = document.getElementById('game-mobile-tabs');
+    if (guessSection && gameMain && mobileTabs) {
+        gameMain.insertBefore(guessSection, mobileTabs);
+    }
     moveElementTo(historySection, logHost);
 }
 
@@ -3650,6 +3654,16 @@ function startSingleplayerLobbyPolling() {
         clearInterval(gameState.pollingInterval);
     }
     
+    // Set up delegated click handler for theme voting (survives DOM rebuilds)
+    const themeContainer = document.getElementById('sp-theme-vote-options');
+    if (themeContainer && !themeContainer._delegatedHandler) {
+        themeContainer._delegatedHandler = true;
+        themeContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.theme-vote-btn');
+            if (btn) voteForTheme(btn.dataset.theme);
+        });
+    }
+    
     updateSingleplayerLobby();
     gameState.pollingInterval = setInterval(updateSingleplayerLobby, 2000);
 }
@@ -3690,10 +3704,7 @@ function updateSingleplayerThemeVoting(options, votes) {
             </button>
         `;
     }).join('');
-
-    container.querySelectorAll('.theme-vote-btn').forEach(btn => {
-        btn.addEventListener('click', () => voteForTheme(btn.dataset.theme));
-    });
+    // Event delegation is set up once in startSingleplayerLobbyPolling() to avoid lost clicks during DOM rebuild
 }
 
 async function updateSingleplayerLobby() {
@@ -3915,6 +3926,16 @@ function startLobbyPolling() {
         clearInterval(gameState.pollingInterval);
     }
     
+    // Set up delegated click handler for theme voting (survives DOM rebuilds)
+    const themeContainer = document.getElementById('theme-vote-options');
+    if (themeContainer && !themeContainer._delegatedHandler) {
+        themeContainer._delegatedHandler = true;
+        themeContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.theme-vote-btn');
+            if (btn) voteForTheme(btn.dataset.theme);
+        });
+    }
+    
     updateLobby();
     gameState.pollingInterval = setInterval(updateLobby, 2000);
 }
@@ -4024,10 +4045,7 @@ function updateThemeVoting(options, votes) {
             </button>
         `;
     }).join('');
-    
-    container.querySelectorAll('.theme-vote-btn').forEach(btn => {
-        btn.addEventListener('click', () => voteForTheme(btn.dataset.theme));
-    });
+    // Event delegation is set up once in startLobbyPolling() to avoid lost clicks during DOM rebuild
 }
 
 async function voteForTheme(theme) {
@@ -4555,8 +4573,8 @@ function updateGame(game) {
     const isSpectator = Boolean(gameState.isSpectator);
     const myPlayer = game.players.find(p => p.id === gameState.playerId);
 
-    // Always update sidebar meta (turn/spectators/words played), even while waiting for word selection.
-    updateSidebarMeta(game);
+    // Always update header meta (turn/mode badge), even while waiting for word selection.
+    updateGameHeaderMeta(game);
     
     // Check if waiting for other players to pick words
     if (!game.all_words_set) {
@@ -4707,9 +4725,6 @@ function updateGame(game) {
         gameState.allThemeWords = game.theme.words || [];
     }
     
-    // Update sidebar word list with highlights
-    updateSidebarWordList(game);
-    
     // Store game state for timer access
     gameState.game = game;
     
@@ -4745,11 +4760,10 @@ function updateGame(game) {
     }
 }
 
-function updateSidebarMeta(game) {
+function updateGameHeaderMeta(game) {
     const turnEl = document.getElementById('turn-number');
-    const specEl = document.getElementById('spectator-count');
     const modeBadge = document.getElementById('game-mode-badge');
-    if (!turnEl || !specEl) return;
+    if (!turnEl) return;
 
     // Update mode badge (ranked/casual)
     if (modeBadge) {
@@ -4794,62 +4808,6 @@ function updateSidebarMeta(game) {
     }
     
     turnEl.textContent = String(roundNumber);
-
-    const spectatorCount = Number(game?.spectator_count ?? 0);
-    specEl.textContent = String(Number.isFinite(spectatorCount) ? spectatorCount : 0);
-}
-
-function updateSidebarWordList(game) {
-    const wordlist = document.getElementById('game-wordlist');
-    if (!wordlist) return;
-    
-    const allWords = game.theme?.words || gameState.allThemeWords || [];
-    if (allWords.length === 0) return;
-    
-    // Get guessed words
-    const guessedWords = new Set();
-    game.history.forEach(entry => {
-        if (entry.word) {
-            guessedWords.add(entry.word.toLowerCase());
-        }
-    });
-    
-    // Get eliminated words (words that caused eliminations)
-    const eliminatedWords = new Set();
-    game.history.forEach(entry => {
-        if (entry.eliminations && entry.eliminations.length > 0 && entry.word) {
-            eliminatedWords.add(entry.word.toLowerCase());
-        }
-    });
-    
-    // Get my secret word
-    const myPlayer = game.players.find(p => p.id === gameState.playerId);
-    const myWord = myPlayer?.secret_word?.toLowerCase();
-    
-    // Sort and render
-    const sortedWords = [...allWords].sort();
-    
-    wordlist.innerHTML = '';
-    sortedWords.forEach(word => {
-        const wordEl = document.createElement('span');
-        wordEl.className = 'word-item';
-        wordEl.textContent = word;
-        
-        const wordLower = word.toLowerCase();
-        
-        if (wordLower === myWord) {
-            wordEl.classList.add('your-word');
-            wordEl.title = 'Your secret word';
-        } else if (eliminatedWords.has(wordLower)) {
-            wordEl.classList.add('eliminated');
-            wordEl.title = 'This word eliminated a player';
-        } else if (guessedWords.has(wordLower)) {
-            wordEl.classList.add('guessed');
-            wordEl.title = 'This word was guessed';
-        }
-        
-        wordlist.appendChild(wordEl);
-    });
 }
 
 function updatePlayersGrid(game) {
