@@ -237,9 +237,9 @@
       "description": "Dark void energy",
       "premium": true
     },
-    "sakura_bg": {
-      "name": "Sakura",
-      "description": "Cherry blossom pink",
+    "cherry_blossom": {
+      "name": "Cherry Blossom",
+      "description": "Soft pink hues",
       "premium": true
     }
   },
@@ -276,11 +276,6 @@
     "aurora": {
       "name": "Aurora",
       "description": "Northern lights dance",
-      "premium": true
-    },
-    "sakura": {
-      "name": "Sakura",
-      "description": "Cherry blossom petals drift down",
       "premium": true
     },
     "big_bang": {
