@@ -5637,6 +5637,7 @@ function updateGuessWordGrid(game, isMyTurn, isSpectator) {
     });
     
     // Update selection bar state
+    const selectionBar = document.getElementById('guess-selection-bar');
     if (!canSelect) {
         submitBtn.disabled = true;
         if (isSpectator) {
@@ -5647,10 +5648,12 @@ function updateGuessWordGrid(game, isMyTurn, isSpectator) {
             selectedDisplay.textContent = 'Not your turn';
         }
         selectedDisplay.classList.remove('has-selection');
+        if (selectionBar) selectionBar.classList.remove('has-selection');
     } else if (!selectedGuessWord) {
         submitBtn.disabled = true;
-        selectedDisplay.textContent = 'Click a word above';
+        selectedDisplay.textContent = 'Click a word to guess';
         selectedDisplay.classList.remove('has-selection');
+        if (selectionBar) selectionBar.classList.remove('has-selection');
     }
 }
 
