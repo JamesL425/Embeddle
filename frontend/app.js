@@ -5647,6 +5647,19 @@ function updateGuessWordGrid(game, isMyTurn, isSpectator) {
                 const selectionBar = document.getElementById('guess-selection-bar');
                 if (selectionBar) selectionBar.classList.add('has-selection');
             });
+            wordEl.addEventListener('dblclick', () => {
+                // Select this word
+                grid.querySelectorAll('.guess-word').forEach(w => w.classList.remove('selected'));
+                wordEl.classList.add('selected');
+                selectedGuessWord = word;
+                selectedDisplay.textContent = word.toUpperCase();
+                selectedDisplay.classList.add('has-selection');
+                submitBtn.disabled = false;
+                const selectionBar = document.getElementById('guess-selection-bar');
+                if (selectionBar) selectionBar.classList.add('has-selection');
+                // Submit the guess
+                submitGuess();
+            });
         } else {
             wordEl.disabled = !canSelect || wordLower === myWord;
         }
