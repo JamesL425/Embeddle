@@ -49,6 +49,7 @@
             <img id="user-avatar" class="user-avatar hidden" src="" alt="">
             <span id="logged-in-name">OPERATIVE</span>
             <button id="view-full-leaderboard-btn" class="btn btn-ghost btn-tiny" title="Leaderboard">🏆</button>
+            <button id="topbar-replay-btn" class="btn btn-ghost btn-tiny" title="Watch Replay">🎬</button>
             <button id="daily-btn" class="btn btn-ghost btn-tiny" title="Daily Ops">🎯</button>
             <button id="cosmetics-btn" class="btn btn-ghost btn-tiny" title="Cosmetics">🎨</button>
             <button id="chat-btn" class="btn btn-ghost btn-tiny" title="Chat">💬<span id="chat-unread-dot" class="unread-dot hidden"></span></button>
@@ -459,11 +460,6 @@
                             <input type="text" id="join-code-input" maxlength="6" placeholder="CODE">
                             <button id="join-code-btn" class="btn btn-ghost btn-tiny">Join</button>
                         </div>
-                        <span class="secondary-divider">|</span>
-                        <div class="replay-code-inline">
-                            <input type="text" id="home-replay-input" maxlength="100" placeholder="Replay">
-                            <button id="home-replay-btn" class="btn btn-ghost btn-tiny">🎬</button>
-                        </div>
                     </div>
                 </div>
                 
@@ -496,6 +492,8 @@
             <div id="open-lobbies" class="hidden"></div>
             <div id="spectate-games" class="hidden"></div>
             <div id="mini-leaderboard" class="hidden"></div>
+            <input type="hidden" id="home-replay-input">
+            <button id="home-replay-btn" class="hidden"></button>
             <div id="home-your-stats" class="hidden">
                 <span id="home-stat-games">0</span>
                 <span id="home-stat-wins">0</span>

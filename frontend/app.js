@@ -1426,6 +1426,34 @@ function closeOptionsPanel() {
 document.getElementById('options-btn')?.addEventListener('click', toggleOptionsPanel);
 document.getElementById('close-options-btn')?.addEventListener('click', closeOptionsPanel);
 
+// Info panel
+let infoPanelOpen = false;
+
+function toggleInfoPanel() {
+    infoPanelOpen = !infoPanelOpen;
+    const panel = document.getElementById('info-panel');
+    if (panel) {
+        panel.classList.toggle('open', infoPanelOpen);
+    }
+}
+
+function closeInfoPanel() {
+    infoPanelOpen = false;
+    const panel = document.getElementById('info-panel');
+    if (panel) panel.classList.remove('open');
+}
+
+document.getElementById('info-btn')?.addEventListener('click', toggleInfoPanel);
+document.getElementById('close-info-btn')?.addEventListener('click', closeInfoPanel);
+
+// Replay button in topbar - prompts for replay code
+document.getElementById('topbar-replay-btn')?.addEventListener('click', () => {
+    const code = prompt('Enter replay code:');
+    if (code && code.trim()) {
+        loadAndShowReplay(code.trim());
+    }
+});
+
 // Topbar toggle (mobile minimizable)
 let topbarCollapsed = false;
 
