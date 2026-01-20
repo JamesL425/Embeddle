@@ -290,80 +290,278 @@
 }
 
 /* Frost - Premium (Ko-fi supporter) */
+/* Icy crystalline border with frozen particle effects */
 .player-card.border-frost {
-    border: 2px solid #00d4ff;
-    box-shadow: 0 0 15px rgba(0, 212, 255, 0.4), inset 0 0 20px rgba(135, 206, 235, 0.1);
-    animation: frostShimmer 3s ease-in-out infinite;
+    border: 2px solid transparent;
+    background: 
+        linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
+        linear-gradient(135deg, #00d4ff, #87ceeb, #ffffff, #b0e0e6, #00d4ff) border-box;
+    background-size: 100% 100%, 300% 300%;
+    box-shadow: 
+        0 0 20px rgba(0, 212, 255, 0.6),
+        0 0 40px rgba(135, 206, 235, 0.3),
+        inset 0 0 25px rgba(200, 230, 255, 0.15);
+    animation: frostShimmer 4s ease-in-out infinite, frostBorderFlow 6s linear infinite;
+    position: relative;
+    overflow: visible;
+}
+
+/* Ice crystal sparkles */
+.player-card.border-frost::before {
+    content: '❄ ❅ ❆';
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #87ceeb;
+    text-shadow: 0 0 8px #00d4ff, 0 0 16px #ffffff;
+    animation: frostSparkle 2s ease-in-out infinite;
+    letter-spacing: 8px;
+    opacity: 0.9;
+}
+
+/* Frozen mist effect */
+.player-card.border-frost::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background: radial-gradient(ellipse at 50% 100%, rgba(135, 206, 235, 0.2) 0%, transparent 50%);
+    pointer-events: none;
+    animation: frostMist 3s ease-in-out infinite;
+    z-index: -1;
+    border-radius: inherit;
 }
 
 @keyframes frostShimmer {
     0%, 100% { 
-        box-shadow: 0 0 15px rgba(0, 212, 255, 0.4), inset 0 0 20px rgba(135, 206, 235, 0.1);
-        border-color: #00d4ff;
+        box-shadow: 
+            0 0 20px rgba(0, 212, 255, 0.6),
+            0 0 40px rgba(135, 206, 235, 0.3),
+            inset 0 0 25px rgba(200, 230, 255, 0.15);
+        filter: brightness(1);
     }
     50% { 
-        box-shadow: 0 0 25px rgba(135, 206, 235, 0.6), 0 0 40px rgba(255, 255, 255, 0.3), inset 0 0 25px rgba(200, 230, 255, 0.15);
-        border-color: #87ceeb;
+        box-shadow: 
+            0 0 30px rgba(135, 206, 235, 0.8),
+            0 0 60px rgba(255, 255, 255, 0.5),
+            inset 0 0 35px rgba(200, 230, 255, 0.25);
+        filter: brightness(1.1);
     }
 }
 
-/* Galaxy - Unlockable (1600 MMR) */
+@keyframes frostBorderFlow {
+    0% { background-position: 100% 100%, 0% 0%; }
+    100% { background-position: 100% 100%, 300% 300%; }
+}
+
+@keyframes frostSparkle {
+    0%, 100% { opacity: 0.7; transform: translateX(-50%) scale(1); }
+    50% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+}
+
+@keyframes frostMist {
+    0%, 100% { opacity: 0.4; transform: translateY(0); }
+    50% { opacity: 0.7; transform: translateY(-5px); }
+}
+
+/* Galaxy - Unlockable (2000 MMR) */
+/* Starfield with nebula glow and twinkling stars */
 .player-card.border-galaxy {
-    border: 2px solid #4b0082;
+    border: 2px solid transparent;
     background: 
-        radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.8), transparent),
-        radial-gradient(1px 1px at 80% 70%, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(1px 1px at 40% 80%, rgba(255, 255, 255, 0.7), transparent),
-        radial-gradient(1px 1px at 60% 20%, rgba(255, 255, 255, 0.5), transparent),
-        radial-gradient(1px 1px at 10% 60%, rgba(255, 255, 255, 0.6), transparent),
-        linear-gradient(var(--bg-card), var(--bg-card));
-    box-shadow: 0 0 20px rgba(75, 0, 130, 0.5), 0 0 40px rgba(138, 43, 226, 0.3);
-    animation: galaxyPulse 4s ease-in-out infinite;
+        linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
+        linear-gradient(45deg, #4b0082, #8b00ff, #00008b, #4b0082) border-box;
+    background-size: 100% 100%, 400% 400%;
+    box-shadow: 
+        0 0 25px rgba(75, 0, 130, 0.7),
+        0 0 50px rgba(138, 43, 226, 0.4),
+        inset 0 0 20px rgba(138, 43, 226, 0.1);
+    animation: galaxyPulse 4s ease-in-out infinite, galaxyBorderFlow 8s linear infinite;
+    position: relative;
+    overflow: visible;
+}
+
+/* Twinkling star field */
+.player-card.border-galaxy::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    background-image: 
+        radial-gradient(2px 2px at 10% 20%, rgba(255, 255, 255, 0.9), transparent),
+        radial-gradient(2px 2px at 30% 60%, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(1px 1px at 50% 10%, rgba(255, 255, 255, 0.8), transparent),
+        radial-gradient(2px 2px at 70% 40%, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(1px 1px at 90% 80%, rgba(255, 255, 255, 0.9), transparent),
+        radial-gradient(2px 2px at 20% 90%, rgba(255, 200, 255, 0.7), transparent),
+        radial-gradient(1px 1px at 80% 15%, rgba(200, 200, 255, 0.8), transparent),
+        radial-gradient(2px 2px at 45% 75%, rgba(255, 255, 200, 0.6), transparent);
+    animation: galaxyStarsTwinkle 3s ease-in-out infinite;
+    pointer-events: none;
+    border-radius: inherit;
+    z-index: 1;
+}
+
+/* Nebula glow effect */
+.player-card.border-galaxy::after {
+    content: '✦';
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 16px;
+    color: #8b00ff;
+    text-shadow: 
+        0 0 10px #8b00ff,
+        0 0 20px #4b0082,
+        0 0 30px #00008b;
+    animation: galaxyStar 2s ease-in-out infinite;
+    z-index: 2;
 }
 
 @keyframes galaxyPulse {
     0%, 100% { 
-        box-shadow: 0 0 20px rgba(75, 0, 130, 0.5), 0 0 40px rgba(138, 43, 226, 0.3);
-        border-color: #4b0082;
+        box-shadow: 
+            0 0 25px rgba(75, 0, 130, 0.7),
+            0 0 50px rgba(138, 43, 226, 0.4),
+            inset 0 0 20px rgba(138, 43, 226, 0.1);
     }
     50% { 
-        box-shadow: 0 0 30px rgba(138, 43, 226, 0.6), 0 0 50px rgba(75, 0, 130, 0.4);
-        border-color: #6a0dad;
+        box-shadow: 
+            0 0 35px rgba(138, 43, 226, 0.8),
+            0 0 70px rgba(75, 0, 130, 0.5),
+            inset 0 0 30px rgba(138, 43, 226, 0.2);
+    }
+}
+
+@keyframes galaxyBorderFlow {
+    0% { background-position: 100% 100%, 0% 0%; }
+    100% { background-position: 100% 100%, 400% 400%; }
+}
+
+@keyframes galaxyStarsTwinkle {
+    0%, 100% { opacity: 0.6; }
+    25% { opacity: 1; }
+    50% { opacity: 0.7; }
+    75% { opacity: 0.9; }
+}
+
+@keyframes galaxyStar {
+    0%, 100% { 
+        transform: translateX(-50%) rotate(0deg) scale(1);
+        opacity: 0.8;
+    }
+    50% { 
+        transform: translateX(-50%) rotate(180deg) scale(1.2);
+        opacity: 1;
     }
 }
 
 /* Godframe - Admin only */
+/* Divine golden aura with celestial particles - the ultimate border */
 .player-card.border-godframe {
-    border: 3px solid transparent;
-    background: 
-        linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
-        linear-gradient(45deg, #ffd700, #ffffff, #ffd700, #ff8c00, #ffd700) border-box;
-    background-size: 100% 100%, 400% 400%;
+    border: 3px solid #ffd700;
+    background: var(--bg-card);
     box-shadow: 
-        0 0 30px rgba(255, 215, 0, 0.8),
-        0 0 60px rgba(255, 215, 0, 0.4),
+        0 0 25px rgba(255, 215, 0, 1),
+        0 0 50px rgba(255, 215, 0, 0.7),
+        0 0 75px rgba(255, 215, 0, 0.5),
+        0 0 100px rgba(255, 255, 255, 0.3),
         inset 0 0 30px rgba(255, 215, 0, 0.2);
-    animation: godframeAura 3s ease-in-out infinite, godframeBorderFlow 4s linear infinite;
+    animation: godframeAura 2s ease-in-out infinite;
+    position: relative;
+    overflow: visible;
+    z-index: 1;
+}
+
+/* Divine halo - outer ethereal glow ring */
+.player-card.border-godframe::before {
+    content: '';
+    position: absolute;
+    top: -25px;
+    left: -25px;
+    right: -25px;
+    bottom: -25px;
+    border: 2px solid rgba(255, 215, 0, 0.4);
+    border-radius: inherit;
+    background: 
+        radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.5) 0%, transparent 40%),
+        radial-gradient(ellipse at 50% 100%, rgba(255, 215, 0, 0.4) 0%, transparent 40%);
+    animation: godframeHalo 3s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* Celestial star ornaments */
+.player-card.border-godframe::after {
+    content: '✦ ✧ ★ ✧ ✦';
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: #ffd700;
+    text-shadow: 
+        0 0 10px #ffd700, 
+        0 0 20px #ffffff,
+        0 0 30px rgba(255, 215, 0, 0.8);
+    animation: godframeStars 4s ease-in-out infinite;
+    letter-spacing: 6px;
+    opacity: 0.95;
+    z-index: 10;
 }
 
 @keyframes godframeAura {
     0%, 100% { 
         box-shadow: 
-            0 0 30px rgba(255, 215, 0, 0.8),
-            0 0 60px rgba(255, 215, 0, 0.4),
+            0 0 25px rgba(255, 215, 0, 1),
+            0 0 50px rgba(255, 215, 0, 0.7),
+            0 0 75px rgba(255, 215, 0, 0.5),
+            0 0 100px rgba(255, 255, 255, 0.3),
             inset 0 0 30px rgba(255, 215, 0, 0.2);
+        border-color: #ffd700;
+        filter: brightness(1);
     }
     50% { 
         box-shadow: 
-            0 0 50px rgba(255, 215, 0, 1),
-            0 0 100px rgba(255, 215, 0, 0.6),
-            inset 0 0 50px rgba(255, 215, 0, 0.4);
+            0 0 40px rgba(255, 215, 0, 1),
+            0 0 80px rgba(255, 215, 0, 0.8),
+            0 0 120px rgba(255, 215, 0, 0.6),
+            0 0 160px rgba(255, 255, 255, 0.4),
+            inset 0 0 50px rgba(255, 215, 0, 0.3);
+        border-color: #fff8dc;
+        filter: brightness(1.15);
     }
 }
 
-@keyframes godframeBorderFlow {
-    0% { background-position: 100% 100%, 0% 50%; }
-    100% { background-position: 100% 100%, 400% 50%; }
+@keyframes godframeHalo {
+    0%, 100% { 
+        opacity: 0.6; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.9; 
+        transform: scale(1.03);
+    }
+}
+
+@keyframes godframeStars {
+    0%, 100% { 
+        opacity: 0.8;
+        transform: translateX(-50%) scale(1);
+        letter-spacing: 6px;
+    }
+    50% { 
+        opacity: 1;
+        transform: translateX(-50%) scale(1.05);
+        letter-spacing: 8px;
+    }
 }
 
 /* ============ NAME COLOR COSMETICS ============ */
@@ -408,6 +606,7 @@
 }
 
 /* Omniscient - Admin only */
+/* All-seeing cosmic eye glow - the divine admin name */
 .name.name-omniscient {
     background: linear-gradient(90deg, #ff00ff, #00ffff, #ffd700, #ff00ff);
     background-size: 400% 100%;
@@ -1418,14 +1617,18 @@
 }
 
 /* Sakura - Premium (Ko-fi supporter) */
+/* Cherry blossom petals drifting down with pink ambient glow */
 .sakura-petal {
     position: absolute;
     top: -30px;
     font-size: var(--size, 1.5rem);
     animation: sakuraFall var(--duration, 4s) ease-in-out forwards;
     animation-delay: var(--delay, 0s);
-    filter: drop-shadow(0 0 4px rgba(255, 182, 193, 0.6));
+    filter: 
+        drop-shadow(0 0 6px rgba(255, 182, 193, 0.9))
+        drop-shadow(0 0 12px rgba(255, 105, 180, 0.6));
     opacity: 0;
+    z-index: 10;
 }
 
 @keyframes sakuraFall {
@@ -1433,8 +1636,11 @@
         transform: translateY(0) rotate(0deg) translateX(0); 
         opacity: 0; 
     }
-    10% { 
+    5% { 
         opacity: 1; 
+    }
+    90% {
+        opacity: 0.8;
     }
     100% { 
         transform: translateY(var(--fall-distance, 100vh)) rotate(var(--rotation, 720deg)) translateX(var(--drift, 50px)); 
@@ -1448,14 +1654,17 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(ellipse at 50% 30%, rgba(255, 182, 193, 0.15) 0%, transparent 60%);
+    background: 
+        radial-gradient(ellipse at 30% 20%, rgba(255, 182, 193, 0.25) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 40%, rgba(255, 105, 180, 0.2) 0%, transparent 45%),
+        radial-gradient(ellipse at 50% 80%, rgba(255, 192, 203, 0.15) 0%, transparent 55%);
     animation: sakuraGlow 3s ease-in-out infinite;
     pointer-events: none;
 }
 
 @keyframes sakuraGlow {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 0.6; }
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.9; }
 }
 
 /* ============ NEW PARTICLE OVERLAYS ============ */
@@ -1652,127 +1861,7 @@ body[data-particles="runes"]::before {
 }
 
 /* Card Borders - Legendary Admin: GODFRAME */
-/* The ultimate divine border - radiates celestial power with orbiting particles */
-.player-card.border-godframe {
-    border: 3px solid transparent;
-    background: 
-        linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
-        conic-gradient(from var(--godframe-angle, 0deg) at 50% 50%, 
-            #ffd700, #ffffff, #ffeaa7, #f39c12, #ffd700, 
-            #ffffff, #ffd700, #f1c40f, #ffffff, #ffd700) border-box;
-    background-size: 100% 100%, 100% 100%;
-    box-shadow: 
-        0 0 20px rgba(255, 215, 0, 0.9),
-        0 0 40px rgba(255, 215, 0, 0.6),
-        0 0 60px rgba(255, 215, 0, 0.4),
-        0 0 80px rgba(255, 255, 255, 0.3),
-        0 0 120px rgba(255, 215, 0, 0.2),
-        inset 0 0 25px rgba(255, 215, 0, 0.15);
-    animation: 
-        godframeAura 2.5s ease-in-out infinite,
-        godframeBorderSpin 8s linear infinite;
-    position: relative;
-    overflow: visible;
-    z-index: 1;
-}
-
-/* Divine halo - outer ethereal glow */
-.player-card.border-godframe::before {
-    content: '';
-    position: absolute;
-    top: -20px;
-    left: -20px;
-    right: -20px;
-    bottom: -20px;
-    background: 
-        radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.4) 0%, transparent 50%),
-        radial-gradient(ellipse at 50% 100%, rgba(255, 215, 0, 0.3) 0%, transparent 50%),
-        radial-gradient(ellipse at 0% 50%, rgba(255, 200, 100, 0.2) 0%, transparent 40%),
-        radial-gradient(ellipse at 100% 50%, rgba(255, 200, 100, 0.2) 0%, transparent 40%),
-        radial-gradient(circle at center, rgba(255, 215, 0, 0.25) 0%, transparent 60%);
-    animation: godframeHalo 3s ease-in-out infinite;
-    pointer-events: none;
-    z-index: -1;
-    border-radius: inherit;
-}
-
-/* Celestial ornaments - divine symbols orbiting the card */
-.player-card.border-godframe::after {
-    content: '✦ ✧ ✦ ✧';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 200%;
-    height: 200%;
-    font-size: 14px;
-    color: #ffd700;
-    text-shadow: 
-        0 0 8px #ffd700, 
-        0 0 16px #ffffff,
-        0 0 24px rgba(255, 215, 0, 0.8);
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    transform: translate(-50%, -50%);
-    animation: godframeOrbit 12s linear infinite;
-    pointer-events: none;
-    z-index: 10;
-    letter-spacing: 60px;
-    opacity: 0.9;
-}
-
-@keyframes godframeAura {
-    0%, 100% { 
-        box-shadow: 
-            0 0 20px rgba(255, 215, 0, 0.9),
-            0 0 40px rgba(255, 215, 0, 0.6),
-            0 0 60px rgba(255, 215, 0, 0.4),
-            0 0 80px rgba(255, 255, 255, 0.3),
-            0 0 120px rgba(255, 215, 0, 0.2),
-            inset 0 0 25px rgba(255, 215, 0, 0.15);
-        filter: brightness(1) saturate(1);
-    }
-    50% { 
-        box-shadow: 
-            0 0 35px rgba(255, 215, 0, 1),
-            0 0 70px rgba(255, 215, 0, 0.8),
-            0 0 100px rgba(255, 215, 0, 0.5),
-            0 0 140px rgba(255, 255, 255, 0.4),
-            0 0 180px rgba(255, 215, 0, 0.3),
-            inset 0 0 40px rgba(255, 215, 0, 0.25);
-        filter: brightness(1.1) saturate(1.1);
-    }
-}
-
-@keyframes godframeBorderSpin {
-    0% { --godframe-angle: 0deg; }
-    100% { --godframe-angle: 360deg; }
-}
-
-/* Register the custom property for animation */
-@property --godframe-angle {
-    syntax: '<angle>';
-    initial-value: 0deg;
-    inherits: false;
-}
-
-@keyframes godframeHalo {
-    0%, 100% { 
-        opacity: 0.6; 
-        transform: scale(1);
-        filter: blur(0px);
-    }
-    50% { 
-        opacity: 0.9; 
-        transform: scale(1.05);
-        filter: blur(2px);
-    }
-}
-
-@keyframes godframeOrbit {
-    0% { transform: translate(-50%, -50%) rotate(0deg); }
-    100% { transform: translate(-50%, -50%) rotate(360deg); }
-}
+/* Main godframe styles defined earlier in this file */
 
 /* Godframe particles - spawned via JS but styled here */
 .godframe-particle {
@@ -1913,109 +2002,38 @@ body[data-particles="runes"]::before {
     background: linear-gradient(90deg, 
         #ff00ff, #00ffff, #ffd700, #ff00ff, 
         #00ff88, #ff3366, #00ffff, #ffd700, #ff00ff);
-    background-size: 1000% 100%;
+    background-size: 800% 100%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     animation: 
-        omniscientShift 8s linear infinite,
+        omniscientShift 6s linear infinite,
         omniscientPulse 2s ease-in-out infinite;
     filter: 
-        drop-shadow(0 0 4px rgba(255, 0, 255, 0.8))
-        drop-shadow(0 0 8px rgba(0, 255, 255, 0.6))
-        drop-shadow(0 0 12px rgba(255, 215, 0, 0.4));
-    position: relative;
+        drop-shadow(0 0 6px rgba(255, 0, 255, 1))
+        drop-shadow(0 0 12px rgba(0, 255, 255, 0.8))
+        drop-shadow(0 0 18px rgba(255, 215, 0, 0.6));
     font-weight: bold;
     letter-spacing: 0.5px;
 }
 
-/* The All-Seeing Eye - mystical eye icon before the name */
-.name.name-omniscient::before {
-    content: '👁';
-    position: absolute;
-    left: -24px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.9em;
-    animation: omniscientEye 3s ease-in-out infinite;
-    filter: 
-        drop-shadow(0 0 6px rgba(255, 0, 255, 1))
-        drop-shadow(0 0 12px rgba(0, 255, 255, 0.8));
-    -webkit-text-fill-color: initial;
-}
-
-/* Cosmic trail after the name */
-.name.name-omniscient::after {
-    content: '✧';
-    position: absolute;
-    right: -18px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.7em;
-    color: #00ffff;
-    animation: omniscientTrail 2s ease-in-out infinite;
-    -webkit-text-fill-color: initial;
-    text-shadow: 
-        0 0 8px #00ffff,
-        0 0 16px #ff00ff;
-}
-
 @keyframes omniscientShift {
     0% { background-position: 0% 50%; }
-    100% { background-position: 1000% 50%; }
+    100% { background-position: 800% 50%; }
 }
 
 @keyframes omniscientPulse {
     0%, 100% { 
         filter: 
-            drop-shadow(0 0 4px rgba(255, 0, 255, 0.8))
-            drop-shadow(0 0 8px rgba(0, 255, 255, 0.6))
-            drop-shadow(0 0 12px rgba(255, 215, 0, 0.4));
-        transform: scale(1);
-    }
-    50% { 
-        filter: 
-            drop-shadow(0 0 8px rgba(255, 0, 255, 1))
-            drop-shadow(0 0 16px rgba(0, 255, 255, 0.8))
-            drop-shadow(0 0 24px rgba(255, 215, 0, 0.6));
-        transform: scale(1.02);
-    }
-}
-
-@keyframes omniscientEye {
-    0%, 100% { 
-        opacity: 1; 
-        transform: translateY(-50%) scale(1);
-        filter: 
             drop-shadow(0 0 6px rgba(255, 0, 255, 1))
-            drop-shadow(0 0 12px rgba(0, 255, 255, 0.8));
-    }
-    25% {
-        opacity: 0.7;
-        transform: translateY(-50%) scale(0.9);
+            drop-shadow(0 0 12px rgba(0, 255, 255, 0.8))
+            drop-shadow(0 0 18px rgba(255, 215, 0, 0.6));
     }
     50% { 
-        opacity: 1; 
-        transform: translateY(-50%) scale(1.15);
         filter: 
             drop-shadow(0 0 10px rgba(255, 0, 255, 1))
             drop-shadow(0 0 20px rgba(0, 255, 255, 1))
             drop-shadow(0 0 30px rgba(255, 215, 0, 0.8));
-    }
-    75% {
-        opacity: 0.8;
-        transform: translateY(-50%) scale(1.05);
-    }
-}
-
-@keyframes omniscientTrail {
-    0%, 100% {
-        opacity: 0.6;
-        transform: translateY(-50%) rotate(0deg);
-    }
-    50% {
-        opacity: 1;
-        transform: translateY(-50%) rotate(180deg) scale(1.2);
     }
 }
 

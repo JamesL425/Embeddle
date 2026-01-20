@@ -554,20 +554,20 @@ function createSakuraEffect(container) {
     glow.className = 'sakura-glow';
     container.appendChild(glow);
     
-    // Spawn cherry blossom petals
-    const petalCount = 50;
-    const petals = ['🌸', '🌸', '🌸', '💮']; // Mostly cherry blossoms with occasional white flower
+    // Spawn cherry blossom petals - more petals for better visibility
+    const petalCount = 70;
+    const petals = ['🌸', '🌸', '🌸', '🌸', '💮', '🏵️']; // Cherry blossoms with occasional variations
     
     for (let i = 0; i < petalCount; i++) {
         const petal = document.createElement('div');
         petal.className = 'sakura-petal';
         petal.textContent = petals[Math.floor(Math.random() * petals.length)];
         
-        const size = (1 + Math.random() * 1).toFixed(2);
-        const duration = (3 + Math.random() * 2).toFixed(2);
-        const delay = (Math.random() * 1.5).toFixed(2);
-        const drift = (-60 + Math.random() * 120).toFixed(0);
-        const rotation = (360 + Math.random() * 720).toFixed(0);
+        const size = (1.2 + Math.random() * 1.2).toFixed(2);
+        const duration = (3 + Math.random() * 3).toFixed(2);
+        const delay = (Math.random() * 2).toFixed(2);
+        const drift = (-80 + Math.random() * 160).toFixed(0);
+        const rotation = (360 + Math.random() * 1080).toFixed(0);
         
         petal.style.left = Math.random() * 100 + '%';
         petal.style.setProperty('--size', `${size}rem`);
@@ -580,7 +580,7 @@ function createSakuraEffect(container) {
         container.appendChild(petal);
     }
     
-    setTimeout(() => container.innerHTML = '', 5500);
+    setTimeout(() => container.innerHTML = '', 6500);
 }
 
 function createBigBangEffect(container) {
