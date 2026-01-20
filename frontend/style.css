@@ -1313,8 +1313,9 @@ header h1 {
     padding: 1rem;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
     grid-template-columns: 280px 1fr 300px;
-    grid-template-rows: 1fr;
+    grid-template-rows: minmax(0, 1fr);
     grid-template-areas: "players center log";
     max-width: 1600px;
     margin: 0 auto;
@@ -1457,12 +1458,11 @@ header h1 {
     flex-direction: column;
     gap: 0.75rem;
     min-height: 0;
-    max-height: 100%;
     overflow: hidden;
 }
 
 .guess-word-grid {
-    flex: 1 1 0;
+    flex: 1 1 auto;
     display: flex;
     flex-wrap: wrap;
     gap: 0.625rem;
@@ -1473,7 +1473,6 @@ header h1 {
     border-radius: var(--radius);
     overflow-y: auto;
     min-height: 0;
-    max-height: calc(100vh - 280px);
 }
 
 .guess-word {
