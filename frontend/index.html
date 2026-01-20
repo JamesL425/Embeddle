@@ -51,6 +51,7 @@
             <button id="daily-btn" class="btn btn-ghost btn-tiny" title="Daily Ops">🎯</button>
             <button id="cosmetics-btn" class="btn btn-ghost btn-tiny" title="Cosmetics">🎨</button>
             <button id="chat-btn" class="btn btn-ghost btn-tiny" title="Chat">💬<span id="chat-unread-dot" class="unread-dot hidden"></span></button>
+            <button id="info-btn" class="btn btn-ghost btn-tiny" title="Info">ℹ️</button>
             <button id="options-btn" class="btn btn-ghost btn-tiny" title="Options">⚙️</button>
         </div>
     </div>
@@ -155,13 +156,67 @@
                 <input type="checkbox" id="opt-nerd-mode">
                 <span>Nerd mode (show raw cosine similarity)</span>
             </label>
-            <hr class="option-divider">
-            <button id="ml-info-btn" class="btn btn-secondary btn-small" style="margin-top: 1rem; width: 100%;">📊 How Embeddings Work</button>
-            
-            <hr class="option-divider">
-            <div class="rank-info-section">
-                <h3 class="rank-info-title">🏆 Ranked Tiers</h3>
-                <p class="rank-info-desc">Climb the ranks by winning ranked matches! New players have higher rating volatility for faster calibration.</p>
+        </div>
+    </div>
+
+    <!-- Info Panel -->
+    <div id="info-panel" class="drawer-panel info-panel">
+        <div class="info-header">
+            <h2>ℹ️ INFO</h2>
+            <button id="close-info-btn" class="btn btn-ghost btn-tiny">×</button>
+        </div>
+        <div class="info-content">
+            <!-- Open Source Section -->
+            <div class="info-section info-opensource">
+                <h3 class="info-section-title">🌐 Open Source</h3>
+                <p class="info-desc">Embeddle is open source! We believe in community-driven development and welcome contributions from everyone.</p>
+                <a href="https://github.com/JamesL425/Embeddle" target="_blank" rel="noopener" class="btn btn-primary info-github-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                    View on GitHub
+                </a>
+                <div class="info-contribute">
+                    <h4>🤝 Want to Contribute?</h4>
+                    <p>We're building an evolving, community-driven game. Here's how you can help:</p>
+                    <ul class="info-contribute-list">
+                        <li><strong>Submit PRs</strong> – Bug fixes, new features, improvements</li>
+                        <li><strong>Report Issues</strong> – Found a bug? Let us know!</li>
+                        <li><strong>Suggest Themes</strong> – Help expand our word databases</li>
+                        <li><strong>Share Ideas</strong> – Game modes, cosmetics, UI improvements</li>
+                    </ul>
+                </div>
+            </div>
+
+            <hr class="info-divider">
+
+            <!-- How It Works Section -->
+            <div class="info-section info-how-it-works">
+                <h3 class="info-section-title">🧠 How Embeddings Work</h3>
+                <p class="info-desc">Embeddle uses <strong>word embeddings</strong> – vectors in high-dimensional space that capture semantic meaning. Words with similar meanings are closer together.</p>
+                
+                <h4>Cosine Similarity</h4>
+                <p class="info-desc-small">We measure how "close" two words are using <strong>cosine similarity</strong> – the cosine of the angle between their vectors. Raw values range from -1 (opposite) to 1 (identical).</p>
+                
+                <div class="info-formula">
+                    <code>cosine(A, B) = (A · B) / (||A|| × ||B||)</code>
+                </div>
+                
+                <h4>Display Transformation</h4>
+                <p class="info-desc-small">Raw cosine similarity values tend to cluster between 20-60%, making them hard to interpret. We apply a sigmoid-like transformation to spread values more intuitively across the 0-100% range.</p>
+                
+                <p class="info-desc-small"><strong>Nerd mode</strong> (in options) shows the original raw cosine similarity alongside the transformed display value.</p>
+                
+                <h4>The Model</h4>
+                <p class="info-desc-small">We use OpenAI's <strong>text-embedding-3-large</strong> model, providing high-quality semantic embeddings for robust word similarity comparisons.</p>
+            </div>
+
+            <hr class="info-divider">
+
+            <!-- Ranked Section -->
+            <div class="info-section info-ranked">
+                <h3 class="info-section-title">🏆 Ranked Tiers</h3>
+                <p class="info-desc-small">Climb the ranks by winning ranked matches! New players have higher rating volatility for faster calibration.</p>
                 
                 <div class="rank-tier-table">
                     <div class="rank-tier-row">
@@ -203,11 +258,13 @@
                     </ul>
                 </div>
             </div>
-            
-            <hr class="option-divider">
-            <div class="support-section">
-                <h3 class="support-title">☕ Support Embeddle</h3>
-                <p class="support-desc">Embeddle is free to play! Your support helps cover AI API costs and keeps the game running.</p>
+
+            <hr class="info-divider">
+
+            <!-- Support Section -->
+            <div class="info-section info-support">
+                <h3 class="info-section-title">☕ Support Embeddle</h3>
+                <p class="info-desc">Embeddle is free to play! Your support helps cover AI API costs and keeps the game running.</p>
                 
                 <div class="premium-perks">
                     <h4>🎁 Supporter Exclusive Cosmetics</h4>
@@ -243,54 +300,8 @@
                     </div>
                 </div>
                 
-                <a href="https://ko-fi.com/embeddle" target="_blank" class="btn btn-primary support-btn">☕ Support on Ko-fi</a>
+                <a href="https://ko-fi.com/embeddle" target="_blank" rel="noopener" class="btn btn-primary support-btn">☕ Support on Ko-fi</a>
                 <p class="support-note">One-time donation of any amount unlocks ALL premium cosmetics forever!</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- ML Info Modal -->
-    <div id="ml-info-modal" class="modal-overlay closable-modal">
-        <div class="modal-backdrop" data-close="true"></div>
-        <div class="modal ml-info-modal">
-            <div class="ml-info-header">
-                <h2>🧠 How EMBEDDLE Works</h2>
-                <button id="close-ml-info-btn" class="btn btn-ghost btn-tiny">×</button>
-            </div>
-            <div class="ml-info-content">
-                <h3>Word Embeddings</h3>
-                <p>EMBEDDLE uses <strong>word embeddings</strong> - vectors in high-dimensional space that capture semantic meaning. Words with similar meanings are closer together in this space.</p>
-                
-                <h3>Cosine Similarity</h3>
-                <p>We measure how "close" two words are using <strong>cosine similarity</strong> - the cosine of the angle between their vectors. Raw values range from -1 (opposite) to 1 (identical).</p>
-                
-                <div class="ml-formula">
-                    <code>cosine(A, B) = (A · B) / (||A|| × ||B||)</code>
-                </div>
-                
-                <h3>Display Transformation</h3>
-                <p>Raw cosine similarity values tend to cluster between 20-60%, making them hard to interpret. We apply a <strong>sigmoid-like transformation</strong> to spread values more intuitively across the 0-100% range:</p>
-                
-                <div class="ml-formula">
-                    <code>display(s) = s<sup>n</sup> / (s<sup>n</sup> + (c·(1-s))<sup>n</sup>)</code>
-                    <br><small>where c = m/(1-m), n = 3, m = 0.36</small>
-                </div>
-                
-                <p>This makes low similarities appear lower and high similarities appear higher, while keeping the midpoint around 36% raw = 50% displayed.</p>
-                
-                <p><strong>Nerd mode</strong> (in options) shows the original raw cosine similarity alongside the transformed display value.</p>
-                
-                <h3>The Game</h3>
-                <p>Each guess reveals how similar it is to each player's secret word. <strong>Guessing a player's exact word eliminates them!</strong></p>
-                
-                <ul class="ml-tips">
-                    <li><strong>Strategy:</strong> Use words semantically close to opponents' likely words to deduce their secret</li>
-                    <li><strong>Defense:</strong> Choose obscure words with few semantic neighbors</li>
-                    <li><strong>Pro tip:</strong> Related words often have 30-50% raw similarity (displayed as ~20-60%)</li>
-                </ul>
-                
-                <h3>Model</h3>
-                <p>We use OpenAI's <strong>text-embedding-3-large</strong> model, providing high-quality semantic embeddings for robust word similarity comparisons.</p>
             </div>
         </div>
     </div>
@@ -471,6 +482,14 @@
                             ☕ Enjoying Embeddle? Support development
                         </a>
                     </div>
+                    <div class="home-opensource-row">
+                        <a href="https://github.com/JamesL425/Embeddle" target="_blank" rel="noopener" class="home-github-link">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                            </svg>
+                            Open Source – Contribute on GitHub
+                        </a>
+                    </div>
                 </div>
             </div>
 
@@ -603,7 +622,8 @@
                     <div class="queue-players-display">
                         <span class="queue-label">OPERATIVES FOUND:</span>
                         <span id="queue-players" class="queue-value">0</span>
-                        <span class="queue-value">/4</span>
+                        <span class="queue-value">/</span>
+                        <span id="queue-target-size" class="queue-value">4</span>
                     </div>
                     <div class="queue-timer-display">
                         <span class="queue-label">TIME IN QUEUE:</span>
@@ -611,7 +631,11 @@
                     </div>
                     <div id="queue-mmr-display" class="queue-mmr-display hidden">
                         <span class="queue-label">SEARCH RANGE:</span>
-                        <span id="queue-mmr-range" class="queue-value">+/- 100 MMR</span>
+                        <span id="queue-mmr-range" class="queue-value">+/- 150 MMR</span>
+                    </div>
+                    <div id="queue-min-size-display" class="queue-min-size-display hidden">
+                        <span class="queue-label">MIN PLAYERS:</span>
+                        <span id="queue-min-size" class="queue-value">4</span>
                     </div>
                 </div>
                 
@@ -1108,8 +1132,14 @@
             <div class="footer-content">
                 <span class="footer-text">// EMBEDDLE v1.0</span>
                 <div class="footer-links">
+                    <a href="https://github.com/JamesL425/Embeddle" target="_blank" rel="noopener" class="footer-link github-link">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 4px;">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                        </svg>
+                        GitHub
+                    </a>
                     <a href="https://ko-fi.com/embeddle" target="_blank" rel="noopener" class="footer-link support-link">
-                        ☕ Support Development
+                        ☕ Support
                     </a>
                     <a href="/privacy" class="footer-link">Privacy</a>
                     <a href="/terms" class="footer-link">Terms</a>

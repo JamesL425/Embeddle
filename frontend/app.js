@@ -2599,15 +2599,27 @@ function showQueueScreen(mode) {
         modeDisplay.className = `queue-value ${mode === 'ranked' ? 'queue-ranked' : 'queue-casual'}`;
     }
 
-    // Show/hide MMR display for ranked
+    // Show/hide MMR display for ranked only
     const mmrDisplay = document.getElementById('queue-mmr-display');
     if (mmrDisplay) {
         mmrDisplay.classList.toggle('hidden', mode !== 'ranked');
     }
 
+    // Show/hide min size display for quick play only
+    const minSizeDisplay = document.getElementById('queue-min-size-display');
+    if (minSizeDisplay) {
+        minSizeDisplay.classList.toggle('hidden', mode !== 'quick_play');
+    }
+
     // Reset displays
     const playersDisplay = document.getElementById('queue-players');
     if (playersDisplay) playersDisplay.textContent = '0';
+
+    const targetSizeDisplay = document.getElementById('queue-target-size');
+    if (targetSizeDisplay) targetSizeDisplay.textContent = '4';
+
+    const minSizeValue = document.getElementById('queue-min-size');
+    if (minSizeValue) minSizeValue.textContent = '4';
 
     const timerDisplay = document.getElementById('queue-timer');
     if (timerDisplay) timerDisplay.textContent = '0:00';
@@ -2655,23 +2667,26 @@ function updateQueueTimer() {
     const statusMessage = document.getElementById('queue-status-message');
     if (statusMessage) {
         if (gameState.queueMode === 'quick_play') {
+            // Quick play - show flexible match size status
             if (elapsed >= 60) {
-                statusMessage.textContent = 'Still searching... hang tight!';
+                statusMessage.textContent = 'Will start with 2+ players...';
             } else if (elapsed >= 30) {
-                statusMessage.textContent = 'Waiting for more operatives...';
+                statusMessage.textContent = 'Will start with 3+ players...';
             } else if (elapsed >= 15) {
                 statusMessage.textContent = 'Expanding search parameters...';
             } else {
                 statusMessage.textContent = 'Scanning for available operatives...';
             }
         } else {
-            // Ranked
+            // Ranked - always 4 players, show MMR expansion
             if (elapsed >= 90) {
                 statusMessage.textContent = 'Searching across all skill levels...';
             } else if (elapsed >= 60) {
                 statusMessage.textContent = 'Widening MMR search range...';
             } else if (elapsed >= 30) {
                 statusMessage.textContent = 'Expanding search parameters...';
+            } else if (elapsed >= 15) {
+                statusMessage.textContent = 'Broadening skill range...';
             } else {
                 statusMessage.textContent = 'Searching for operatives at your skill level...';
             }
@@ -2714,6 +2729,24 @@ async function pollQueueStatus() {
             const mmrRangeDisplay = document.getElementById('queue-mmr-range');
             if (mmrRangeDisplay) {
                 mmrRangeDisplay.textContent = `+/- ${response.mmr_range} MMR`;
+            }
+        }
+
+        // Update min match size for quick play
+        if (response.min_match_size !== undefined) {
+            const minSizeDisplay = document.getElementById('queue-min-size');
+            if (minSizeDisplay) {
+                minSizeDisplay.textContent = response.min_match_size.toString();
+            }
+            // Update the target size display to show the range
+            const targetSizeDisplay = document.getElementById('queue-target-size');
+            if (targetSizeDisplay) {
+                // Show "2-4" format when min is less than max
+                if (response.min_match_size < (response.max_match_size || 4)) {
+                    targetSizeDisplay.textContent = `${response.min_match_size}-${response.max_match_size || 4}`;
+                } else {
+                    targetSizeDisplay.textContent = (response.max_match_size || 4).toString();
+                }
             }
         }
 

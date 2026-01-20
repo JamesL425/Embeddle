@@ -4964,18 +4964,29 @@ def get_leaderboard(leaderboard_type: str = 'alltime') -> list:
 # Queue configuration
 QUEUE_EXPIRY_SECONDS = 300  # 5 minutes max in queue
 QUEUE_QUICK_PLAY_TIMEOUT = 30  # 30 seconds before filling with AI
-QUEUE_MATCH_SIZE = 4  # Fixed 4-player matches
-QUEUE_MIN_CASUAL_GAMES_FOR_RANKED = 5  # Minimum casual games before ranked
+QUEUE_MATCH_SIZE_MIN = 2  # Minimum players for a quick play match
+QUEUE_MATCH_SIZE_MAX = 4  # Maximum players for matches
+QUEUE_MATCH_SIZE = 4  # Fixed match size for ranked
+QUEUE_MIN_CASUAL_GAMES_FOR_RANKED = 3  # Minimum casual games before ranked (lowered for accessibility)
 
 # MMR range expansion for ranked matchmaking
-RANKED_MMR_RANGE_INITIAL = 100
+# More aggressive expansion to find matches faster
+RANKED_MMR_RANGE_INITIAL = 150  # Start wider for faster initial matches
 RANKED_MMR_RANGE_EXPANSIONS = [
-    (30, 200),   # After 30s: +/- 200
-    (60, 300),   # After 60s: +/- 300
-    (90, 400),   # After 90s: +/- 400
-    (120, 500),  # After 120s: +/- 500 (max)
+    (15, 250),   # After 15s: +/- 250 (expand quickly)
+    (30, 400),   # After 30s: +/- 400
+    (45, 600),   # After 45s: +/- 600
+    (60, 800),   # After 60s: +/- 800
+    (90, 1000),  # After 90s: +/- 1000 (match anyone)
 ]
-RANKED_MMR_RANGE_MAX = 500
+RANKED_MMR_RANGE_MAX = 1000
+
+# Match size reduction based on wait time (for quick play only)
+# After waiting long enough, accept smaller matches
+QUICK_PLAY_MATCH_SIZE_REDUCTIONS = [
+    (30, 3),   # After 30s: accept 3-player matches
+    (60, 2),   # After 60s: accept 2-player matches
+]
 
 
 def _queue_key(mode: str) -> str:
@@ -5000,6 +5011,15 @@ def get_mmr_range_for_wait_time(wait_seconds: float) -> int:
         if wait_seconds >= threshold_seconds:
             mmr_range = expanded_range
     return min(mmr_range, RANKED_MMR_RANGE_MAX)
+
+
+def get_min_match_size_for_quick_play(wait_seconds: float) -> int:
+    """Get the minimum acceptable match size for quick play based on wait time."""
+    min_size = QUEUE_MATCH_SIZE_MAX
+    for threshold_seconds, reduced_size in QUICK_PLAY_MATCH_SIZE_REDUCTIONS:
+        if wait_seconds >= threshold_seconds:
+            min_size = reduced_size
+    return max(min_size, QUEUE_MATCH_SIZE_MIN)
 
 
 def join_matchmaking_queue(
@@ -5173,10 +5193,17 @@ def get_queue_status(mode: str, player_id: str) -> dict:
         "wait_time": int(wait_time),
     }
     
-    # Add MMR range info for ranked
+    # Add mode-specific info
     if mode == "ranked":
+        # Ranked: show MMR range, always 4 players
         response["mmr_range"] = get_mmr_range_for_wait_time(wait_time)
         response["player_mmr"] = player_data.get("mmr", 1000)
+        response["match_size"] = QUEUE_MATCH_SIZE  # Always 4
+    elif mode == "quick_play":
+        # Quick play: show flexible match size
+        min_size = get_min_match_size_for_quick_play(wait_time)
+        response["min_match_size"] = min_size
+        response["max_match_size"] = QUEUE_MATCH_SIZE_MAX
     
     return response
 
@@ -5242,16 +5269,56 @@ def _try_quick_play_match(redis, queue_key: str, requesting_player_id: str, wait
     """
     Try to create a quick play match.
     
-    - If 4 players: create match with first 4 (FIFO)
-    - Never adds AI - waits for human players
+    - If 4 players: create match immediately (FIFO)
+    - After 30s: accept 3-player matches
+    - After 60s: accept 2-player matches
     """
     players = _get_queue_players(redis, queue_key, "quick_play")
     
-    if len(players) >= QUEUE_MATCH_SIZE:
-        # Have enough players - create match with first 4 (FIFO)
-        players.sort(key=lambda p: p.get("joined_at", now))
-        match_players = players[:QUEUE_MATCH_SIZE]
-        return _create_match_from_queue(redis, "quick_play", match_players, ai_fill=0)
+    # Get minimum match size based on wait time
+    min_match_size = get_min_match_size_for_quick_play(wait_time)
+    
+    if len(players) < min_match_size:
+        return None
+    
+    # Sort by join time (FIFO)
+    players.sort(key=lambda p: p.get("joined_at", now))
+    
+    # Find the requesting player's position
+    requesting_idx = next((i for i, p in enumerate(players) if p.get("player_id") == requesting_player_id), None)
+    if requesting_idx is None:
+        return None
+    
+    # Check if all players ahead of us (and us) have waited long enough for this match size
+    # We need at least min_match_size players who all accept this size
+    eligible_players = []
+    for p in players:
+        p_wait = now - p.get("joined_at", now)
+        p_min_size = get_min_match_size_for_quick_play(p_wait)
+        # This player accepts matches of size >= p_min_size
+        # We need players who accept our current min_match_size
+        if len(eligible_players) < QUEUE_MATCH_SIZE_MAX:
+            eligible_players.append((p, p_min_size))
+    
+    # Find the best group we can form
+    # Start with max size and reduce
+    for target_size in range(QUEUE_MATCH_SIZE_MAX, min_match_size - 1, -1):
+        if len(eligible_players) < target_size:
+            continue
+        
+        # Take the first target_size players
+        group_candidates = eligible_players[:target_size]
+        
+        # Check if requesting player is in this group
+        group_player_ids = [p.get("player_id") for p, _ in group_candidates]
+        if requesting_player_id not in group_player_ids:
+            continue
+        
+        # Check if all players in the group accept this match size
+        all_accept = all(p_min_size <= target_size for _, p_min_size in group_candidates)
+        if all_accept:
+            match_players = [p for p, _ in group_candidates]
+            return _create_match_from_queue(redis, "quick_play", match_players, ai_fill=0)
     
     return None
 
@@ -5262,6 +5329,7 @@ def _try_ranked_match(redis, queue_key: str, requesting_player_id: str, wait_tim
     
     - Groups players by MMR range
     - Expands range over time
+    - Always requires exactly 4 players
     - Never adds AI - waits until 4 humans found
     """
     players = _get_queue_players(redis, queue_key, "ranked")
@@ -5288,12 +5356,11 @@ def _try_ranked_match(redis, queue_key: str, requesting_player_id: str, wait_tim
     if len(candidates) < QUEUE_MATCH_SIZE:
         return None
     
-    # Check if all candidates are within range of each other
     # Find the best group of 4 with tightest MMR spread
     best_group = None
     best_spread = float('inf')
     
-    # Simple greedy approach: sort by MMR and take consecutive groups
+    # Sort by MMR and take consecutive groups
     candidates.sort(key=lambda p: p.get("mmr", 1000))
     
     for i in range(len(candidates) - QUEUE_MATCH_SIZE + 1):

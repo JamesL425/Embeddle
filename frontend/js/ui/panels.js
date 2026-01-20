@@ -1,6 +1,6 @@
 /**
  * Panels UI Component
- * Manages side panels (options, cosmetics, daily) and top bar
+ * Manages side panels (options, cosmetics, daily, info) and top bar
  */
 
 import { optionsState, getOptions } from '../state/optionsState.js';
@@ -10,6 +10,7 @@ import * as chat from './chat.js';
 
 // Panel states
 let optionsPanelOpen = false;
+let infoPanelOpen = false;
 let topbarCollapsed = false;
 
 /**
@@ -22,6 +23,10 @@ export function init() {
     // Options panel
     document.getElementById('options-btn')?.addEventListener('click', toggleOptions);
     document.getElementById('close-options-btn')?.addEventListener('click', closeOptions);
+    
+    // Info panel
+    document.getElementById('info-btn')?.addEventListener('click', toggleInfo);
+    document.getElementById('close-info-btn')?.addEventListener('click', closeInfo);
     
     // Option toggle handlers
     document.getElementById('opt-chat-enabled')?.addEventListener('change', (e) => {
@@ -58,16 +63,6 @@ export function init() {
         optionsState.nerdMode = Boolean(e.target.checked);
         saveOptions(optionsState);
         applyOptions();
-    });
-    
-    // ML Info modal
-    document.getElementById('ml-info-btn')?.addEventListener('click', () => {
-        const modal = document.getElementById('ml-info-modal');
-        if (modal) modal.classList.add('show');
-    });
-    document.getElementById('close-ml-info-btn')?.addEventListener('click', () => {
-        const modal = document.getElementById('ml-info-modal');
-        if (modal) modal.classList.remove('show');
     });
 }
 
@@ -165,6 +160,26 @@ export function closeOptions() {
 }
 
 /**
+ * Toggle info panel
+ */
+export function toggleInfo() {
+    infoPanelOpen = !infoPanelOpen;
+    const panel = document.getElementById('info-panel');
+    if (panel) {
+        panel.classList.toggle('open', infoPanelOpen);
+    }
+}
+
+/**
+ * Close info panel
+ */
+export function closeInfo() {
+    infoPanelOpen = false;
+    const panel = document.getElementById('info-panel');
+    if (panel) panel.classList.remove('open');
+}
+
+/**
  * Apply options to UI elements
  */
 export function applyOptionsToUI() {
@@ -230,6 +245,8 @@ export default {
     init,
     toggleOptions,
     closeOptions,
+    toggleInfo,
+    closeInfo,
     applyOptionsToUI,
     applyOptions,
     updateTopbarUsername,

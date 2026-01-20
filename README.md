@@ -2,7 +2,20 @@
 
 A multiplayer word deduction game where players try to guess each other's secret words using semantic similarity.
 
-**Play now at [bagofwordsdle.vercel.app](https://bagofwordsdle.vercel.app)**
+**Play now at [embeddle.vercel.app](https://embeddle.vercel.app)**
+
+## 🌐 Open Source & Community-Driven
+
+Embeddle is open source! We believe in community-driven development and welcome contributions from everyone. This is an evolving game that grows with input from players and developers alike.
+
+### How to Contribute
+
+- **Submit PRs** – Bug fixes, new features, UI improvements
+- **Report Issues** – Found a bug? Let us know on GitHub Issues
+- **Suggest Themes** – Help expand our word databases with new theme ideas
+- **Share Ideas** – Game modes, cosmetics, balance suggestions
+
+Check out our [GitHub repository](https://github.com/JamesL425/Embeddle) and see our [Contributing Guide](CONTRIBUTING.md) for more details.
 
 ## How to Play
 
