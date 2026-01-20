@@ -407,12 +407,13 @@
 /* Frost - Premium (Ko-fi supporter) */
 /* Clean icy border with subtle glow */
 .player-card.border-frost {
-    border: 2px solid #87ceeb;
+    border: 2px solid #87ceeb !important;
     box-shadow: 
         0 0 12px rgba(135, 206, 235, 0.6),
         0 0 24px rgba(0, 212, 255, 0.3),
-        inset 0 0 8px rgba(135, 206, 235, 0.1);
+        inset 0 0 8px rgba(135, 206, 235, 0.1) !important;
     animation: frostPulse 3s ease-in-out infinite;
+    overflow: visible !important;
 }
 
 @keyframes frostPulse {
@@ -435,12 +436,13 @@
 /* Galaxy - Unlockable (2000 MMR) */
 /* Deep space purple border with starfield glow */
 .player-card.border-galaxy {
-    border: 2px solid #8b00ff;
+    border: 2px solid #8b00ff !important;
     box-shadow: 
         0 0 15px rgba(138, 43, 226, 0.7),
         0 0 30px rgba(75, 0, 130, 0.4),
-        inset 0 0 10px rgba(138, 43, 226, 0.1);
+        inset 0 0 10px rgba(138, 43, 226, 0.1) !important;
     animation: galaxyPulse 4s ease-in-out infinite;
+    overflow: visible !important;
 }
 
 @keyframes galaxyPulse {
@@ -463,13 +465,14 @@
 /* Godframe - Admin only */
 /* Divine golden border with radiant glow */
 .player-card.border-godframe {
-    border: 3px solid #ffd700;
+    border: 3px solid #ffd700 !important;
     box-shadow: 
         0 0 20px rgba(255, 215, 0, 0.9),
         0 0 40px rgba(255, 215, 0, 0.6),
         0 0 60px rgba(255, 215, 0, 0.3),
-        inset 0 0 15px rgba(255, 215, 0, 0.15);
+        inset 0 0 15px rgba(255, 215, 0, 0.15) !important;
     animation: godframeGlow 2s ease-in-out infinite;
+    overflow: visible !important;
 }
 
 @keyframes godframeGlow {
@@ -518,13 +521,15 @@
 }
 
 /* Rainbow - Premium (Ko-fi supporter) */
-.name.name-rainbow {
-    background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff, #ff0000);
-    background-size: 200% 100%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: rainbowShift 3s linear infinite;
+.name.name-rainbow,
+.player-card .name.name-rainbow {
+    background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #8b00ff, #ff0000) !important;
+    background-size: 200% 100% !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    color: transparent !important;
+    animation: rainbowShift 3s linear infinite !important;
 }
 
 @keyframes rainbowShift {
@@ -534,13 +539,15 @@
 
 /* Omniscient - Admin only */
 /* Cosmic rainbow text with subtle glow */
-.name.name-omniscient {
-    background: linear-gradient(90deg, #ff00ff, #00ffff, #ffd700, #ff00ff);
-    background-size: 300% 100%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: omniscientShift 4s linear infinite;
+.name.name-omniscient,
+.player-card .name.name-omniscient {
+    background: linear-gradient(90deg, #ff00ff, #00ffff, #ffd700, #ff00ff) !important;
+    background-size: 300% 100% !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    color: transparent !important;
+    animation: omniscientShift 4s linear infinite !important;
     font-weight: bold;
 }
 

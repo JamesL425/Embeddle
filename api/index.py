@@ -549,19 +549,23 @@ DEFAULT_COSMETICS = {
     "card_border": "classic",
     "name_color": "default",
     "badge": "none",
+    "guess_effect": "classic",
+    "custom_background": "default",
     "victory_effect": "classic",
     "profile_title": "none",
     "profile_avatar": "default",
 }
 
 # Cosmetics schema version for stored user cosmetics payload.
-COSMETICS_SCHEMA_VERSION = 3
+COSMETICS_SCHEMA_VERSION = 4
 
 # Map category keys stored on users -> catalog keys in api/cosmetics.json
 COSMETIC_CATEGORY_TO_CATALOG_KEY = {
     'card_border': 'card_borders',
     'name_color': 'name_colors',
     'badge': 'badges',
+    'guess_effect': 'guess_effects',
+    'custom_background': 'custom_backgrounds',
     'victory_effect': 'victory_effects',
     'profile_title': 'profile_titles',
     'profile_avatar': 'profile_avatars',

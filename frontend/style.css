@@ -6330,6 +6330,7 @@ body.in-game .site-footer {
     flex: 1;
     padding: 0.9rem;
     margin: 0;
+    overflow: visible;
 }
 
 .cosmetics-test-buttons {
@@ -6923,7 +6924,6 @@ body.in-game .site-footer {
 .player-card .name.name-cyan { color: #00e5ff; text-shadow: 0 0 12px rgba(0, 229, 255, 0.7); }
 
 .player-card .name.name-gold { color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
-.player-card .name.name-rainbow { animation: rainbow-text 2s linear infinite; }
 .player-card .name.name-fire { color: #ff4400; text-shadow: 0 0 10px rgba(255, 100, 0, 0.7); }
 .player-card .name.name-ice { color: #00ccff; text-shadow: 0 0 10px rgba(0, 200, 255, 0.7); }
 .player-card .name.name-neon_pink { color: #ff00ff; text-shadow: 0 0 10px rgba(255, 0, 255, 0.7); }
@@ -6967,16 +6967,6 @@ body.in-game .site-footer {
 .player-card .name.name-void_text { 
     color: #1a0033; 
     text-shadow: 0 0 10px rgba(100, 0, 200, 0.8), 0 0 20px rgba(0, 0, 0, 0.9);
-}
-
-@keyframes rainbow-text {
-    0% { color: #ff0000; }
-    17% { color: #ff8800; }
-    33% { color: #ffff00; }
-    50% { color: #00ff00; }
-    67% { color: #0088ff; }
-    83% { color: #8800ff; }
-    100% { color: #ff0000; }
 }
 
 @keyframes electric-text {
