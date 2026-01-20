@@ -1,30 +1,60 @@
 """
 Game Repository
 CRUD operations for game data in Redis
+
+This module provides data access functions for game state,
+including saving, loading, and querying games.
 """
 
 import json
+import time
 from typing import Optional, Dict, Any, List
 from .redis_client import get_redis
 
 # Game expiry settings
-GAME_EXPIRY_SECONDS = 7200  # 2 hours
-LOBBY_EXPIRY_SECONDS = 600  # 10 minutes
-PRESENCE_TTL_SECONDS = 15
+GAME_EXPIRY_SECONDS: int = 7200  # 2 hours
+LOBBY_EXPIRY_SECONDS: int = 600  # 10 minutes
+PRESENCE_TTL_SECONDS: int = 15
 
 
 def _game_key(code: str) -> str:
-    """Generate Redis key for a game."""
+    """
+    Generate Redis key for a game.
+    
+    Args:
+        code: Game code
+        
+    Returns:
+        Redis key string
+    """
     return f"game:{code}"
 
 
 def _presence_key(code: str, kind: str) -> str:
-    """Generate Redis key for presence tracking."""
+    """
+    Generate Redis key for presence tracking.
+    
+    Args:
+        code: Game code
+        kind: Type of presence (e.g., 'spectator', 'player')
+        
+    Returns:
+        Redis key string
+    """
     return f"presence:{kind}:{code}"
 
 
-def save_game(code: str, game_data: dict) -> bool:
-    """Save game data to Redis."""
+def save_game(code: str, game_data: Dict[str, Any]) -> bool:
+    """
+    Save game data to Redis.
+    
+    Args:
+        code: Game code
+        game_data: Game state dictionary
+        
+    Returns:
+        True if save succeeded, False otherwise
+    """
     redis = get_redis()
     if not redis:
         return False
@@ -36,8 +66,16 @@ def save_game(code: str, game_data: dict) -> bool:
         return False
 
 
-def load_game(code: str) -> Optional[dict]:
-    """Load game data from Redis."""
+def load_game(code: str) -> Optional[Dict[str, Any]]:
+    """
+    Load game data from Redis.
+    
+    Args:
+        code: Game code
+        
+    Returns:
+        Game state dictionary, or None if not found
+    """
     redis = get_redis()
     if not redis:
         return None
@@ -50,7 +88,15 @@ def load_game(code: str) -> Optional[dict]:
 
 
 def delete_game(code: str) -> bool:
-    """Delete game data from Redis."""
+    """
+    Delete game data from Redis.
+    
+    Args:
+        code: Game code
+        
+    Returns:
+        True if delete succeeded, False otherwise
+    """
     redis = get_redis()
     if not redis:
         return False
@@ -63,7 +109,15 @@ def delete_game(code: str) -> bool:
 
 
 def game_exists(code: str) -> bool:
-    """Check if a game exists."""
+    """
+    Check if a game exists.
+    
+    Args:
+        code: Game code
+        
+    Returns:
+        True if game exists
+    """
     redis = get_redis()
     if not redis:
         return False
@@ -74,12 +128,24 @@ def game_exists(code: str) -> bool:
 
 
 def touch_presence(code: str, kind: str, member: str) -> bool:
-    """Update presence for a member in a game."""
+    """
+    Update presence for a member in a game.
+    
+    Uses a sorted set with timestamps to track active members.
+    Stale entries are automatically removed.
+    
+    Args:
+        code: Game code
+        kind: Type of presence (e.g., 'spectator')
+        member: Member identifier
+        
+    Returns:
+        True if update succeeded
+    """
     redis = get_redis()
     if not redis:
         return False
     try:
-        import time
         key = _presence_key(code, kind)
         now = int(time.time())
         cutoff = now - PRESENCE_TTL_SECONDS
@@ -96,12 +162,19 @@ def touch_presence(code: str, kind: str, member: str) -> bool:
 
 
 def get_spectator_count(code: str) -> int:
-    """Get count of active spectators for a game."""
+    """
+    Get count of active spectators for a game.
+    
+    Args:
+        code: Game code
+        
+    Returns:
+        Number of active spectators
+    """
     redis = get_redis()
     if not redis:
         return 0
     try:
-        import time
         key = _presence_key(code, "spectator")
         now = int(time.time())
         cutoff = now - PRESENCE_TTL_SECONDS
@@ -114,15 +187,22 @@ def get_spectator_count(code: str) -> int:
         return 0
 
 
-def get_public_lobbies(mode: Optional[str] = None) -> List[dict]:
-    """Get list of public lobbies."""
+def get_public_lobbies(mode: Optional[str] = None) -> List[Dict[str, Any]]:
+    """
+    Get list of public lobbies.
+    
+    Args:
+        mode: Filter by mode ('ranked' or 'unranked'), or None for all
+        
+    Returns:
+        List of lobby info dictionaries
+    """
     redis = get_redis()
     if not redis:
         return []
     
     try:
-        # Scan for lobby keys
-        lobbies = []
+        lobbies: List[Dict[str, Any]] = []
         cursor = 0
         while True:
             cursor, keys = redis.scan(cursor, match="game:*", count=100)
@@ -165,14 +245,19 @@ def get_public_lobbies(mode: Optional[str] = None) -> List[dict]:
         return []
 
 
-def get_spectateable_games() -> List[dict]:
-    """Get list of games available for spectating."""
+def get_spectateable_games() -> List[Dict[str, Any]]:
+    """
+    Get list of games available for spectating.
+    
+    Returns:
+        List of game info dictionaries
+    """
     redis = get_redis()
     if not redis:
         return []
     
     try:
-        games = []
+        games: List[Dict[str, Any]] = []
         cursor = 0
         while True:
             cursor, keys = redis.scan(cursor, match="game:*", count=100)

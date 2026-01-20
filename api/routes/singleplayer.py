@@ -329,14 +329,12 @@ def _handle_ai_turn(
         save_game(game['code'], game)
         return 200, {"skipped": True, "reason": "no_valid_guess"}
     
-    # Calculate similarities
-    try:
-        guess_embedding = get_embedding(guess_word)
-    except Exception as e:
-        return 500, {"detail": f"Failed to get embedding: {e}"}
+    guess_lower = guess_word.lower()
     
+    # Calculate similarities using pre-computed matrix (fast path)
     similarities = {}
     eliminations = []
+    matrix = game.get('theme_similarity_matrix')
     
     for p in game['players']:
         if not p.get('is_alive', True):
@@ -346,13 +344,27 @@ def _handle_ai_turn(
         if not secret_word:
             continue
         
+        secret_lower = secret_word.lower()
+        
+        # Fast path: use pre-computed similarity matrix
+        if matrix and guess_lower in matrix:
+            sim = matrix[guess_lower].get(secret_lower)
+            if sim is not None:
+                similarities[p['id']] = round(sim, 4)
+                if guess_lower == secret_lower or sim >= 0.99:
+                    eliminations.append(p['id'])
+                    p['is_alive'] = False
+                continue
+        
+        # Fallback: compute from embeddings (rare)
         try:
+            guess_embedding = get_embedding(guess_word)
             secret_embedding = get_embedding(secret_word)
             sim = cosine_similarity(guess_embedding, secret_embedding)
             similarities[p['id']] = round(sim, 4)
             
             # Check for elimination (exact match or very high similarity)
-            if guess_word.lower() == secret_word.lower() or sim >= 0.99:
+            if guess_lower == secret_lower or sim >= 0.99:
                 eliminations.append(p['id'])
                 p['is_alive'] = False
         except Exception:

@@ -1,14 +1,47 @@
 /**
  * Storage Utilities
  * localStorage helpers with error handling
+ * 
+ * This module provides type-safe wrappers around localStorage
+ * with automatic JSON serialization and error handling.
+ * All keys are prefixed with 'embeddle_' to avoid conflicts.
+ * 
+ * @module utils/storage
  */
 
 /**
- * Save game session to localStorage
+ * @typedef {Object} GameSession
+ * @property {string} code - Game code
+ * @property {string} playerId - Player ID
+ * @property {string} [playerName] - Player display name
+ * @property {string} [sessionToken] - Session token for authenticated actions
+ * @property {boolean} [isSingleplayer] - Whether this is a singleplayer game
+ */
+
+/**
+ * @typedef {Object} RecentGame
+ * @property {string} code - Game code
+ * @property {string|null} playerId - Player ID
+ * @property {string|null} playerName - Player name
+ * @property {string|null} sessionToken - Session token
+ * @property {boolean} isSingleplayer - Whether singleplayer
+ * @property {number} lastSeen - Timestamp of last activity
+ */
+
+/**
+ * Save game session to localStorage.
+ * Also updates the recent games list and browser URL.
+ * 
  * @param {Object} gameState - Current game state
+ * @param {string} gameState.code - Game code
+ * @param {string} gameState.playerId - Player ID
+ * @param {string} [gameState.playerName] - Player name
+ * @param {string} [gameState.sessionToken] - Session token
+ * @param {boolean} [gameState.isSingleplayer] - Singleplayer flag
  */
 export function saveGameSession(gameState) {
     if (gameState.code && gameState.playerId) {
+        /** @type {GameSession} */
         const session = {
             code: gameState.code,
             playerId: gameState.playerId,
@@ -26,7 +59,8 @@ export function saveGameSession(gameState) {
 }
 
 /**
- * Clear game session from localStorage
+ * Clear game session from localStorage.
+ * Saves to recent games before clearing and resets URL.
  */
 export function clearGameSession() {
     const existing = getSavedSession();
@@ -38,8 +72,9 @@ export function clearGameSession() {
 }
 
 /**
- * Get saved session from localStorage
- * @returns {Object|null}
+ * Get saved session from localStorage.
+ * 
+ * @returns {GameSession|null} Saved session or null if not found/invalid
  */
 export function getSavedSession() {
     try {
@@ -52,8 +87,9 @@ export function getSavedSession() {
 }
 
 /**
- * Get recent games list
- * @returns {Array}
+ * Get recent games list.
+ * 
+ * @returns {RecentGame[]} Array of recent games (max 10)
  */
 export function getRecentGames() {
     try {
@@ -66,13 +102,16 @@ export function getRecentGames() {
 }
 
 /**
- * Add or update a game in recent games list
- * @param {Object} session - Game session data
+ * Add or update a game in recent games list.
+ * Maintains a maximum of 10 recent games.
+ * 
+ * @param {GameSession} session - Game session data
  */
 export function upsertRecentGame(session) {
     if (!session?.code) return;
     const list = getRecentGames();
     const now = Date.now();
+    /** @type {RecentGame} */
     const entry = {
         code: session.code,
         playerId: session.playerId || null,
@@ -91,8 +130,10 @@ export function upsertRecentGame(session) {
 }
 
 /**
- * Generate a random 32-character hex ID (128 bits for better security)
- * @returns {string}
+ * Generate a random 32-character hex ID (128 bits for better security).
+ * Uses crypto.getRandomValues when available for cryptographic randomness.
+ * 
+ * @returns {string} 32-character lowercase hex string
  */
 export function generateHexId32() {
     const bytes = new Uint8Array(16);
@@ -105,9 +146,10 @@ export function generateHexId32() {
 }
 
 /**
+ * Generate a random 16-character hex ID.
+ * 
  * @deprecated Use generateHexId32 instead for better security
- * Generate a random 16-character hex ID
- * @returns {string}
+ * @returns {string} 16-character lowercase hex string
  */
 export function generateHexId16() {
     const bytes = new Uint8Array(8);
@@ -120,8 +162,10 @@ export function generateHexId16() {
 }
 
 /**
- * Get or create a persistent spectator ID
- * @returns {string}
+ * Get or create a persistent spectator ID.
+ * Creates a new ID if none exists or existing one is invalid.
+ * 
+ * @returns {string} 32-character hex spectator ID
  */
 export function getOrCreateSpectatorId() {
     try {
@@ -140,8 +184,10 @@ export function getOrCreateSpectatorId() {
 }
 
 /**
- * Get game code from current URL
- * @returns {string|null}
+ * Get game code from current URL.
+ * Matches /game/{CODE} pattern.
+ * 
+ * @returns {string|null} Uppercase game code or null if not on game page
  */
 export function getGameCodeFromURL() {
     const match = window.location.pathname.match(/^\/game\/([A-Z0-9]+)$/i);
@@ -149,8 +195,10 @@ export function getGameCodeFromURL() {
 }
 
 /**
- * Get challenge ID from current URL
- * @returns {string|null}
+ * Get challenge ID from current URL.
+ * Matches /challenge/{ID} pattern.
+ * 
+ * @returns {string|null} Uppercase challenge ID or null if not on challenge page
  */
 export function getChallengeIdFromURL() {
     const match = window.location.pathname.match(/^\/challenge\/([A-Z0-9]+)$/i);
@@ -158,8 +206,17 @@ export function getChallengeIdFromURL() {
 }
 
 /**
- * Save options to localStorage
- * @param {Object} options - Options object
+ * @typedef {Object} GameOptions
+ * @property {boolean} [musicEnabled] - Background music enabled
+ * @property {boolean} [sfxEnabled] - Sound effects enabled
+ * @property {number} [musicVolume] - Music volume (0-1)
+ * @property {number} [sfxVolume] - SFX volume (0-1)
+ */
+
+/**
+ * Save options to localStorage.
+ * 
+ * @param {GameOptions} options - Options object to save
  */
 export function saveOptions(options) {
     try {
@@ -170,9 +227,10 @@ export function saveOptions(options) {
 }
 
 /**
- * Load options from localStorage
- * @param {Object} defaults - Default options
- * @returns {Object}
+ * Load options from localStorage.
+ * 
+ * @param {GameOptions} defaults - Default options to use if none saved
+ * @returns {GameOptions} Merged options (saved + defaults)
  */
 export function loadOptions(defaults) {
     try {
@@ -188,55 +246,61 @@ export function loadOptions(defaults) {
 }
 
 /**
- * Get saved auth token
- * @returns {string|null}
+ * Get saved auth token.
+ * 
+ * @returns {string|null} JWT token or null
  */
 export function getAuthToken() {
     return localStorage.getItem('embeddle_auth_token');
 }
 
 /**
- * Save auth token
- * @param {string} token
+ * Save auth token.
+ * 
+ * @param {string} token - JWT token to save
  */
 export function setAuthToken(token) {
     localStorage.setItem('embeddle_auth_token', token);
 }
 
 /**
- * Remove auth token
+ * Remove auth token.
  */
 export function removeAuthToken() {
     localStorage.removeItem('embeddle_auth_token');
 }
 
 /**
- * Get saved player name
- * @returns {string|null}
+ * Get saved player name.
+ * 
+ * @returns {string|null} Player name or null
  */
 export function getSavedName() {
     return localStorage.getItem('embeddle_name');
 }
 
 /**
- * Save player name
- * @param {string} name
+ * Save player name.
+ * 
+ * @param {string} name - Player name to save
  */
 export function setSavedName(name) {
     localStorage.setItem('embeddle_name', name);
 }
 
 /**
- * Remove saved player name
+ * Remove saved player name.
  */
 export function removeSavedName() {
     localStorage.removeItem('embeddle_name');
 }
 
 /**
- * Generic save to localStorage with error handling
+ * Generic save to localStorage with error handling.
+ * Value is automatically JSON stringified.
+ * 
  * @param {string} key - Storage key (will be prefixed with embeddle_)
- * @param {*} value - Value to store (will be JSON stringified)
+ * @param {*} value - Value to store
  */
 export function saveToStorage(key, value) {
     try {
@@ -247,9 +311,11 @@ export function saveToStorage(key, value) {
 }
 
 /**
- * Generic load from localStorage with error handling
+ * Generic load from localStorage with error handling.
+ * Value is automatically JSON parsed.
+ * 
  * @param {string} key - Storage key (will be prefixed with embeddle_)
- * @returns {*} Parsed value or null
+ * @returns {*} Parsed value or null if not found/invalid
  */
 export function loadFromStorage(key) {
     try {

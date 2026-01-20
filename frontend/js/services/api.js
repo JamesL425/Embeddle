@@ -1,9 +1,112 @@
 /**
  * API Client Service
  * Centralized API communication with error handling
+ * 
+ * This module provides the core HTTP client for all backend communication.
+ * It handles authentication headers, error parsing, and provides typed
+ * API method wrappers for all endpoints.
+ * 
+ * @module services/api
  */
 
 import { gameState } from '../state/gameState.js';
+
+/**
+ * @typedef {Object} ApiError
+ * @property {string} message - Error message
+ * @property {number} status - HTTP status code
+ * @property {string} endpoint - API endpoint that failed
+ * @property {string} method - HTTP method used
+ * @property {Object} response - Raw response data
+ */
+
+/**
+ * @typedef {Object} GameResponse
+ * @property {string} code - Game code
+ * @property {string} status - Game status ('lobby', 'word_selection', 'playing', 'finished')
+ * @property {PlayerInfo[]} players - List of players
+ * @property {string} host_id - Host player ID
+ * @property {string} [current_player_id] - Current turn player ID
+ * @property {number} current_turn - Current turn index
+ * @property {ThemeInfo} [theme] - Current theme
+ * @property {string[]} [theme_options] - Available theme options
+ * @property {Object.<string, VoterInfo[]>} [theme_votes] - Theme votes
+ * @property {HistoryEntry[]} history - Game history
+ * @property {WinnerInfo} [winner] - Winner info if finished
+ * @property {boolean} is_ranked - Whether ranked game
+ * @property {boolean} is_singleplayer - Whether singleplayer
+ */
+
+/**
+ * @typedef {Object} PlayerInfo
+ * @property {string} id - Player ID
+ * @property {string} name - Display name
+ * @property {boolean} is_alive - Whether still in game
+ * @property {boolean} is_ai - Whether AI player
+ * @property {string} [secret_word] - Secret word (only visible to self or when eliminated)
+ * @property {boolean} has_word - Whether word is selected
+ * @property {boolean} is_ready - Whether ready
+ * @property {Object} [cosmetics] - Player cosmetics
+ * @property {string[]} [word_pool] - Available word choices (own player only)
+ */
+
+/**
+ * @typedef {Object} ThemeInfo
+ * @property {string} name - Theme name
+ * @property {string[]} words - Words in theme
+ */
+
+/**
+ * @typedef {Object} VoterInfo
+ * @property {string} id - Voter player ID
+ * @property {string} name - Voter name
+ */
+
+/**
+ * @typedef {Object} HistoryEntry
+ * @property {string} type - Entry type ('guess', 'elimination', 'word_change')
+ * @property {string} [word] - Guessed word
+ * @property {string} [guesser_id] - ID of guesser
+ * @property {string} [guesser_name] - Name of guesser
+ * @property {Object.<string, number>} [similarities] - Similarity scores by player ID
+ * @property {string[]} [eliminations] - IDs of eliminated players
+ */
+
+/**
+ * @typedef {Object} WinnerInfo
+ * @property {string} id - Winner player ID
+ * @property {string} name - Winner name
+ */
+
+/**
+ * @typedef {Object} CreateGameResponse
+ * @property {string} code - Generated game code
+ * @property {string} player_id - Assigned player ID
+ * @property {string} session_token - Session token for authenticated actions
+ */
+
+/**
+ * @typedef {Object} JoinGameResponse
+ * @property {string} player_id - Assigned player ID
+ * @property {string} session_token - Session token for authenticated actions
+ * @property {GameResponse} game - Current game state
+ */
+
+/**
+ * @typedef {Object} GuessResponse
+ * @property {Object.<string, number>} similarities - Similarity scores by player ID
+ * @property {string[]} eliminations - IDs of eliminated players
+ * @property {boolean} [game_over] - Whether game ended
+ * @property {WinnerInfo} [winner] - Winner info if game over
+ */
+
+/**
+ * @typedef {Object} LobbyInfo
+ * @property {string} code - Game code
+ * @property {number} player_count - Current players
+ * @property {number} max_players - Maximum players
+ * @property {boolean} is_ranked - Whether ranked
+ */
 
 // API base URL - uses current origin
 const API_BASE = window.location.origin;

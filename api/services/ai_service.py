@@ -227,13 +227,29 @@ def ai_update_memory(ai_player: dict, guess_word: str, similarities: dict, game:
     ai_player["ai_memory"] = memory
 
 
-def ai_find_similar_words(target_word: str, theme_words: List[str], guessed_words: List[str], count: int = 5) -> List[str]:
+def ai_find_similar_words(target_word: str, theme_words: List[str], guessed_words: List[str], count: int = 5, game: dict = None) -> List[str]:
     """Find words in theme semantically similar to target word.
     
     Note: guessed_words parameter is kept for API compatibility but no longer used for filtering.
     Bots should be able to re-guess words because players may have changed their words.
+    
+    Uses pre-computed similarity matrix when available for O(1) lookups.
     """
     try:
+        target_lower = target_word.lower()
+        
+        # Fast path: use pre-computed similarity matrix
+        matrix = game.get('theme_similarity_matrix') if game else None
+        if matrix and target_lower in matrix:
+            candidates = []
+            for word in theme_words:
+                word_lower = word.lower()
+                sim = matrix[target_lower].get(word_lower, 0)
+                candidates.append((word, sim))
+            candidates.sort(key=lambda x: x[1], reverse=True)
+            return [c[0] for c in candidates[:count]]
+        
+        # Fallback: compute from embeddings (rare)
         target_embedding = get_embedding(target_word)
         
         candidates = []
@@ -301,7 +317,8 @@ def ai_choose_guess(ai_player: dict, game: dict) -> Optional[str]:
                     best_target["top_word"],
                     available_words,
                     guessed_words,
-                    count=5
+                    count=5,
+                    game=game
                 )
                 if similar:
                     return random.choice(similar[:3])

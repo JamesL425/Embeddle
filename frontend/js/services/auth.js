@@ -1,6 +1,14 @@
 /**
  * Authentication Service
  * Handles OAuth, JWT tokens, and user sessions
+ * 
+ * This module manages all authentication-related functionality:
+ * - Google OAuth flow initiation
+ * - JWT token handling from URL params and localStorage
+ * - Guest (name-only) login
+ * - Session management
+ * 
+ * @module services/auth
  */
 
 import { apiCall, getApiBase } from './api.js';
@@ -11,8 +19,37 @@ import {
 } from '../utils/storage.js';
 
 /**
- * Initialize authentication from URL params or localStorage
- * @returns {Promise<Object|null>} - User data if authenticated
+ * @typedef {Object} AuthUser
+ * @property {string} id - User ID
+ * @property {string} email - User email
+ * @property {string} name - Display name
+ * @property {string} [avatar] - Avatar URL
+ * @property {boolean} [is_admin] - Whether user is admin
+ * @property {boolean} [is_donor] - Whether user is donor
+ * @property {boolean} [isGuest] - Whether this is a guest user
+ */
+
+/**
+ * Initialize authentication from URL params or localStorage.
+ * 
+ * Checks for:
+ * 1. OAuth callback token in URL (auth_token param)
+ * 2. OAuth error in URL (auth_error param)
+ * 3. Existing token in localStorage
+ * 4. Saved guest name in localStorage
+ * 
+ * @returns {Promise<AuthUser|null>} User data if authenticated, null otherwise
+ * @throws {Error} If OAuth callback contains an error
+ * 
+ * @example
+ * try {
+ *     const user = await initAuth();
+ *     if (user) {
+ *         console.log('Logged in as:', user.name);
+ *     }
+ * } catch (e) {
+ *     console.error('Auth failed:', e.message);
+ * }
  */
 export async function initAuth() {
     // Check for OAuth callback token in URL
@@ -58,9 +95,11 @@ export async function initAuth() {
 }
 
 /**
- * Load authenticated user data from server
+ * Load authenticated user data from server.
+ * Validates the token and fetches full user profile.
+ * 
  * @param {string} token - JWT token
- * @returns {Promise<Object|null>}
+ * @returns {Promise<AuthUser|null>} User data or null if token invalid
  */
 export async function loadAuthenticatedUser(token) {
     try {
@@ -76,16 +115,28 @@ export async function loadAuthenticatedUser(token) {
 }
 
 /**
- * Start Google OAuth flow
+ * Start Google OAuth flow.
+ * Redirects the browser to Google's OAuth consent page.
  */
 export function loginWithGoogle() {
     window.location.href = `${getApiBase()}/api/auth/google`;
 }
 
 /**
- * Login with simple name (guest mode)
- * @param {string} name
- * @returns {Object}
+ * Login with simple name (guest mode).
+ * Does not require server authentication.
+ * 
+ * @param {string} name - Player display name
+ * @returns {AuthUser} Guest user object
+ * @throws {Error} If name is invalid or reserved
+ * 
+ * @example
+ * try {
+ *     const user = loginAsGuest('PlayerOne');
+ *     console.log('Playing as:', user.name);
+ * } catch (e) {
+ *     alert(e.message);
+ * }
  */
 export function loginAsGuest(name) {
     // Sanitize name
@@ -107,7 +158,8 @@ export function loginAsGuest(name) {
 }
 
 /**
- * Logout current user
+ * Logout current user.
+ * Clears all auth state and saved credentials.
  */
 export function logout() {
     gameState.clearAuth();
@@ -117,41 +169,48 @@ export function logout() {
 }
 
 /**
- * Check if user is authenticated (has valid token)
- * @returns {boolean}
+ * Check if user is authenticated (has valid token).
+ * 
+ * @returns {boolean} True if user has auth token
  */
 export function isAuthenticated() {
     return gameState.isAuthenticated();
 }
 
 /**
- * Check if user has admin privileges
- * @returns {boolean}
+ * Check if user has admin privileges.
+ * 
+ * @returns {boolean} True if user is admin
  */
 export function isAdmin() {
     return gameState.isAdmin();
 }
 
 /**
- * Get current user
- * @returns {Object|null}
+ * Get current authenticated user.
+ * 
+ * @returns {AuthUser|null} Current user or null if not authenticated
  */
 export function getCurrentUser() {
     return gameState.get('authUser');
 }
 
 /**
- * Get current player name
- * @returns {string|null}
+ * Get current player name.
+ * Returns the display name for either authenticated or guest users.
+ * 
+ * @returns {string|null} Player name or null
  */
 export function getPlayerName() {
     return gameState.get('playerName');
 }
 
 /**
- * Check if name is the admin callsign
- * @param {string} name
- * @returns {boolean}
+ * Check if name is the admin callsign.
+ * Used to prevent users from using reserved names.
+ * 
+ * @param {string} name - Name to check
+ * @returns {boolean} True if name is 'admin' (case-insensitive)
  */
 export function isAdminCallsign(name) {
     return name?.toLowerCase() === 'admin';

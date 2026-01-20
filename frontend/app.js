@@ -1273,6 +1273,153 @@ document.getElementById('login-name').addEventListener('keydown', (e) => {
     }
 });
 
+// ============ NAME PROMPT MODAL (LAZY NAME ENTRY) ============
+
+let namePromptCallback = null;
+
+function showNamePromptModal(callback) {
+    const modal = document.getElementById('name-prompt-modal');
+    const input = document.getElementById('name-prompt-input');
+    const errorEl = document.getElementById('name-prompt-error');
+    
+    if (!modal || !input) return;
+    
+    namePromptCallback = callback;
+    
+    // Pre-populate with saved name if available
+    const savedName = localStorage.getItem('embeddle_name') || '';
+    input.value = savedName;
+    
+    // Clear error state
+    errorEl?.classList.add('hidden');
+    input.classList.remove('error');
+    
+    // Show modal
+    modal.style.display = 'flex';
+    
+    // Focus input after a brief delay for animation
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 50);
+}
+
+function hideNamePromptModal() {
+    const modal = document.getElementById('name-prompt-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    namePromptCallback = null;
+}
+
+function validateAndSubmitNamePrompt() {
+    const input = document.getElementById('name-prompt-input');
+    const errorEl = document.getElementById('name-prompt-error');
+    
+    if (!input) return;
+    
+    const name = input.value.trim();
+    
+    // Sanitize name - remove any HTML/script tags and limit length
+    const sanitizedName = name.replace(/<[^>]*>/g, '').substring(0, 20).trim();
+    
+    if (!sanitizedName) {
+        input.classList.add('error');
+        if (errorEl) {
+            errorEl.textContent = 'Please enter a callsign';
+            errorEl.classList.remove('hidden');
+        }
+        return;
+    }
+    
+    // Block reserved name "admin"
+    if (sanitizedName.toLowerCase() === 'admin') {
+        input.classList.add('error');
+        if (errorEl) {
+            errorEl.textContent = 'This callsign is reserved. Please choose another.';
+            errorEl.classList.remove('hidden');
+        }
+        return;
+    }
+    
+    // Set the name
+    setLoggedIn(sanitizedName);
+    
+    // Hide modal
+    hideNamePromptModal();
+    
+    // Execute callback if provided
+    if (namePromptCallback) {
+        namePromptCallback();
+    }
+}
+
+// Name prompt modal event listeners
+document.getElementById('name-prompt-submit')?.addEventListener('click', validateAndSubmitNamePrompt);
+
+document.getElementById('name-prompt-cancel')?.addEventListener('click', hideNamePromptModal);
+
+document.getElementById('name-prompt-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        validateAndSubmitNamePrompt();
+    } else if (e.key === 'Escape') {
+        hideNamePromptModal();
+    }
+});
+
+// Close modal on backdrop click
+document.getElementById('name-prompt-modal')?.querySelector('.modal-backdrop')?.addEventListener('click', hideNamePromptModal);
+
+// Clear error on input
+document.getElementById('name-prompt-input')?.addEventListener('input', () => {
+    const input = document.getElementById('name-prompt-input');
+    const errorEl = document.getElementById('name-prompt-error');
+    input?.classList.remove('error');
+    errorEl?.classList.add('hidden');
+});
+
+/**
+ * Ensure player has a name, prompting if needed
+ * @param {Function} callback - Called after name is confirmed
+ * @returns {boolean} - True if name exists, false if prompt shown
+ */
+function ensurePlayerName(callback) {
+    if (gameState.playerName) {
+        return true;
+    }
+    showNamePromptModal(callback);
+    return false;
+}
+
+// ============ MORE OPTIONS COLLAPSIBLE ============
+
+function initMoreOptionsToggle() {
+    const toggle = document.getElementById('more-options-toggle');
+    const content = document.getElementById('more-options-content');
+    
+    if (!toggle || !content) return;
+    
+    // Set initial state based on screen size (collapsed on mobile, expanded on desktop)
+    const isDesktop = window.innerWidth >= 1100;
+    if (isDesktop) {
+        content.classList.remove('collapsed');
+        toggle.setAttribute('aria-expanded', 'true');
+    } else {
+        content.classList.add('collapsed');
+        toggle.setAttribute('aria-expanded', 'false');
+    }
+    
+    toggle.addEventListener('click', () => {
+        const isCollapsed = content.classList.contains('collapsed');
+        content.classList.toggle('collapsed');
+        toggle.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
+    });
+}
+
+// Initialize on load
+initMoreOptionsToggle();
+
 // Logout button in profile modal
 document.getElementById('profile-logout-btn')?.addEventListener('click', logout);
 
@@ -2494,9 +2641,9 @@ function stopSpectateRefresh() {
 }
 
 function joinLobbyPrompt(code) {
+    // Lazy name prompt - show modal if no name
     if (!gameState.playerName) {
-        showError('Enter your callsign first (top right)');
-        document.getElementById('login-name').focus();
+        showNamePromptModal(() => joinLobbyPrompt(code));
         return;
     }
     joinLobby(code, gameState.playerName);
@@ -2510,9 +2657,9 @@ function normalizeGameCodeInput(raw) {
 }
 
 async function createLobby({ visibility = 'private', isRanked = false, timeControl = 'rapid' } = {}) {
+    // Lazy name prompt - show modal if no name
     if (!gameState.playerName) {
-        showError('Enter your callsign first (top right)');
-        document.getElementById('login-name').focus();
+        showNamePromptModal(() => createLobby({ visibility, isRanked, timeControl }));
         return;
     }
     if (isRanked && !gameState.authToken) {
@@ -2533,9 +2680,9 @@ async function createLobby({ visibility = 'private', isRanked = false, timeContr
 }
 
 async function quickPlay({ ranked = false } = {}) {
+    // Lazy name prompt - show modal if no name
     if (!gameState.playerName) {
-        showError('Enter your callsign first (top right)');
-        document.getElementById('login-name').focus();
+        showNamePromptModal(() => quickPlay({ ranked }));
         return;
     }
     if (ranked && !gameState.authToken) {
@@ -2550,8 +2697,9 @@ async function quickPlay({ ranked = false } = {}) {
 // ============ MATCHMAKING QUEUE ============
 
 async function joinMatchmakingQueue(mode) {
+    // Lazy name prompt - show modal if no name
     if (!gameState.playerName) {
-        showError('Enter your callsign first');
+        showNamePromptModal(() => joinMatchmakingQueue(mode));
         return;
     }
 
@@ -2843,9 +2991,9 @@ document.getElementById('ranked-btn')?.addEventListener('click', async () => {
 let customLobbyVisibility = 'public';
 
 function showCustomLobbyModal() {
+    // Lazy name prompt - show modal if no name
     if (!gameState.playerName) {
-        showError('Enter your callsign first (top right)');
-        document.getElementById('login-name').focus();
+        showNamePromptModal(showCustomLobbyModal);
         return;
     }
     const modal = document.getElementById('custom-lobby-modal');
@@ -3477,10 +3625,10 @@ async function loadMiniLeaderboard() {
 
 // ============ SINGLEPLAYER MODE ============
 
-document.getElementById('singleplayer-btn')?.addEventListener('click', async () => {
+async function startSingleplayer() {
+    // Lazy name prompt - show modal if no name
     if (!gameState.playerName) {
-        showError('Enter your callsign first (top right)');
-        document.getElementById('login-name').focus();
+        showNamePromptModal(startSingleplayer);
         return;
     }
     
@@ -3495,7 +3643,9 @@ document.getElementById('singleplayer-btn')?.addEventListener('click', async () 
     } catch (error) {
         showError(error.message);
     }
-});
+}
+
+document.getElementById('singleplayer-btn')?.addEventListener('click', startSingleplayer);
 
 async function joinSingleplayerLobby(code, name) {
     try {

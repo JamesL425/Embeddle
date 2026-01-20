@@ -1,40 +1,80 @@
 """
 User Repository
 CRUD operations for user data in Redis
+
+This module provides data access functions for user profiles,
+player statistics, and leaderboards.
 """
 
 import json
 import time
-from typing import Optional, Dict, Any, List
+from datetime import datetime, timezone, timedelta
+from typing import Optional, Dict, Any, List, Tuple
 from .redis_client import get_redis
 
 
 def _user_key(user_id: str) -> str:
-    """Generate Redis key for a user."""
+    """
+    Generate Redis key for a user.
+    
+    Args:
+        user_id: User ID
+        
+    Returns:
+        Redis key string
+    """
     return f"user:{user_id}"
 
 
 def _user_email_key(email: str) -> str:
-    """Generate Redis key for email lookup."""
+    """
+    Generate Redis key for email lookup.
+    
+    Args:
+        email: User email
+        
+    Returns:
+        Redis key string
+    """
     return f"user_email:{email.lower()}"
 
 
 def _stats_key(name: str) -> str:
-    """Generate Redis key for player stats."""
+    """
+    Generate Redis key for player stats.
+    
+    Args:
+        name: Player name
+        
+    Returns:
+        Redis key string
+    """
     return f"stats:{name.lower()}"
 
 
 def _weekly_leaderboard_key() -> str:
-    """Generate Redis key for weekly leaderboard."""
-    from datetime import datetime, timezone
+    """
+    Generate Redis key for weekly leaderboard.
+    
+    Returns:
+        Redis key string for current week's leaderboard
+    """
     now = datetime.now(timezone.utc)
     # Week starts on Monday
-    start = now - __import__('datetime').timedelta(days=now.weekday())
+    start = now - timedelta(days=now.weekday())
     return f"leaderboard:weekly:{start.strftime('%Y-%m-%d')}"
 
 
-def get_user_by_id(user_id: str) -> Optional[dict]:
-    """Get user by ID."""
+def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Get user by ID.
+    
+    Args:
+        user_id: User ID
+        
+    Returns:
+        User data dictionary, or None if not found
+    """
     redis = get_redis()
     if not redis:
         return None
@@ -46,8 +86,16 @@ def get_user_by_id(user_id: str) -> Optional[dict]:
         return None
 
 
-def get_user_by_email(email: str) -> Optional[dict]:
-    """Get user by email."""
+def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+    """
+    Get user by email.
+    
+    Args:
+        email: User email address
+        
+    Returns:
+        User data dictionary, or None if not found
+    """
     redis = get_redis()
     if not redis:
         return None
@@ -61,8 +109,16 @@ def get_user_by_email(email: str) -> Optional[dict]:
         return None
 
 
-def save_user(user: dict) -> bool:
-    """Save user data to Redis."""
+def save_user(user: Dict[str, Any]) -> bool:
+    """
+    Save user data to Redis.
+    
+    Args:
+        user: User data dictionary (must contain 'id' key)
+        
+    Returns:
+        True if save succeeded, False otherwise
+    """
     redis = get_redis()
     if not redis:
         return False
@@ -84,8 +140,16 @@ def save_user(user: dict) -> bool:
         return False
 
 
-def get_player_stats(name: str) -> dict:
-    """Get player stats by name."""
+def get_player_stats(name: str) -> Dict[str, Any]:
+    """
+    Get player stats by name.
+    
+    Args:
+        name: Player display name
+        
+    Returns:
+        Stats dictionary (empty dict if not found)
+    """
     redis = get_redis()
     if not redis:
         return {}
@@ -96,8 +160,17 @@ def get_player_stats(name: str) -> dict:
         return {}
 
 
-def save_player_stats(name: str, stats: dict) -> bool:
-    """Save player stats."""
+def save_player_stats(name: str, stats: Dict[str, Any]) -> bool:
+    """
+    Save player stats.
+    
+    Args:
+        name: Player display name
+        stats: Stats dictionary
+        
+    Returns:
+        True if save succeeded, False otherwise
+    """
     redis = get_redis()
     if not redis:
         return False
@@ -110,7 +183,17 @@ def save_player_stats(name: str, stats: dict) -> bool:
 
 
 def update_leaderboard(name: str, wins: int, weekly_wins: int = 0) -> bool:
-    """Update leaderboard scores."""
+    """
+    Update leaderboard scores.
+    
+    Args:
+        name: Player display name
+        wins: Total wins (all-time)
+        weekly_wins: Wins this week
+        
+    Returns:
+        True if update succeeded, False otherwise
+    """
     redis = get_redis()
     if not redis:
         return False
@@ -131,8 +214,17 @@ def update_leaderboard(name: str, wins: int, weekly_wins: int = 0) -> bool:
         return False
 
 
-def get_leaderboard(leaderboard_type: str = "alltime", limit: int = 50) -> List[dict]:
-    """Get leaderboard entries."""
+def get_leaderboard(leaderboard_type: str = "alltime", limit: int = 50) -> List[Dict[str, Any]]:
+    """
+    Get leaderboard entries.
+    
+    Args:
+        leaderboard_type: 'alltime' or 'weekly'
+        limit: Maximum number of entries to return
+        
+    Returns:
+        List of player entries with stats
+    """
     redis = get_redis()
     if not redis:
         return []
@@ -146,7 +238,7 @@ def get_leaderboard(leaderboard_type: str = "alltime", limit: int = 50) -> List[
         # Get top players by score (descending)
         results = redis.zrevrange(key, 0, limit - 1, withscores=True)
         
-        players = []
+        players: List[Dict[str, Any]] = []
         for name, score in results:
             stats = get_player_stats(name)
             players.append({
@@ -162,8 +254,16 @@ def get_leaderboard(leaderboard_type: str = "alltime", limit: int = 50) -> List[
         return []
 
 
-def get_ranked_leaderboard(limit: int = 50) -> List[dict]:
-    """Get ranked leaderboard by MMR."""
+def get_ranked_leaderboard(limit: int = 50) -> List[Dict[str, Any]]:
+    """
+    Get ranked leaderboard by MMR.
+    
+    Args:
+        limit: Maximum number of entries to return
+        
+    Returns:
+        List of player entries with MMR and ranked stats
+    """
     redis = get_redis()
     if not redis:
         return []
@@ -172,7 +272,7 @@ def get_ranked_leaderboard(limit: int = 50) -> List[dict]:
         # Get top players by MMR
         results = redis.zrevrange("leaderboard:ranked", 0, limit - 1, withscores=True)
         
-        players = []
+        players: List[Dict[str, Any]] = []
         for name, mmr in results:
             stats = get_player_stats(name)
             players.append({

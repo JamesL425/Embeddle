@@ -1,18 +1,33 @@
 """
 Redis Client Module
 Centralized Redis connection management
+
+This module provides a singleton Redis client for all data operations.
+It handles connection initialization and provides helper functions
+for checking Redis configuration status.
 """
 
 import os
-from typing import Optional
-from functools import lru_cache
+from typing import Optional, Any
+
+# Type alias for Redis client (actual type depends on upstash_redis)
+RedisClient = Any
 
 # Lazy-initialized Redis client
-_redis_client = None
+_redis_client: Optional[RedisClient] = None
 
 
-def get_redis():
-    """Get Redis client singleton."""
+def get_redis() -> Optional[RedisClient]:
+    """
+    Get Redis client singleton.
+    
+    Returns:
+        Redis client instance, or None if initialization failed.
+        
+    Note:
+        The client is lazily initialized on first call.
+        Subsequent calls return the same instance.
+    """
     global _redis_client
     if _redis_client is None:
         try:
@@ -28,16 +43,31 @@ def get_redis():
 
 
 def get_redis_url() -> Optional[str]:
-    """Get Redis URL from environment."""
+    """
+    Get Redis URL from environment.
+    
+    Returns:
+        Redis REST API URL, or None if not configured.
+    """
     return os.getenv("UPSTASH_REDIS_REST_URL")
 
 
 def get_redis_token() -> Optional[str]:
-    """Get Redis token from environment."""
+    """
+    Get Redis token from environment.
+    
+    Returns:
+        Redis REST API token, or None if not configured.
+    """
     return os.getenv("UPSTASH_REDIS_REST_TOKEN")
 
 
 def is_redis_configured() -> bool:
-    """Check if Redis is properly configured."""
+    """
+    Check if Redis is properly configured.
+    
+    Returns:
+        True if both URL and token are set.
+    """
     return bool(get_redis_url() and get_redis_token())
 

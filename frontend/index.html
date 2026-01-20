@@ -456,26 +456,35 @@
                 </div>
                 
                 <div class="home-actions">
-                    <div class="home-actions-primary">
-                        <button id="quickplay-btn" class="btn btn-primary btn-large btn-block home-action">
+                    <div class="home-actions-hero">
+                        <button id="quickplay-btn" class="btn btn-primary btn-hero home-action">
                             <span class="btn-text">&gt; QUICK_PLAY</span>
+                            <span class="btn-subtitle">Jump into a game with other players</span>
                             <span id="quickplay-queue-count" class="queue-count hidden">0 in queue</span>
                         </button>
-                        <button id="ranked-btn" class="btn btn-rank btn-large btn-block home-action">
+                    </div>
+                    <div class="home-actions-ranked">
+                        <button id="ranked-btn" class="btn btn-rank btn-block home-action">
                             <span class="btn-text">&gt; RANKED</span>
                             <span id="ranked-queue-count" class="queue-count hidden">0 in queue</span>
                         </button>
+                        <span id="ranked-signin-note" class="home-note">Requires Google sign-in + 5 casual games</span>
                     </div>
-                    <div class="home-actions-secondary">
-                        <button id="create-lobby-btn" class="btn btn-secondary btn-block home-action">&gt; CUSTOM_LOBBY</button>
-                        <button id="singleplayer-btn" class="btn btn-secondary btn-block home-action">&gt; SOLO_MISSION</button>
-                    </div>
-                    <div class="home-join-row">
-                        <input type="text" id="join-code-input" maxlength="6" placeholder="SERVER_ID">
-                        <button id="join-code-btn" class="btn btn-small btn-secondary">JOIN</button>
-                    </div>
-                    <div class="home-links-row">
-                        <span id="ranked-signin-note" class="home-note">Ranked requires Google sign-in + 5 casual games.</span>
+                    <div class="home-more-options">
+                        <button id="more-options-toggle" class="more-options-toggle" type="button">
+                            <span class="more-options-icon">▼</span>
+                            <span>More Options</span>
+                        </button>
+                        <div id="more-options-content" class="more-options-content collapsed">
+                            <div class="home-actions-secondary">
+                                <button id="create-lobby-btn" class="btn btn-secondary btn-block home-action">&gt; CUSTOM_LOBBY</button>
+                                <button id="singleplayer-btn" class="btn btn-secondary btn-block home-action">&gt; SOLO_MISSION</button>
+                            </div>
+                            <div class="home-join-row">
+                                <input type="text" id="join-code-input" maxlength="6" placeholder="SERVER_ID">
+                                <button id="join-code-btn" class="btn btn-small btn-secondary">JOIN</button>
+                            </div>
+                        </div>
                     </div>
                     <div class="home-support-row">
                         <a href="https://ko-fi.com/embeddle" target="_blank" rel="noopener" class="home-support-link">
@@ -1214,6 +1223,27 @@
                 <div class="username-modal-buttons">
                     <button id="username-submit-btn" class="btn btn-primary" disabled>&gt; CONFIRM CALLSIGN</button>
                     <button id="username-skip-btn" class="btn btn-ghost btn-small">Skip for now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Name Prompt Modal (lazy name entry) -->
+    <div id="name-prompt-modal" class="modal-overlay closable-modal" style="display: none;">
+        <div class="modal-backdrop" data-close="true"></div>
+        <div class="modal name-prompt-modal">
+            <div class="name-prompt-header">
+                <h2>// ENTER_CALLSIGN</h2>
+            </div>
+            <div class="name-prompt-content">
+                <p class="name-prompt-description">Choose a callsign to identify yourself in the game.</p>
+                <div class="name-prompt-input-group">
+                    <input type="text" id="name-prompt-input" placeholder="Enter callsign..." maxlength="20" autocomplete="off" spellcheck="false">
+                </div>
+                <p id="name-prompt-error" class="name-prompt-error hidden"></p>
+                <div class="name-prompt-buttons">
+                    <button id="name-prompt-submit" class="btn btn-primary">&gt; CONTINUE</button>
+                    <button id="name-prompt-cancel" class="btn btn-ghost">CANCEL</button>
                 </div>
             </div>
         </div>

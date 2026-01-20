@@ -1,0 +1,906 @@
+openapi: 3.0.3
+info:
+  title: Embeddle API
+  description: |
+    REST API for Embeddle - a multiplayer word game using semantic embeddings.
+    
+    ## Authentication
+    
+    Most endpoints require authentication via JWT token in the Authorization header:
+    ```
+    Authorization: Bearer <token>
+    ```
+    
+    Game actions also require a session token in the request body for CSRF protection.
+    
+    ## Rate Limiting
+    
+    API endpoints are rate limited. Exceeding limits returns 429 Too Many Requests.
+    Rate limit headers are included in responses:
+    - `X-RateLimit-Limit`: Maximum requests allowed
+    - `X-RateLimit-Remaining`: Requests remaining
+    - `X-RateLimit-Reset`: Unix timestamp when limit resets
+    
+  version: 1.0.0
+  contact:
+    name: Embeddle Support
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://embeddle.vercel.app
+    description: Production server
+  - url: http://localhost:3000
+    description: Development server
+
+tags:
+  - name: Auth
+    description: Authentication and user sessions
+  - name: Games
+    description: Game creation and gameplay
+  - name: Singleplayer
+    description: Singleplayer game management
+  - name: Users
+    description: User profiles and cosmetics
+  - name: Leaderboard
+    description: Rankings and statistics
+  - name: Lobbies
+    description: Public game discovery
+
+paths:
+  # ============== AUTH ==============
+  /api/auth/google:
+    get:
+      tags: [Auth]
+      summary: Start Google OAuth flow
+      description: Redirects to Google OAuth consent page
+      responses:
+        '302':
+          description: Redirect to Google OAuth
+          headers:
+            Location:
+              schema:
+                type: string
+              description: Google OAuth URL
+        '500':
+          description: OAuth not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/callback:
+    get:
+      tags: [Auth]
+      summary: OAuth callback handler
+      description: Handles Google OAuth callback and creates user session
+      parameters:
+        - name: code
+          in: query
+          description: OAuth authorization code
+          schema:
+            type: string
+        - name: state
+          in: query
+          description: OAuth state token
+          schema:
+            type: string
+        - name: error
+          in: query
+          description: OAuth error code
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to frontend with auth token or error
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      description: Returns authenticated user's profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout user
+      description: Revokes current JWT token
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  # ============== GAMES ==============
+  /api/games:
+    post:
+      tags: [Games]
+      summary: Create a new game
+      description: Creates a new game lobby and adds the creator as host
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  description: Player display name
+                  minLength: 1
+                  maxLength: 20
+                  example: "PlayerOne"
+                visibility:
+                  type: string
+                  enum: [public, private]
+                  default: private
+                  description: Game visibility
+                is_ranked:
+                  type: boolean
+                  default: false
+                  description: Whether this is a ranked game
+      responses:
+        '200':
+          description: Game created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateGameResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/games/{code}:
+    get:
+      tags: [Games]
+      summary: Get game state
+      description: Returns current game state for a player
+      parameters:
+        - $ref: '#/components/parameters/GameCode'
+        - name: player_id
+          in: query
+          description: Player ID for authenticated view
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Game state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GameState'
+        '404':
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/games/{code}/join:
+    post:
+      tags: [Games]
+      summary: Join a game
+      description: Join an existing game lobby
+      parameters:
+        - $ref: '#/components/parameters/GameCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  description: Player display name
+                  minLength: 1
+                  maxLength: 20
+      responses:
+        '200':
+          description: Joined successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JoinGameResponse'
+        '400':
+          description: Cannot join (game full, already started, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/games/{code}/leave:
+    post:
+      tags: [Games]
+      summary: Leave a game
+      description: Leave the current game
+      parameters:
+        - $ref: '#/components/parameters/GameCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GameAction'
+      responses:
+        '200':
+          description: Left successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /api/games/{code}/start:
+    post:
+      tags: [Games]
+      summary: Start the game
+      description: Start the game (host only). Moves to theme voting phase.
+      parameters:
+        - $ref: '#/components/parameters/GameCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GameAction'
+      responses:
+        '200':
+          description: Game started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "word_selection"
+        '403':
+          description: Not host
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/games/{code}/vote:
+    post:
+      tags: [Games]
+      summary: Vote for theme
+      description: Cast vote for a theme during theme selection
+      parameters:
+        - $ref: '#/components/parameters/GameCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/GameAction'
+                - type: object
+                  required: [theme]
+                  properties:
+                    theme:
+                      type: string
+                      description: Theme name to vote for
+      responses:
+        '200':
+          description: Vote recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /api/games/{code}/set-word:
+    post:
+      tags: [Games]
+      summary: Set secret word
+      description: Select secret word from word pool
+      parameters:
+        - $ref: '#/components/parameters/GameCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/GameAction'
+                - type: object
+                  required: [secret_word]
+                  properties:
+                    secret_word:
+                      type: string
+                      description: Selected secret word
+      responses:
+        '200':
+          description: Word set
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /api/games/{code}/guess:
+    post:
+      tags: [Games]
+      summary: Submit a guess
+      description: Submit a guess word during your turn
+      parameters:
+        - $ref: '#/components/parameters/GameCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/GameAction'
+                - type: object
+                  required: [word]
+                  properties:
+                    word:
+                      type: string
+                      description: Word to guess
+      responses:
+        '200':
+          description: Guess result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuessResult'
+        '400':
+          description: Invalid guess or not your turn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/games/{code}/change-word:
+    post:
+      tags: [Games]
+      summary: Change secret word
+      description: Change secret word after eliminating another player
+      parameters:
+        - $ref: '#/components/parameters/GameCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/GameAction'
+                - type: object
+                  required: [new_word]
+                  properties:
+                    new_word:
+                      type: string
+                      description: New secret word
+      responses:
+        '200':
+          description: Word changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  # ============== SINGLEPLAYER ==============
+  /api/singleplayer:
+    post:
+      tags: [Singleplayer]
+      summary: Create singleplayer game
+      description: Create a new singleplayer game with AI opponents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                difficulty:
+                  type: string
+                  enum: [rookie, analyst, field-agent, spymaster, ghost, nemesis]
+                  default: rookie
+                  description: Default AI difficulty
+      responses:
+        '200':
+          description: Game created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Game code
+                  default_difficulty:
+                    type: string
+
+  /api/singleplayer/{code}/add-ai:
+    post:
+      tags: [Singleplayer]
+      summary: Add AI player
+      description: Add an AI opponent to the game
+      parameters:
+        - $ref: '#/components/parameters/GameCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/GameAction'
+                - type: object
+                  properties:
+                    difficulty:
+                      type: string
+                      enum: [rookie, analyst, field-agent, spymaster, ghost, nemesis]
+      responses:
+        '200':
+          description: AI added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ai_id:
+                    type: string
+                  ai_name:
+                    type: string
+                  difficulty:
+                    type: string
+
+  # ============== USERS ==============
+  /api/users/me:
+    get:
+      tags: [Users]
+      summary: Get user profile
+      description: Get authenticated user's full profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  /api/users/me/cosmetics:
+    post:
+      tags: [Users]
+      summary: Update cosmetics
+      description: Update user's equipped cosmetics
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                card_border:
+                  type: string
+                name_color:
+                  type: string
+                badge:
+                  type: string
+      responses:
+        '200':
+          description: Cosmetics updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  cosmetics:
+                    type: object
+
+  # ============== LEADERBOARD ==============
+  /api/leaderboard:
+    get:
+      tags: [Leaderboard]
+      summary: Get casual leaderboard
+      description: Get casual (unranked) leaderboard
+      parameters:
+        - name: type
+          in: query
+          description: Leaderboard type
+          schema:
+            type: string
+            enum: [alltime, weekly]
+            default: alltime
+        - name: limit
+          in: query
+          description: Maximum entries
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+      responses:
+        '200':
+          description: Leaderboard entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  players:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LeaderboardEntry'
+
+  /api/leaderboard/ranked:
+    get:
+      tags: [Leaderboard]
+      summary: Get ranked leaderboard
+      description: Get ranked leaderboard sorted by MMR
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Ranked leaderboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  players:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RankedLeaderboardEntry'
+
+  # ============== LOBBIES ==============
+  /api/lobbies:
+    get:
+      tags: [Lobbies]
+      summary: Get public lobbies
+      description: Get list of public game lobbies
+      parameters:
+        - name: mode
+          in: query
+          description: Filter by game mode
+          schema:
+            type: string
+            enum: [ranked, unranked]
+      responses:
+        '200':
+          description: List of lobbies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lobbies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LobbyInfo'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from OAuth login
+
+  parameters:
+    GameCode:
+      name: code
+      in: path
+      required: true
+      description: 6-character game code
+      schema:
+        type: string
+        pattern: '^[A-Z0-9]{6}$'
+        example: "ABC123"
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Error message
+      required: [detail]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        avatar:
+          type: string
+          format: uri
+        is_admin:
+          type: boolean
+        is_donor:
+          type: boolean
+
+    UserProfile:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            stats:
+              type: object
+              properties:
+                games_played:
+                  type: integer
+                wins:
+                  type: integer
+                mmr:
+                  type: integer
+                ranked_games:
+                  type: integer
+            cosmetics:
+              type: object
+            owned_cosmetics:
+              type: object
+            wallet:
+              type: object
+              properties:
+                credits:
+                  type: integer
+
+    CreateGameResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Generated game code
+        player_id:
+          type: string
+          description: Assigned player ID
+        session_token:
+          type: string
+          description: Session token for authenticated actions
+      required: [code, player_id, session_token]
+
+    JoinGameResponse:
+      type: object
+      properties:
+        player_id:
+          type: string
+        session_token:
+          type: string
+        game:
+          $ref: '#/components/schemas/GameState'
+
+    GameAction:
+      type: object
+      properties:
+        player_id:
+          type: string
+          description: Player ID
+        session_token:
+          type: string
+          description: Session token for CSRF protection
+      required: [player_id, session_token]
+
+    GameState:
+      type: object
+      properties:
+        code:
+          type: string
+        status:
+          type: string
+          enum: [lobby, word_selection, playing, finished]
+        players:
+          type: array
+          items:
+            $ref: '#/components/schemas/Player'
+        host_id:
+          type: string
+        current_player_id:
+          type: string
+        current_turn:
+          type: integer
+        theme:
+          $ref: '#/components/schemas/Theme'
+        theme_options:
+          type: array
+          items:
+            type: string
+        theme_votes:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryEntry'
+        winner:
+          $ref: '#/components/schemas/Winner'
+        is_ranked:
+          type: boolean
+        is_singleplayer:
+          type: boolean
+
+    Player:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        is_alive:
+          type: boolean
+        is_ai:
+          type: boolean
+        difficulty:
+          type: string
+        has_word:
+          type: boolean
+        is_ready:
+          type: boolean
+        secret_word:
+          type: string
+          description: Only visible to self or when eliminated
+        word_pool:
+          type: array
+          items:
+            type: string
+          description: Only visible to self
+        cosmetics:
+          type: object
+
+    Theme:
+      type: object
+      properties:
+        name:
+          type: string
+        words:
+          type: array
+          items:
+            type: string
+
+    HistoryEntry:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [guess, elimination, word_change]
+        word:
+          type: string
+        guesser_id:
+          type: string
+        guesser_name:
+          type: string
+        similarities:
+          type: object
+          additionalProperties:
+            type: number
+        eliminations:
+          type: array
+          items:
+            type: string
+
+    Winner:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+    GuessResult:
+      type: object
+      properties:
+        similarities:
+          type: object
+          additionalProperties:
+            type: number
+            minimum: 0
+            maximum: 1
+          description: Similarity scores by player ID
+        eliminations:
+          type: array
+          items:
+            type: string
+          description: IDs of eliminated players
+        game_over:
+          type: boolean
+        winner:
+          $ref: '#/components/schemas/Winner'
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        name:
+          type: string
+        wins:
+          type: integer
+        games_played:
+          type: integer
+        weekly_wins:
+          type: integer
+
+    RankedLeaderboardEntry:
+      type: object
+      properties:
+        name:
+          type: string
+        mmr:
+          type: integer
+        peak_mmr:
+          type: integer
+        ranked_games:
+          type: integer
+        ranked_wins:
+          type: integer
+        ranked_losses:
+          type: integer
+
+    LobbyInfo:
+      type: object
+      properties:
+        code:
+          type: string
+        player_count:
+          type: integer
+        max_players:
+          type: integer
+        is_ranked:
+          type: boolean
+

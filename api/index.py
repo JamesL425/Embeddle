@@ -1263,6 +1263,8 @@ def _nemesis_update_beliefs(ai_player: dict, game: dict, guess_word: str, simila
     
     For each opponent, update P(word | observations) using the similarity
     between the guess and each possible word.
+    
+    Uses pre-computed similarity matrix for O(1) lookups when available.
     """
     import math
     
@@ -1273,15 +1275,10 @@ def _nemesis_update_beliefs(ai_player: dict, game: dict, guess_word: str, simila
         _nemesis_init_beliefs(ai_player, game)
         beliefs = memory.get("nemesis_beliefs", {})
     
-    # Get cached embeddings from Redis
-    theme_embeddings = get_theme_embeddings(game)
     guess_lower = guess_word.lower()
-    guess_embedding = theme_embeddings.get(guess_lower)
-    if not guess_embedding:
-        try:
-            guess_embedding = get_embedding(guess_word, game)
-        except Exception:
-            return
+    
+    # Fast path: use pre-computed similarity matrix
+    matrix = game.get('theme_similarity_matrix') if game else None
     
     for player_id, observed_sim in similarities.items():
         if player_id == ai_player.get("id"):
@@ -1301,13 +1298,18 @@ def _nemesis_update_beliefs(ai_player: dict, game: dict, guess_word: str, simila
         total_prob = 0.0
         
         for word, prior_prob in player_beliefs.items():
-            word_embedding = theme_embeddings.get(word.lower())
-            if not word_embedding:
+            word_lower = word.lower()
+            
+            # Get expected similarity from matrix or compute as fallback
+            expected_sim = None
+            if matrix and guess_lower in matrix:
+                expected_sim = matrix[guess_lower].get(word_lower)
+            
+            if expected_sim is None:
+                # Fallback: skip this word (rare - only if matrix incomplete)
                 new_beliefs[word] = prior_prob
                 total_prob += prior_prob
                 continue
-            
-            expected_sim = cosine_similarity(guess_embedding, word_embedding)
             
             # Likelihood: how well does observed similarity match expected?
             # Use Gaussian likelihood with sigma=0.15
@@ -1365,7 +1367,7 @@ def _nemesis_expected_info_gain(ai_player: dict, game: dict, guess_word: str,
     
     FAST VERSION: Uses a heuristic based on how well the guess word
     discriminates between high-probability and low-probability candidates
-    in our beliefs. Uses cached embeddings for speed.
+    in our beliefs. Uses pre-computed similarity matrix for speed.
     """
     memory = ai_player.get("ai_memory", {})
     beliefs = memory.get("nemesis_beliefs", {})
@@ -1373,15 +1375,10 @@ def _nemesis_expected_info_gain(ai_player: dict, game: dict, guess_word: str,
     if not beliefs:
         return 0.0
     
-    # Get cached embeddings from Redis
-    theme_embeddings = get_theme_embeddings(game)
     guess_lower = guess_word.lower()
-    guess_embedding = theme_embeddings.get(guess_lower)
-    if not guess_embedding:
-        try:
-            guess_embedding = get_embedding(guess_word, game)
-        except Exception:
-            return 0.0
+    
+    # Fast path: use pre-computed similarity matrix
+    matrix = game.get('theme_similarity_matrix') if game else None
     
     total_info_gain = 0.0
     
@@ -1406,11 +1403,13 @@ def _nemesis_expected_info_gain(ai_player: dict, game: dict, guess_word: str,
         
         similarities = []
         for word, prob in top_candidates:
-            word_emb = theme_embeddings.get(word.lower())
-            if not word_emb:
-                continue
-            sim = cosine_similarity(guess_embedding, word_emb)
-            similarities.append(sim)
+            word_lower = word.lower()
+            
+            # Get similarity from matrix
+            if matrix and guess_lower in matrix:
+                sim = matrix[guess_lower].get(word_lower)
+                if sim is not None:
+                    similarities.append(sim)
         
         if len(similarities) >= 2:
             # Variance of similarities indicates discrimination power
@@ -1628,14 +1627,14 @@ def _nemesis_get_priority_candidates(ai_player: dict, game: dict,
     
     Prioritizes:
     1. Words with high probability of being opponents' secrets
-    2. Words similar to high-scoring guesses (using cached embeddings)
+    2. Words similar to high-scoring guesses (using similarity matrix)
     3. Random sample for exploration
     """
     import random
     
     memory = ai_player.get("ai_memory", {})
     beliefs = memory.get("nemesis_beliefs", {})
-    theme_embeddings = get_theme_embeddings(game)
+    matrix = game.get('theme_similarity_matrix') if game else None
     
     priority_words = set()
     
@@ -1650,7 +1649,7 @@ def _nemesis_get_priority_candidates(ai_player: dict, game: dict,
                         priority_words.add(aw)
                         break
     
-    # Add words similar to recent high-similarity guesses (using cached embeddings)
+    # Add words similar to recent high-similarity guesses (using similarity matrix)
     for player in game.get("players", []):
         pid = player.get("id")
         if pid == ai_player.get("id"):
@@ -1658,14 +1657,14 @@ def _nemesis_get_priority_candidates(ai_player: dict, game: dict,
         top_guesses = _ai_top_guesses_since_change(game, pid, k=3)
         for word, sim in top_guesses:
             if sim > 0.5:
-                # Find similar words using cached embeddings
-                word_emb = theme_embeddings.get(word.lower())
-                if not word_emb:
-                    continue
-                for aw in available_words[:50]:  # Sample for efficiency
-                    aw_emb = theme_embeddings.get(aw.lower())
-                    if aw_emb and cosine_similarity(word_emb, aw_emb) > 0.6:
-                        priority_words.add(aw)
+                word_lower = word.lower()
+                # Find similar words using similarity matrix
+                if matrix and word_lower in matrix:
+                    for aw in available_words[:50]:  # Sample for efficiency
+                        aw_lower = aw.lower()
+                        sim_to_word = matrix[word_lower].get(aw_lower)
+                        if sim_to_word is not None and sim_to_word > 0.6:
+                            priority_words.add(aw)
     
     # Fill remaining with random sample
     remaining = count - len(priority_words)
@@ -2236,8 +2235,24 @@ def _ai_maybe_bluff(ai_player: dict, game: dict, available_words: list) -> Optio
     if not my_secret:
         return None
     
+    my_secret_lower = my_secret.lower()
+    
     try:
-        # Look up embedding from cache (or legacy stored embedding)
+        # Fast path: use pre-computed similarity matrix
+        matrix = game.get('theme_similarity_matrix') if game else None
+        if matrix and my_secret_lower in matrix:
+            bluff_candidates = []
+            for word in available_words[:30]:  # Sample for performance
+                word_lower = word.lower()
+                sim = matrix[my_secret_lower].get(word_lower)
+                if sim is not None and 0.5 < sim < 0.75:
+                    bluff_candidates.append((word, sim))
+            
+            if bluff_candidates:
+                return random.choice(bluff_candidates)[0]
+            return None
+        
+        # Fallback: use embeddings (rare - only if matrix not available)
         try:
             my_embedding = get_embedding(my_secret)
         except Exception:
@@ -8648,27 +8663,39 @@ class handler(BaseHTTPRequestHandler):
             if not is_valid_word(word):
                 return self._send_error("Please enter a valid English word", 400)
             
-            try:
-                guess_embedding = get_embedding(word)
-            except Exception as e:
-                print(f"Embedding error for guess: {e}")  # Log server-side only
-                return self._send_error("Word processing service unavailable. Please try again.", 503)
-            
+            # Calculate similarities using pre-computed matrix (fast path)
+            word_lower = word.lower()
             similarities = {}
+            matrix = game.get('theme_similarity_matrix')
+            
             for p in game['players']:
-                # Look up secret embedding from cache (not stored in player object)
                 secret_word = p.get('secret_word')
                 if not secret_word:
                     continue
+                secret_lower = secret_word.lower()
+                
+                # Fast path: use pre-computed similarity matrix
+                if matrix and word_lower in matrix:
+                    sim = matrix[word_lower].get(secret_lower)
+                    if sim is not None:
+                        similarities[p['id']] = round(sim, 4)
+                        continue
+                
+                # Fallback: compute from embeddings (rare - only if matrix not available)
                 try:
+                    guess_embedding = get_embedding(word)
                     secret_emb = get_embedding(secret_word)
                     sim = cosine_similarity(guess_embedding, secret_emb)
                     similarities[p['id']] = round(sim, 4)
                 except Exception:
                     # Fallback to stored embedding if cache miss (legacy games)
                     if p.get('secret_embedding'):
-                        sim = cosine_similarity(guess_embedding, p['secret_embedding'])
-                        similarities[p['id']] = round(sim, 4)
+                        try:
+                            guess_embedding = get_embedding(word)
+                            sim = cosine_similarity(guess_embedding, p['secret_embedding'])
+                            similarities[p['id']] = round(sim, 4)
+                        except Exception:
+                            pass
             
             # Eliminate players whose exact word was guessed
             eliminations = []
