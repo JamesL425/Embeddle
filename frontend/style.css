@@ -1575,6 +1575,7 @@ header h1 {
     padding: 0.75rem 1.5rem;
     font-size: 1rem;
     transition: all 0.2s ease;
+    margin-left: auto;
 }
 
 #guess-submit-btn:not(:disabled) {
