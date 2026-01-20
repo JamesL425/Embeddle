@@ -124,6 +124,7 @@ export function updateTurnIndicator(game) {
     const currentPlayer = game.players.find(p => p.id === game.current_player_id);
     
     if (!currentPlayer) {
+        indicator.classList.remove('your-turn');
         indicator.innerHTML = '<span>Waiting...</span>';
         return;
     }
@@ -134,10 +135,13 @@ export function updateTurnIndicator(game) {
     if (game.waiting_for_word_change) {
         const waitingPlayer = game.players.find(p => p.id === game.waiting_for_word_change);
         const waitingName = waitingPlayer?.name || 'Someone';
+        indicator.classList.remove('your-turn');
         indicator.innerHTML = `<span class="waiting-for-change">Waiting for ${escapeHtml(waitingName)} to change word...</span>`;
     } else if (isMyTurn) {
+        indicator.classList.add('your-turn');
         indicator.innerHTML = '<span class="your-turn">YOUR TURN - Make a guess!</span>';
     } else {
+        indicator.classList.remove('your-turn');
         indicator.innerHTML = `<span>${escapeHtml(name)}'s turn</span>`;
     }
 }

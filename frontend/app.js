@@ -4928,9 +4928,6 @@ function updatePlayersGrid(game) {
             div.dataset.banner = player.cosmetics.profile_banner;
         }
         
-        // Check if this player recently changed their word
-        const hasChangedWord = wordChangeAfterIndex[player.id] !== undefined;
-        
         // Calculate max transformed similarity for danger indicator
         const topGuesses = topGuessesPerPlayer[player.id];
         const maxTransformedSim = getMaxTransformedSimilarity(topGuesses);
@@ -4968,23 +4965,21 @@ function updatePlayersGrid(game) {
             }
         }
         
-        // Build top guesses HTML
-        let topGuessesHtml = '';
-        if (topGuesses && topGuesses.length > 0) {
-            topGuessesHtml = '<div class="top-guesses">';
-            topGuesses.forEach(guess => {
-                const transformedSim = transformSimilarity(guess.similarity);
-                const simColor = getSimilarityColor(transformedSim);
-                topGuessesHtml += `
-                    <div class="top-guess">
-                        <span class="guess-word">${escapeHtml(guess.word)}</span>
-                        <span class="guess-sim" style="color: ${simColor}">${escapeHtml((transformedSim * 100).toFixed(0))}%</span>
-                    </div>
-                `;
-            });
-            topGuessesHtml += '</div>';
+        // Build last guess similarity HTML (simplified - just show the most recent guess similarity)
+        let lastGuessHtml = '';
+        const lastEntry = game.history && game.history.length > 0 ? game.history[game.history.length - 1] : null;
+        
+        // Check if this player recently changed their word
+        const hasChangedWord = wordChangeAfterIndex[player.id] !== undefined;
+        
+        if (player.is_alive && lastEntry && lastEntry.similarities && lastEntry.similarities[player.id] !== undefined) {
+            const simValue = lastEntry.similarities[player.id];
+            const transformedSim = transformSimilarity(simValue);
+            const simColor = getSimilarityColor(transformedSim);
+            const simPercent = Math.round(transformedSim * 100);
+            lastGuessHtml = `<div class="similarity" style="color: ${simColor}">${simPercent}%</div>`;
         } else if (hasChangedWord && player.is_alive) {
-            topGuessesHtml = '<div class="word-changed-note">Word changed!</div>';
+            lastGuessHtml = '<div class="word-changed-note">Word changed!</div>';
         }
         
         // Build name HTML with clickable profile (for non-AI players)
@@ -5012,7 +5007,7 @@ function updatePlayersGrid(game) {
             <div class="status ${player.is_alive ? 'alive' : 'eliminated'}">
                 ${player.is_alive ? 'Alive' : 'Eliminated'}
             </div>
-            ${topGuessesHtml}
+            ${lastGuessHtml}
         `;
         
         // Add click handler for profile viewing (non-AI players only)
@@ -5630,6 +5625,9 @@ function updateGuessWordGrid(game, isMyTurn, isSpectator) {
                 selectedDisplay.textContent = word.toUpperCase();
                 selectedDisplay.classList.add('has-selection');
                 submitBtn.disabled = false;
+                // Add has-selection to the bar itself
+                const selectionBar = document.getElementById('guess-selection-bar');
+                if (selectionBar) selectionBar.classList.add('has-selection');
             });
         } else {
             wordEl.disabled = !canSelect || wordLower === myWord;
