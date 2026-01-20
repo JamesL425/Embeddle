@@ -417,6 +417,9 @@ function playVictoryEffect(effectId, targetEl = null) {
         case 'aurora':
             createAuroraEffect(container);
             break;
+        case 'sakura':
+            createSakuraEffect(container);
+            break;
         case 'big_bang':
             createBigBangEffect(container);
             break;
@@ -539,6 +542,45 @@ function createAuroraEffect(container) {
     }
     
     setTimeout(() => container.innerHTML = '', 4000);
+}
+
+function createSakuraEffect(container) {
+    container.innerHTML = '';
+    const height = container.clientHeight || window.innerHeight || 800;
+    const fallDistance = (height + 40) + 'px';
+    
+    // Add ambient pink glow
+    const glow = document.createElement('div');
+    glow.className = 'sakura-glow';
+    container.appendChild(glow);
+    
+    // Spawn cherry blossom petals
+    const petalCount = 50;
+    const petals = ['🌸', '🌸', '🌸', '💮']; // Mostly cherry blossoms with occasional white flower
+    
+    for (let i = 0; i < petalCount; i++) {
+        const petal = document.createElement('div');
+        petal.className = 'sakura-petal';
+        petal.textContent = petals[Math.floor(Math.random() * petals.length)];
+        
+        const size = (1 + Math.random() * 1).toFixed(2);
+        const duration = (3 + Math.random() * 2).toFixed(2);
+        const delay = (Math.random() * 1.5).toFixed(2);
+        const drift = (-60 + Math.random() * 120).toFixed(0);
+        const rotation = (360 + Math.random() * 720).toFixed(0);
+        
+        petal.style.left = Math.random() * 100 + '%';
+        petal.style.setProperty('--size', `${size}rem`);
+        petal.style.setProperty('--duration', `${duration}s`);
+        petal.style.setProperty('--delay', `${delay}s`);
+        petal.style.setProperty('--drift', `${drift}px`);
+        petal.style.setProperty('--rotation', `${rotation}deg`);
+        petal.style.setProperty('--fall-distance', fallDistance);
+        
+        container.appendChild(petal);
+    }
+    
+    setTimeout(() => container.innerHTML = '', 5500);
 }
 
 function createBigBangEffect(container) {

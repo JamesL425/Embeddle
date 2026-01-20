@@ -1473,7 +1473,7 @@ header h1 {
     border-radius: var(--radius);
     overflow-y: auto;
     min-height: 0;
-    max-height: 75%;
+    max-height: calc(100vh - 280px);
 }
 
 .guess-word {
@@ -1990,11 +1990,6 @@ header h1 {
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
-}
-
-/* Guess Section */
-.guess-section {
-    margin-bottom: var(--space-lg);
 }
 
 /* Chat (drawer panel) */

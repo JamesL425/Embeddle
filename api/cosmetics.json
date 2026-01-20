@@ -34,6 +34,17 @@
       "description": "Rainbow shimmer",
       "premium": true
     },
+    "frost": {
+      "name": "Frost",
+      "description": "Icy crystalline shimmer",
+      "premium": true
+    },
+    "galaxy": {
+      "name": "Galaxy",
+      "description": "Starfield with nebula glow",
+      "premium": false,
+      "requirements": [{"metric": "peak_mmr", "min": 1600}]
+    },
     "godframe": {
       "name": "Godframe",
       "description": "Divine golden aura with celestial particles",
@@ -172,6 +183,11 @@
     "aurora": {
       "name": "Aurora",
       "description": "Northern lights dance",
+      "premium": true
+    },
+    "sakura": {
+      "name": "Sakura",
+      "description": "Cherry blossom petals drift down",
       "premium": true
     },
     "big_bang": {

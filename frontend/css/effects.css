@@ -289,6 +289,49 @@
     100% { background-position: 100% 100%, 600% 50%; }
 }
 
+/* Frost - Premium (Ko-fi supporter) */
+.player-card.border-frost {
+    border: 2px solid #00d4ff;
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.4), inset 0 0 20px rgba(135, 206, 235, 0.1);
+    animation: frostShimmer 3s ease-in-out infinite;
+}
+
+@keyframes frostShimmer {
+    0%, 100% { 
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.4), inset 0 0 20px rgba(135, 206, 235, 0.1);
+        border-color: #00d4ff;
+    }
+    50% { 
+        box-shadow: 0 0 25px rgba(135, 206, 235, 0.6), 0 0 40px rgba(255, 255, 255, 0.3), inset 0 0 25px rgba(200, 230, 255, 0.15);
+        border-color: #87ceeb;
+    }
+}
+
+/* Galaxy - Unlockable (1600 MMR) */
+.player-card.border-galaxy {
+    border: 2px solid #4b0082;
+    background: 
+        radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.8), transparent),
+        radial-gradient(1px 1px at 80% 70%, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(1px 1px at 40% 80%, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(1px 1px at 60% 20%, rgba(255, 255, 255, 0.5), transparent),
+        radial-gradient(1px 1px at 10% 60%, rgba(255, 255, 255, 0.6), transparent),
+        linear-gradient(var(--bg-card), var(--bg-card));
+    box-shadow: 0 0 20px rgba(75, 0, 130, 0.5), 0 0 40px rgba(138, 43, 226, 0.3);
+    animation: galaxyPulse 4s ease-in-out infinite;
+}
+
+@keyframes galaxyPulse {
+    0%, 100% { 
+        box-shadow: 0 0 20px rgba(75, 0, 130, 0.5), 0 0 40px rgba(138, 43, 226, 0.3);
+        border-color: #4b0082;
+    }
+    50% { 
+        box-shadow: 0 0 30px rgba(138, 43, 226, 0.6), 0 0 50px rgba(75, 0, 130, 0.4);
+        border-color: #6a0dad;
+    }
+}
+
 /* Godframe - Admin only */
 .player-card.border-godframe {
     border: 3px solid transparent;
@@ -1372,6 +1415,47 @@
 @keyframes auroraWave {
     0%, 100% { opacity: 0.3; transform: translateY(0); }
     50% { opacity: 0.6; transform: translateY(-20px); }
+}
+
+/* Sakura - Premium (Ko-fi supporter) */
+.sakura-petal {
+    position: absolute;
+    top: -30px;
+    font-size: var(--size, 1.5rem);
+    animation: sakuraFall var(--duration, 4s) ease-in-out forwards;
+    animation-delay: var(--delay, 0s);
+    filter: drop-shadow(0 0 4px rgba(255, 182, 193, 0.6));
+    opacity: 0;
+}
+
+@keyframes sakuraFall {
+    0% { 
+        transform: translateY(0) rotate(0deg) translateX(0); 
+        opacity: 0; 
+    }
+    10% { 
+        opacity: 1; 
+    }
+    100% { 
+        transform: translateY(var(--fall-distance, 100vh)) rotate(var(--rotation, 720deg)) translateX(var(--drift, 50px)); 
+        opacity: 0; 
+    }
+}
+
+.sakura-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse at 50% 30%, rgba(255, 182, 193, 0.15) 0%, transparent 60%);
+    animation: sakuraGlow 3s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes sakuraGlow {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
 }
 
 /* ============ NEW PARTICLE OVERLAYS ============ */
