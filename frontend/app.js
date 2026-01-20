@@ -1802,7 +1802,8 @@ async function openProfileModal(playerName) {
             }
             joinedEl.textContent = `Playing since ${joinDate.toLocaleDateString()} (${timeAgo})`;
         } else {
-            joinedEl.textContent = data.has_google_account ? '' : 'Guest player';
+            // No created_at - either guest or legacy user without timestamp
+            joinedEl.textContent = '';
         }
         
         // Update stats

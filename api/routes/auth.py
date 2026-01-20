@@ -453,6 +453,9 @@ def _handle_oauth_callback(
         # Update existing user
         user['name'] = name
         user['last_login'] = int(time.time())
+        # Backfill created_at for legacy users
+        if not user.get('created_at'):
+            user['created_at'] = int(time.time())
     
     save_user(user)
     
