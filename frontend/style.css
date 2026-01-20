@@ -1311,11 +1311,24 @@ header h1 {
     display: grid;
     gap: 1rem;
     padding: 1rem;
-    height: calc(100vh - 3.5rem);
+    flex: 1;
+    min-height: 0;
     grid-template-columns: 280px 1fr 300px;
     grid-template-areas: "players center log";
     max-width: 1600px;
     margin: 0 auto;
+}
+
+/* Game screen should fill viewport and not scroll on desktop */
+#game-screen {
+    height: 100vh;
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+}
+
+#game-screen.active {
+    display: flex;
 }
 
 /* Players column */
@@ -1605,6 +1618,11 @@ header h1 {
 
 /* Mobile: single column with tabs */
 @media (max-width: 768px) {
+    #game-screen {
+        height: auto;
+        overflow: auto;
+    }
+    
     .game-topbar {
         flex-wrap: wrap;
         gap: 0.5rem;
@@ -5144,17 +5162,6 @@ body.on-home-screen .site-footer {
 /* Hide footer and prevent scrolling during game */
 body.in-game .site-footer {
     display: none;
-}
-
-body.in-game {
-    overflow: hidden;
-}
-
-/* Allow scrolling on mobile during game */
-@media (max-width: 768px) {
-    body.in-game {
-        overflow: auto;
-    }
 }
 
 .footer-content {
