@@ -474,17 +474,19 @@ header h1 {
 
 /* ============ HOME SCREEN LAYOUT ============ */
 
-/* Simple centered layout */
+/* Simple centered layout - fits viewport without scrolling */
 #home-screen.active.home-screen {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: var(--space-lg);
+    gap: var(--space-md);
     max-width: 600px;
     margin: 0 auto;
-    min-height: calc(100vh - 200px);
-    padding: var(--space-lg) var(--space-md);
+    height: calc(100vh - 180px);
+    max-height: calc(100vh - 180px);
+    padding: var(--space-sm) var(--space-md);
+    overflow: hidden;
 }
 
 #home-screen.active.home-screen .card {
@@ -494,12 +496,13 @@ header h1 {
 
 #home-screen.active.home-screen .hero-card {
     text-align: center;
+    padding: var(--space-lg) var(--space-md);
 }
 
 .home-actions {
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
+    gap: var(--space-sm);
     align-items: center;
     width: 100%;
     max-width: 400px;
@@ -517,15 +520,15 @@ header h1 {
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 2rem 2.5rem;
-    font-size: 1.5rem;
+    padding: 1.25rem 2rem;
+    font-size: 1.3rem;
     font-weight: 700;
-    min-height: 110px;
-    gap: 0.25rem;
+    min-height: 80px;
+    gap: 0.2rem;
 }
 
 .btn-xlarge .btn-text {
-    font-size: 1.6rem;
+    font-size: 1.4rem;
     letter-spacing: 0.08em;
 }
 
@@ -594,10 +597,10 @@ header h1 {
     min-height: auto;
 }
 
-/* How It Works Section */
+/* How It Works Section - Compact */
 .how-it-works {
-    margin-top: var(--space-lg);
-    padding: var(--space-md);
+    margin-top: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -605,22 +608,22 @@ header h1 {
 }
 
 .how-it-works h3 {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
-    margin: 0 0 var(--space-sm);
+    margin: 0 0 var(--space-xs);
     letter-spacing: 0.1em;
 }
 
 .how-it-works-steps {
     margin: 0;
     padding-left: 1.25rem;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-secondary);
-    line-height: 1.6;
+    line-height: 1.5;
 }
 
 .how-it-works-steps li {
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.15rem;
 }
 
 .how-it-works-steps strong {
@@ -628,8 +631,8 @@ header h1 {
 }
 
 .how-it-works-footer {
-    margin: var(--space-sm) 0 0;
-    font-size: 0.85rem;
+    margin: var(--space-xs) 0 0;
+    font-size: 0.8rem;
     color: var(--text-primary);
     font-weight: 600;
     text-align: center;
@@ -641,7 +644,7 @@ header h1 {
     align-items: center;
     justify-content: center;
     gap: var(--space-sm);
-    margin-top: var(--space-md);
+    margin-top: var(--space-sm);
     font-size: 0.75rem;
 }
 
