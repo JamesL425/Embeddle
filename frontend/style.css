@@ -1473,6 +1473,7 @@ header h1 {
     border-radius: var(--radius);
     overflow-y: auto;
     min-height: 0;
+    max-height: 80%;
 }
 
 .guess-word {
@@ -5224,6 +5225,17 @@ body.in-game .site-footer {
 
 .support-link:hover::before {
     opacity: 1;
+}
+
+.discord-link {
+    color: #5865F2;
+    display: inline-flex;
+    align-items: center;
+}
+
+.discord-link:hover {
+    color: #7289DA;
+    text-shadow: 0 0 10px rgba(88, 101, 242, 0.5);
 }
 
 
