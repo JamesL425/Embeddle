@@ -18,7 +18,7 @@ const TEXT = {
         leaderboard: '[LB]',
         replay: '[REC]',
         daily: '[OPS]',
-        cosmetics: '[SYS]',
+        cosmetics: '[COS]',
         chat: '[MSG]',
         info: '[?]',
         options: '[CFG]',
@@ -52,7 +52,7 @@ const TEXT = {
         steps: [
             { action: 'Select', description: 'a codeword from the database' },
             { action: 'Probe', description: 'with guesses to reveal similarity scores' },
-            { action: 'Analyze', description: 'patterns while masking your own' },
+            { action: 'Analyse', description: 'patterns while masking your own' },
             { action: 'Execute', description: "when you've identified a target" },
         ],
         footer: 'Sole survivor takes the round.',
@@ -196,13 +196,13 @@ const TEXT = {
         calibrationTitle: 'Rating Calibration',
         calibrationItems: [
             { phase: 'Placement (0-4 games):', desc: 'High volatility for fast calibration' },
-            { phase: 'Provisional (5-19 games):', desc: 'Medium volatility as rating stabilizes' },
+            { phase: 'Provisional (5-19 games):', desc: 'Medium volatility as rating stabilises' },
             { phase: 'Established (20+ games):', desc: 'Normal volatility for stable ratings' },
         ],
         supportTitle: '// SUPPORT',
         supportDesc: 'Free to play. Donations cover server and API costs.',
         supporterPerks: '// SUPPORTER_PERKS',
-        supporterPerksDesc: 'Supporters unlock custom theme colors and an exclusive badge. One-time donation, permanent access.',
+        supporterPerksDesc: 'Supporters unlock custom theme colours and an exclusive badge. One-time donation, permanent access.',
         supportBtn: '> SUPPORT',
         supportNote: 'Any amount unlocks all supporter perks.',
     },
@@ -228,12 +228,12 @@ const TEXT = {
 
     // ============ COSMETICS PANEL ============
     cosmetics: {
-        themeColor: '// THEME_COLOR',
+        themeColor: '// THEME_COLOUR',
         customHex: '// CUSTOM_HEX',
         apply: '> APPLY',
         badge: '// BADGE',
         title: '// TITLE',
-        allUnlocked: '> All customization unlocked',
+        allUnlocked: '> All customisation unlocked',
         premiumFree: '> Premium features currently free',
         supportToUnlock: '> Support to unlock custom colors',
         supportBtn: '> SUPPORT',
@@ -298,9 +298,9 @@ const TEXT = {
 
     // ============ ERRORS & NOTIFICATIONS ============
     errors: {
-        signInRequired: 'Sign in with Google to customize',
+        signInRequired: 'Sign in with Google to customise',
         failedToEquip: 'Failed to equip',
-        signInToSave: 'Sign in to save custom color',
+        signInToSave: 'Sign in to save custom colour',
     },
 
     // ============ MISC ============
