@@ -1463,11 +1463,11 @@ function closeGamesPanel() {
 }
 
 function refreshGamesPanel() {
-    renderRecentGames();
-    loadOpenLobbies();
+    renderGamesPanelRecent();
+    loadOpenLobbiesForPanel();
 }
 
-function renderRecentGames() {
+function renderGamesPanelRecent() {
     const container = document.getElementById('games-recent-list');
     if (!container) return;
     
@@ -1501,7 +1501,7 @@ function renderRecentGames() {
     }).join('');
 }
 
-async function loadOpenLobbies() {
+async function loadOpenLobbiesForPanel() {
     const container = document.getElementById('games-lobbies-list');
     if (!container) return;
     
@@ -1568,7 +1568,7 @@ window.closeGamesPanel = closeGamesPanel;
 
 document.getElementById('games-btn')?.addEventListener('click', toggleGamesPanel);
 document.getElementById('close-games-btn')?.addEventListener('click', closeGamesPanel);
-document.getElementById('refresh-lobbies-btn')?.addEventListener('click', loadOpenLobbies);
+document.getElementById('refresh-lobbies-btn')?.addEventListener('click', loadOpenLobbiesForPanel);
 
 // Replay button in topbar - prompts for replay code
 document.getElementById('topbar-replay-btn')?.addEventListener('click', () => {
