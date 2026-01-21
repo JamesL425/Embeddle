@@ -6501,6 +6501,198 @@ body.in-game .site-footer {
     opacity: 0.85;
 }
 
+/* ============ THEME COLOR PICKER (Simplified) ============ */
+
+.theme-color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: var(--space-sm);
+}
+
+.theme-color-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.theme-color-option:hover:not(.locked) {
+    border-color: var(--preview-color, var(--accent-primary));
+}
+
+.theme-color-option.equipped {
+    border-color: var(--preview-color, var(--accent-primary));
+    background: var(--bg-hover);
+}
+
+.theme-color-option.locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.theme-color-option .color-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+    background: var(--preview-color, var(--accent-primary));
+    flex-shrink: 0;
+}
+
+.theme-color-option .color-name {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.theme-color-option.equipped .color-name {
+    color: var(--text-primary);
+}
+
+/* Custom color section */
+.custom-color-section {
+    margin-top: var(--space-lg);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border);
+}
+
+.custom-color-section label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: var(--space-sm);
+}
+
+.custom-color-row {
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+}
+
+.color-picker-input {
+    width: 40px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    background: transparent;
+}
+
+.color-picker-input::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+.color-picker-input::-webkit-color-swatch {
+    border: none;
+    border-radius: 2px;
+}
+
+.hex-input {
+    width: 90px;
+    font-family: 'Courier Prime', monospace;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+/* Badge grid */
+.badge-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+.badge-option {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+    font-size: 0.75rem;
+}
+
+.badge-option:hover:not(.locked) {
+    border-color: var(--accent-primary);
+}
+
+.badge-option.equipped {
+    border-color: var(--accent-primary);
+    background: var(--bg-hover);
+}
+
+.badge-option.locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.badge-option .badge-icon {
+    font-family: 'Courier Prime', monospace;
+    color: var(--accent-primary);
+}
+
+.badge-option .badge-name {
+    color: var(--text-secondary);
+}
+
+.badge-option.equipped .badge-name {
+    color: var(--text-primary);
+}
+
+/* Title grid */
+.title-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+.title-option {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition);
+    font-size: 0.75rem;
+}
+
+.title-option:hover:not(.locked) {
+    border-color: var(--accent-primary);
+}
+
+.title-option.equipped {
+    border-color: var(--accent-primary);
+    background: var(--bg-hover);
+}
+
+.title-option.locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.title-option .title-text {
+    color: var(--text-secondary);
+}
+
+.title-option.equipped .title-text {
+    color: var(--text-primary);
+}
+
+/* Simplified cosmetics banner */
+.cosmetics-banner.locked {
+    border-color: var(--text-muted);
+}
+
+.cosmetics-banner.locked p {
+    color: var(--text-muted);
+}
+
 /* Premium Unlock Prompt */
 .premium-unlock-prompt {
     position: fixed;

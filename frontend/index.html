@@ -49,20 +49,20 @@
         <div class="topbar-content">
             <img id="user-avatar" class="user-avatar hidden" src="" alt="">
             <span id="logged-in-name">OPERATIVE</span>
-            <button id="view-full-leaderboard-btn" class="btn btn-ghost btn-tiny" title="Leaderboard">🏆</button>
-            <button id="topbar-replay-btn" class="btn btn-ghost btn-tiny" title="Watch Replay">🎬</button>
-            <button id="daily-btn" class="btn btn-ghost btn-tiny" title="Daily Ops">🎯</button>
-            <button id="cosmetics-btn" class="btn btn-ghost btn-tiny" title="Cosmetics">🎨</button>
-            <button id="chat-btn" class="btn btn-ghost btn-tiny" title="Chat">💬<span id="chat-unread-dot" class="unread-dot hidden"></span></button>
-            <button id="info-btn" class="btn btn-ghost btn-tiny" title="Info">ℹ️</button>
-            <button id="options-btn" class="btn btn-ghost btn-tiny" title="Options">⚙️</button>
+            <button id="view-full-leaderboard-btn" class="btn btn-ghost btn-tiny" title="Leaderboard">[LB]</button>
+            <button id="topbar-replay-btn" class="btn btn-ghost btn-tiny" title="Watch Replay">[REC]</button>
+            <button id="daily-btn" class="btn btn-ghost btn-tiny" title="Daily Contracts">[OPS]</button>
+            <button id="cosmetics-btn" class="btn btn-ghost btn-tiny" title="Customize">[SYS]</button>
+            <button id="chat-btn" class="btn btn-ghost btn-tiny" title="Chat">[MSG]<span id="chat-unread-dot" class="unread-dot hidden"></span></button>
+            <button id="info-btn" class="btn btn-ghost btn-tiny" title="Info">[?]</button>
+            <button id="options-btn" class="btn btn-ghost btn-tiny" title="Options">[CFG]</button>
         </div>
     </div>
 
     <!-- Cosmetics Panel -->
     <div id="cosmetics-panel" class="drawer-panel cosmetics-panel">
         <div class="cosmetics-header">
-            <h2>🎨 COSMETICS</h2>
+            <h2>// CUSTOMIZE</h2>
             <button id="close-cosmetics-btn" class="btn btn-ghost btn-tiny">×</button>
         </div>
         <div class="cosmetics-tools">
@@ -71,39 +71,29 @@
                     <div id="cosmetics-preview-name" class="name">YOU</div>
                     <div class="status alive">Preview</div>
                 </div>
-                <div class="cosmetics-test-buttons">
-                    <button id="cosmetics-test-turn" class="btn btn-ghost btn-small" type="button">TOGGLE TURN</button>
-                    <button id="cosmetics-test-guess" class="btn btn-ghost btn-small" type="button">TEST GUESS</button>
-                    <button id="cosmetics-test-elim" class="btn btn-ghost btn-small" type="button">TEST ELIM</button>
-                    <button id="cosmetics-test-victory" class="btn btn-ghost btn-small" type="button">TEST VICTORY</button>
-                </div>
             </div>
-            <div id="cosmetics-guess-form" class="cosmetics-guess-form" aria-label="Guess effect preview">
-                <span class="cosmetics-guess-text">SUBMIT</span>
-            </div>
-            <div id="cosmetics-victory-container" class="cosmetics-victory-preview" aria-label="Victory effect preview"></div>
         </div>
         <div class="cosmetics-content">
             <!-- Content populated by JS -->
         </div>
     </div>
 
-    <!-- Daily Ops Panel -->
+    <!-- Daily Contracts Panel -->
     <div id="daily-panel" class="drawer-panel daily-panel">
         <div class="daily-header">
-            <h2>🎯 DAILY OPS</h2>
+            <h2>// CONTRACTS</h2>
             <button id="close-daily-btn" class="btn btn-ghost btn-tiny">×</button>
         </div>
         <div class="daily-content">
             <div class="daily-balance">
-                <span>CREDITS:</span>
+                <span>CRED:</span>
                 <span id="daily-credits">0</span>
             </div>
 
-            <h3 class="daily-section-title">DAILY STREAK</h3>
+            <h3 class="daily-section-title">STREAK</h3>
             <div id="daily-streak" class="daily-streak">
                 <div class="streak-display">
-                    <span class="streak-icon">🔥</span>
+                    <span class="streak-icon">&gt;</span>
                     <span class="streak-count">0</span>
                 </div>
             </div>
@@ -128,7 +118,7 @@
     <!-- Options Panel -->
     <div id="options-panel" class="drawer-panel options-panel">
         <div class="options-header">
-            <h2>⚙️ OPTIONS</h2>
+            <h2>// CONFIG</h2>
             <button id="close-options-btn" class="btn btn-ghost btn-tiny">×</button>
         </div>
         <div class="options-content">
@@ -137,14 +127,14 @@
                 <span>Text chat</span>
             </label>
             <div class="option-row option-row-slider">
-                <span>🎵 Music</span>
+                <span>Music</span>
                 <div class="volume-control">
                     <input type="range" id="opt-music-volume" min="0" max="100" value="12">
                     <span class="volume-value" id="music-volume-display">12%</span>
                 </div>
             </div>
             <div class="option-row option-row-slider">
-                <span>🔊 Sound Effects</span>
+                <span>SFX</span>
                 <div class="volume-control">
                     <input type="range" id="opt-sfx-volume" min="0" max="100" value="50">
                     <span class="volume-value" id="sfx-volume-display">50%</span>
@@ -165,14 +155,14 @@
     <!-- Info Panel -->
     <div id="info-panel" class="drawer-panel info-panel">
         <div class="info-header">
-            <h2>ℹ️ INFO</h2>
+            <h2>// INTEL</h2>
             <button id="close-info-btn" class="btn btn-ghost btn-tiny">×</button>
         </div>
         <div class="info-content">
             <!-- Open Source Section -->
             <div class="info-section info-opensource">
-                <h3 class="info-section-title">🌐 Open Source</h3>
-                <p class="info-desc">Embeddle is open source! We believe in community-driven development and welcome contributions from everyone.</p>
+                <h3 class="info-section-title">// SOURCE_CODE</h3>
+                <p class="info-desc">The code is open. Fork it. Break it. Make it better.</p>
                 <a href="https://github.com/JamesL425/Embeddle" target="_blank" rel="noopener" class="btn btn-primary info-github-btn">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 8px;">
                         <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
@@ -186,13 +176,13 @@
                     Join our Discord
                 </a>
                 <div class="info-contribute">
-                    <h4>🤝 Want to Contribute?</h4>
-                    <p>We're building an evolving, community-driven game. Here's how you can help:</p>
+                    <h4>// CONTRIBUTE</h4>
+                    <p>This is a community project. Get involved:</p>
                     <ul class="info-contribute-list">
-                        <li><strong>Submit PRs</strong> – Bug fixes, new features, improvements</li>
-                        <li><strong>Report Issues</strong> – Found a bug? Let us know!</li>
-                        <li><strong>Suggest Themes</strong> – Help expand our word databases</li>
-                        <li><strong>Share Ideas</strong> – Game modes, cosmetics, UI improvements</li>
+                        <li><strong>Submit PRs</strong> - patches, features, fixes</li>
+                        <li><strong>Report bugs</strong> - if you find a hole, flag it</li>
+                        <li><strong>Add themes</strong> - expand the word databases</li>
+                        <li><strong>Ideas</strong> - new modes, mechanics, whatever</li>
                     </ul>
                 </div>
             </div>
@@ -201,8 +191,8 @@
 
             <!-- How It Works Section -->
             <div class="info-section info-how-it-works">
-                <h3 class="info-section-title">🧠 How Embeddings Work</h3>
-                <p class="info-desc">Embeddle uses <strong>word embeddings</strong> – vectors in high-dimensional space that capture semantic meaning. Words with similar meanings are closer together.</p>
+                <h3 class="info-section-title">// THE_TECH</h3>
+                <p class="info-desc">Words exist as vectors in high-dimensional space. Similar meanings cluster together. We exploit this to measure semantic distance.</p>
                 
                 <h4>Cosine Similarity</h4>
                 <p class="info-desc-small">We measure how "close" two words are using <strong>cosine similarity</strong> – the cosine of the angle between their vectors. Raw values range from -1 (opposite) to 1 (identical).</p>
@@ -224,8 +214,8 @@
 
             <!-- Ranked Section -->
             <div class="info-section info-ranked">
-                <h3 class="info-section-title">🏆 Ranked Tiers</h3>
-                <p class="info-desc-small">Climb the ranks by winning ranked matches! New players have higher rating volatility for faster calibration.</p>
+                <h3 class="info-section-title">// RANK_TIERS</h3>
+                <p class="info-desc-small">Win ranked matches to climb. New operatives calibrate faster due to higher volatility.</p>
                 
                 <div class="rank-tier-table">
                     <div class="rank-tier-row">
@@ -272,70 +262,16 @@
 
             <!-- Support Section -->
             <div class="info-section info-support">
-                <h3 class="info-section-title">☕ Support Embeddle</h3>
-                <p class="info-desc">Embeddle is free to play! Your support helps cover AI API costs and keeps the game running.</p>
+                <h3 class="info-section-title">// SUPPORT</h3>
+                <p class="info-desc">Free to play. Donations cover server and API costs.</p>
                 
                 <div class="premium-perks">
-                    <h4>🎁 Supporter Exclusive Cosmetics</h4>
-                    <div class="premium-items-grid">
-                        <div class="premium-item">
-                            <span class="premium-item-icon">🌈</span>
-                            <span class="premium-item-name">Holographic Border</span>
-                        </div>
-                        <div class="premium-item">
-                            <span class="premium-item-icon">❄️</span>
-                            <span class="premium-item-name">Frost Border</span>
-                        </div>
-                        <div class="premium-item">
-                            <span class="premium-item-icon">✨</span>
-                            <span class="premium-item-name">Rainbow Name</span>
-                        </div>
-                        <div class="premium-item">
-                            <span class="premium-item-icon">⚡</span>
-                            <span class="premium-item-name">Electric Guess</span>
-                        </div>
-                        <div class="premium-item">
-                            <span class="premium-item-icon">🌊</span>
-                            <span class="premium-item-name">Rainbow Wave Guess</span>
-                        </div>
-                        <div class="premium-item">
-                            <span class="premium-item-icon">🌌</span>
-                            <span class="premium-item-name">Aurora Background</span>
-                        </div>
-                        <div class="premium-item">
-                            <span class="premium-item-icon">🌀</span>
-                            <span class="premium-item-name">Void Background</span>
-                        </div>
-                        <div class="premium-item">
-                            <span class="premium-item-icon">🌸</span>
-                            <span class="premium-item-name">Cherry Blossom BG</span>
-                        </div>
-                        <div class="premium-item">
-                            <span class="premium-item-icon">🎆</span>
-                            <span class="premium-item-name">Aurora Victory</span>
-                        </div>
-                        <div class="premium-item">
-                            <span class="premium-item-icon">☕</span>
-                            <span class="premium-item-name">Supporter Badge</span>
-                        </div>
-                        <div class="premium-item">
-                            <span class="premium-item-icon">🌀</span>
-                            <span class="premium-item-name">Void Walker Title</span>
-                        </div>
-                        <div class="premium-item">
-                            <span class="premium-item-icon">💎</span>
-                            <span class="premium-item-name">Diamond Avatar</span>
-                        </div>
-                        <div class="premium-item">
-                            <span class="premium-item-icon">⭐</span>
-                            <span class="premium-item-name">Superstar Avatar</span>
-                        </div>
-                    </div>
-                    <p class="premium-unlock-note">🏆 Reach 2000 MMR to unlock the exclusive <strong>Galaxy Border</strong>!</p>
+                    <h4>// SUPPORTER_PERKS</h4>
+                    <p class="info-desc-small">Supporters unlock custom theme colors and an exclusive badge. One-time donation, permanent access.</p>
                 </div>
                 
-                <a href="https://ko-fi.com/embeddle" target="_blank" rel="noopener" class="btn btn-primary support-btn">☕ Support on Ko-fi</a>
-                <p class="support-note">One-time donation of any amount unlocks ALL premium cosmetics forever!</p>
+                <a href="https://ko-fi.com/embeddle" target="_blank" rel="noopener" class="btn btn-primary support-btn">&gt; SUPPORT</a>
+                <p class="support-note">Any amount unlocks all supporter perks.</p>
             </div>
         </div>
     </div>
@@ -351,9 +287,9 @@
             <div class="profile-header">
                 <div class="profile-avatar-wrapper">
                     <img id="profile-avatar" class="profile-avatar hidden" src="" alt="">
-                    <span id="profile-avatar-placeholder" class="profile-avatar-placeholder">👤</span>
+                    <span id="profile-avatar-placeholder" class="profile-avatar-placeholder">[?]</span>
                     <span id="profile-avatar-emoji" class="profile-avatar-emoji hidden"></span>
-                    <button id="edit-avatar-btn" class="edit-avatar-btn hidden" title="Change avatar">✏️</button>
+                    <button id="edit-avatar-btn" class="edit-avatar-btn hidden" title="Change avatar">[E]</button>
                 </div>
                 <div class="profile-title-wrapper">
                     <div class="profile-name-row">
@@ -413,7 +349,7 @@
                 </div>
                 <div class="profile-actions">
                     <button id="share-profile-btn" class="btn btn-secondary btn-small">
-                        <span class="share-icon">🔗</span> SHARE PROFILE
+                        <span class="share-icon">&gt;</span> SHARE
                     </button>
                     <button id="profile-logout-btn" class="btn btn-danger btn-small">
                         LOGOUT
@@ -443,7 +379,7 @@
     <!-- Chat Panel -->
     <div id="chat-panel" class="drawer-panel chat-panel">
         <div class="chat-header">
-            <h2>💬 CHAT</h2>
+            <h2>// COMMS</h2>
             <button id="close-chat-btn" class="btn btn-ghost btn-tiny">×</button>
         </div>
         <div class="chat-content">
@@ -460,7 +396,7 @@
     <div class="container">
         <header>
             <h1>&lt;EMBEDDLE/&gt;</h1>
-            <p class="tagline">// crack them before they crack you</p>
+            <p class="tagline">// decode. deduce. eliminate.</p>
         </header>
 
         <!-- Home Screen -->
@@ -493,20 +429,20 @@
                 
                 <!-- How It Works Section -->
                 <div class="how-it-works">
-                    <h3>// HOW_IT_WORKS</h3>
+                    <h3>// BRIEFING</h3>
                     <ol class="how-it-works-steps">
-                        <li><strong>Pick</strong> a secret word from a themed list</li>
-                        <li><strong>Guess</strong> words to see similarity scores for each player</li>
-                        <li><strong>Deduce</strong> others' words while hiding your own</li>
-                        <li><strong>Eliminate</strong> players by guessing their exact word</li>
+                        <li><strong>Select</strong> a codeword from the database</li>
+                        <li><strong>Probe</strong> with guesses to reveal similarity scores</li>
+                        <li><strong>Analyze</strong> patterns while masking your own</li>
+                        <li><strong>Execute</strong> when you've identified a target</li>
                     </ol>
-                    <p class="how-it-works-footer">Last one standing wins!</p>
+                    <p class="how-it-works-footer">Sole survivor takes the round.</p>
                 </div>
                 
                 <!-- Footer Links -->
                 <div class="home-footer-links">
                     <a href="https://ko-fi.com/embeddle" target="_blank" rel="noopener" class="home-support-link">
-                        ☕ Support
+                        Support
                     </a>
                     <span class="secondary-divider">|</span>
                     <a href="https://github.com/JamesL425/Embeddle" target="_blank" rel="noopener" class="home-github-link">
@@ -542,7 +478,7 @@
         <!-- Queue Screen (Matchmaking) -->
         <div id="queue-screen" class="screen">
             <div class="card queue-card">
-                <h2>// SEARCHING FOR OPERATIVES</h2>
+                <h2>// SCANNING_NETWORK</h2>
                 
                 <div class="queue-animation">
                     <div class="queue-radar">
@@ -557,10 +493,10 @@
                 <div class="queue-info">
                     <div class="queue-mode-display">
                         <span class="queue-label">MODE:</span>
-                        <span id="queue-mode" class="queue-value">QUICK PLAY</span>
+                        <span id="queue-mode" class="queue-value">STANDARD</span>
                     </div>
                     <div class="queue-players-display">
-                        <span class="queue-label">OPERATIVES FOUND:</span>
+                        <span class="queue-label">TARGETS LOCATED:</span>
                         <span id="queue-players" class="queue-value">0</span>
                         <span class="queue-value">/</span>
                         <span id="queue-target-size" class="queue-value">4</span>
@@ -580,7 +516,7 @@
                 </div>
                 
                 <div class="queue-status-text">
-                    <p id="queue-status-message">Scanning for available operatives...</p>
+                    <p id="queue-status-message">Establishing connection...</p>
                 </div>
                 
                 <button id="cancel-queue-btn" class="btn btn-ghost">&lt; CANCEL</button>
@@ -681,7 +617,7 @@
                 </div>
                 <div class="lobby-info">
                     <p>Operatives: <span id="player-count">0</span>/6</p>
-                    <p class="min-players">Minimum 2 operatives required</p>
+                    <p class="min-players">Minimum 2 required</p>
                 </div>
                 <div id="host-controls" class="host-controls hidden">
                     <button id="start-game-btn" class="btn btn-primary btn-large btn-block" disabled>&gt; SELECT_WORDS</button>
@@ -717,32 +653,32 @@
                     <h3>ADD AI OPPONENT</h3>
                     <div class="ai-difficulty-buttons">
                         <button class="btn btn-ai-add" data-difficulty="rookie" title="Wears a wire, drops a clue.">
-                            <span class="ai-icon">🤖</span>
+                            <span class="ai-icon">[R]</span>
                             <span class="ai-label">ROOKIE</span>
                             <span class="ai-desc">Wears a wire, drops a clue.</span>
                         </button>
                         <button class="btn btn-ai-add" data-difficulty="analyst" title="Careful scans. Minimal self-leak.">
-                            <span class="ai-icon">🤖</span>
+                            <span class="ai-icon">[A]</span>
                             <span class="ai-label">ANALYST</span>
                             <span class="ai-desc">Careful scans. Minimal self-leak.</span>
                         </button>
                         <button class="btn btn-ai-add" data-difficulty="field-agent" title="Balanced ops: probes, then strikes.">
-                            <span class="ai-icon">🤖</span>
+                            <span class="ai-icon">[F]</span>
                             <span class="ai-label">FIELD AGENT</span>
                             <span class="ai-desc">Balanced ops: probes, then strikes.</span>
                         </button>
                         <button class="btn btn-ai-add" data-difficulty="spymaster" title="Builds a profile. Executes cleanly.">
-                            <span class="ai-icon">🤖</span>
+                            <span class="ai-icon">[S]</span>
                             <span class="ai-label">SPYMASTER</span>
                             <span class="ai-desc">Builds a profile. Executes cleanly.</span>
                         </button>
                         <button class="btn btn-ai-add" data-difficulty="ghost" title="Leaves no trace. Panics into offense.">
-                            <span class="ai-icon">🤖</span>
+                            <span class="ai-icon">[G]</span>
                             <span class="ai-label">GHOST</span>
                             <span class="ai-desc">Leaves no trace. Panics into offense.</span>
                         </button>
                         <button class="btn btn-ai-add btn-ai-nemesis" data-difficulty="nemesis" title="Cold. Calculated. Relentless.">
-                            <span class="ai-icon">🤖</span>
+                            <span class="ai-icon">[N]</span>
                             <span class="ai-label">NEMESIS</span>
                             <span class="ai-desc">Cold. Calculated. Relentless.</span>
                         </button>
@@ -751,7 +687,7 @@
                 
                 <div class="sp-lobby-info">
                     <p>Operatives: <span id="sp-player-count">1</span>/6</p>
-                    <p id="sp-min-players" class="min-players">Add at least 1 AI opponent</p>
+                    <p id="sp-min-players" class="min-players">Add at least 1 AI target</p>
                 </div>
                 
                 <div class="sp-host-controls">
@@ -767,7 +703,7 @@
                 <h2>// SELECT_CODEWORD</h2>
                 <p class="theme-label">DATABASE: <span id="wordselect-theme-name">-</span></p>
                 
-                <div id="word-selection-timer" class="word-selection-timer hidden">⏱ 0:00</div>
+                <div id="word-selection-timer" class="word-selection-timer hidden">0:00</div>
                 
                 <div class="word-select-status">
                     <p id="word-select-status-text">Locked in: <span id="locked-count">0</span>/<span id="total-count">0</span></p>
@@ -786,8 +722,8 @@
                 </div>
                 
                 <div id="word-locked-notice" class="word-locked-notice hidden">
-                    <p>✓ CODEWORD LOCKED: <span id="locked-word-display">-</span></p>
-                    <p id="waiting-text" class="waiting-text">Waiting for other operatives...</p>
+                    <p>&gt; LOCKED: <span id="locked-word-display">-</span></p>
+                    <p id="waiting-text" class="waiting-text">Awaiting other operatives...</p>
                 </div>
                 
                 <div id="host-begin-controls" class="host-begin-controls hidden">
@@ -826,7 +762,7 @@
                 <main class="game-center">
                     <div id="change-word-container" class="change-word-container hidden">
                         <div class="change-word-header">
-                            <p class="change-word-label">🎯 Pick a new secret word:</p>
+                            <p class="change-word-label">&gt; Select new codeword:</p>
                             <div id="word-change-timer" class="word-change-timer hidden">
                                 <span id="word-change-countdown">30</span>s
                             </div>
@@ -840,11 +776,11 @@
                     </div>
                     
                     <div id="waiting-for-change" class="waiting-notice hidden">
-                        ⏳ <span id="waiting-player-name">Operative</span> is picking a new word...
+                        &gt; <span id="waiting-player-name">Operative</span> selecting new word...
                     </div>
 
                     <div class="turn-indicator" id="turn-indicator">
-                        <span id="turn-text">STANDBY...</span>
+                        <span id="turn-text">AWAITING SIGNAL...</span>
                         <span id="turn-timer" class="turn-timer hidden">--</span>
                     </div>
 
@@ -943,16 +879,16 @@
                 <!-- Share Results Section - Compact -->
                 <div class="share-results-section share-results-compact">
                     <div class="share-buttons-row">
-                        <button id="copy-results-btn" class="btn btn-ghost btn-small">📋 Copy</button>
-                        <button id="share-twitter-btn" class="btn btn-ghost btn-small">𝕏 Share</button>
-                        <button id="watch-replay-btn" class="btn btn-ghost btn-small">🎬 Replay</button>
-                        <button id="share-replay-btn" class="btn btn-ghost btn-small">🔗 Link</button>
+                        <button id="copy-results-btn" class="btn btn-ghost btn-small">Copy</button>
+                        <button id="share-twitter-btn" class="btn btn-ghost btn-small">Share</button>
+                        <button id="watch-replay-btn" class="btn btn-ghost btn-small">Replay</button>
+                        <button id="share-replay-btn" class="btn btn-ghost btn-small">Link</button>
                     </div>
                 </div>
                 
                 <!-- Support Prompt (shown for non-donors after 3+ games) -->
                 <div id="gameover-support-prompt" class="gameover-support-prompt hidden">
-                    <p>☕ Enjoying Embeddle? Your support keeps it free!</p>
+                    <p>Like the game? Support keeps it running.</p>
                     <a href="https://ko-fi.com/embeddle" target="_blank" rel="noopener" class="btn btn-small btn-support">Support on Ko-fi</a>
                     <button id="dismiss-support-prompt" class="btn btn-ghost btn-tiny" title="Dismiss">×</button>
                 </div>
@@ -965,7 +901,7 @@
                 <!-- Replay Header -->
                 <div class="replay-screen-header">
                     <div class="replay-title-section">
-                        <h2>🎬 REPLAY VIEWER</h2>
+                        <h2>// REPLAY</h2>
                         <span id="replay-screen-theme" class="replay-screen-theme">Theme: —</span>
                     </div>
                     <button id="replay-back-btn" class="btn btn-ghost btn-small">← BACK</button>
@@ -988,9 +924,9 @@
 
                     <!-- Playback Controls -->
                     <div class="replay-screen-controls">
-                        <button id="replay-screen-prev" class="btn btn-secondary btn-small">⏮ PREV</button>
-                        <button id="replay-screen-play" class="btn btn-primary">▶ PLAY</button>
-                        <button id="replay-screen-next" class="btn btn-secondary btn-small">NEXT ⏭</button>
+                        <button id="replay-screen-prev" class="btn btn-secondary btn-small">&lt; PREV</button>
+                        <button id="replay-screen-play" class="btn btn-primary">&gt; PLAY</button>
+                        <button id="replay-screen-next" class="btn btn-secondary btn-small">NEXT &gt;</button>
                     </div>
 
                     <!-- Timeline Slider -->
@@ -1003,8 +939,8 @@
                 <div class="replay-share-section">
                     <h3>// SHARE_REPLAY</h3>
                     <div class="replay-share-buttons">
-                        <button id="replay-copy-link-btn" class="btn btn-secondary btn-small">🔗 COPY LINK</button>
-                        <button id="replay-copy-code-btn" class="btn btn-secondary btn-small">📋 COPY CODE</button>
+                        <button id="replay-copy-link-btn" class="btn btn-secondary btn-small">COPY LINK</button>
+                        <button id="replay-copy-code-btn" class="btn btn-secondary btn-small">COPY CODE</button>
                     </div>
                     <div class="replay-load-section">
                         <input type="text" id="replay-load-input" placeholder="Paste replay code..." class="replay-code-input">
@@ -1018,7 +954,7 @@
         <div id="replay-modal" class="modal-overlay">
             <div class="modal replay-modal">
                 <div class="replay-header">
-                    <h2>🎬 GAME REPLAY</h2>
+                    <h2>// REPLAY</h2>
                     <button id="close-replay-btn" class="btn btn-ghost btn-tiny">×</button>
                 </div>
                 <div class="replay-info">
@@ -1032,9 +968,9 @@
                     <!-- Current turn info -->
                 </div>
                 <div class="replay-controls">
-                    <button id="replay-prev" class="btn btn-secondary btn-small">⏮ PREV</button>
-                    <button id="replay-play" class="btn btn-primary btn-small">▶ PLAY</button>
-                    <button id="replay-next" class="btn btn-secondary btn-small">NEXT ⏭</button>
+                    <button id="replay-prev" class="btn btn-secondary btn-small">&lt; PREV</button>
+                    <button id="replay-play" class="btn btn-primary btn-small">&gt; PLAY</button>
+                    <button id="replay-next" class="btn btn-secondary btn-small">NEXT &gt;</button>
                 </div>
                 <div class="replay-timeline">
                     <input type="range" id="replay-slider" min="0" max="0" value="0">
@@ -1060,7 +996,7 @@
                         Discord
                     </a>
                     <a href="https://ko-fi.com/embeddle" target="_blank" rel="noopener" class="footer-link support-link">
-                        ☕ Support
+                        Support
                     </a>
                     <a href="/privacy" class="footer-link">Privacy</a>
                     <a href="/terms" class="footer-link">Terms</a>
@@ -1122,7 +1058,7 @@
         <div class="modal-backdrop"></div>
         <div class="modal username-modal">
             <div class="username-modal-header">
-                <h2>🎖️ CHOOSE YOUR CALLSIGN</h2>
+                <h2>// CALLSIGN</h2>
             </div>
             <div class="username-modal-content">
                 <p class="username-modal-description">Pick a unique callsign for your operative profile. This will be displayed to other players instead of your Google account name.</p>
@@ -1161,6 +1097,7 @@
         </div>
     </div>
 
+    <script src="/js/text.js"></script>
     <script src="/cosmetics.js"></script>
     <script src="/daily.js"></script>
     <script src="/app.js"></script>

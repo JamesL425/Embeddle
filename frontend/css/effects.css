@@ -1,7 +1,40 @@
 /**
  * Effects & Animations
- * Cosmetics, particles, victory effects, elimination animations
+ * Neo-noir aesthetic effects, subtle animations
  */
+
+/* ============ SCANLINE OVERLAY (optional) ============ */
+.scanlines::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9998;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px,
+        rgba(0, 0, 0, 0.03) 4px
+    );
+}
+
+/* ============ SUBTLE FLICKER EFFECT ============ */
+@keyframes subtleFlicker {
+    0%, 100% { opacity: 1; }
+    92% { opacity: 1; }
+    93% { opacity: 0.95; }
+    94% { opacity: 1; }
+    96% { opacity: 0.98; }
+    97% { opacity: 1; }
+}
+
+.flicker {
+    animation: subtleFlicker 8s infinite;
+}
 
 /* ============ AI CHAT BUBBLES ============ */
 
@@ -30,7 +63,7 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* ============ MATRIX BACKGROUND ============ */
+/* ============ MATRIX BACKGROUND (muted) ============ */
 
 .matrix-bg {
     position: fixed;
@@ -40,7 +73,7 @@
     height: 100%;
     pointer-events: none;
     z-index: -1;
-    opacity: 0.15;
+    opacity: 0.06;
 }
 
 /* ============ CONFETTI ============ */
@@ -58,8 +91,8 @@
 
 .confetti-piece {
     position: absolute;
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     animation: confettiFall 3s ease-out forwards;
 }
 
@@ -74,7 +107,40 @@
     }
 }
 
-/* ============ ELIMINATION EFFECTS ============ */
+/* ============ SIMPLIFIED EFFECTS ============ */
+
+/* Simple elimination flash */
+.player-card.elim-flash {
+    animation: elimFlash 0.5s ease;
+}
+
+@keyframes elimFlash {
+    0% { opacity: 1; }
+    25% { opacity: 0.3; background: rgba(204, 51, 68, 0.2); }
+    50% { opacity: 1; }
+    75% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* Simple guess pulse */
+.guess-selection-bar.guess-pulse,
+#cosmetics-guess-form.guess-pulse {
+    animation: guessPulseSimple 0.4s ease;
+}
+
+@keyframes guessPulseSimple {
+    0% { 
+        box-shadow: 0 0 0 0 var(--user-accent-glow);
+    }
+    50% { 
+        box-shadow: 0 0 15px 5px var(--user-accent-glow);
+    }
+    100% { 
+        box-shadow: 0 0 0 0 var(--user-accent-glow);
+    }
+}
+
+/* ============ ELIMINATION EFFECTS (Legacy) ============ */
 
 .player-card.elim-classic {
     animation: elimClassic 0.5s ease;
@@ -495,22 +561,12 @@
     font-style: italic;
 }
 
-/* The Creator - Admin only */
-.player-title.title-the-creator {
-    background: linear-gradient(90deg, #ffd700, #ffffff, #ffd700);
-    background-size: 200% 100%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: creatorTitleShift 3s linear infinite;
-    font-weight: bold;
-    font-style: normal;
-    filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8));
-}
-
-@keyframes creatorTitleShift {
-    0% { background-position: 0% 50%; }
-    100% { background-position: 200% 50%; }
+/* Player badge - simple text badge */
+.player-badge {
+    font-size: 0.7rem;
+    font-family: 'Courier Prime', monospace;
+    color: var(--user-accent);
+    margin-left: 0.25rem;
 }
 
 /* ============ MMR BAR SYSTEM ============ */
