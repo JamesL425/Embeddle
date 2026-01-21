@@ -31,7 +31,7 @@
 <body class="on-home-screen">
     <!-- Login Box -->
     <div id="login-box" class="login-box">
-        <input type="text" id="login-name" placeholder="ENTER CALLSIGN..." maxlength="20">
+        <input type="text" id="login-name" placeholder="ENTER NAME..." maxlength="20">
         <span class="login-or">or</span>
         <button id="google-login-btn" class="btn btn-google" title="Sign in with Google">
             <svg width="18" height="18" viewBox="0 0 24 24">
@@ -582,8 +582,8 @@
                         <input type="text" id="game-code" maxlength="6" placeholder="XXXXXX" required>
                     </div>
                     <div class="form-group">
-                        <label for="player-name">CALLSIGN</label>
-                        <input type="text" id="player-name" maxlength="20" placeholder="Enter callsign..." required>
+                        <label for="player-name">NAME</label>
+                        <input type="text" id="player-name" maxlength="20" placeholder="Enter name..." required>
                     </div>
                     <div class="form-group">
                         <label for="secret-word">CODEWORD</label>
@@ -1064,18 +1064,18 @@
         <div class="modal-backdrop"></div>
         <div class="modal username-modal">
             <div class="username-modal-header">
-                <h2>// CALLSIGN</h2>
+                <h2>// NAME</h2>
             </div>
             <div class="username-modal-content">
-                <p class="username-modal-description">Pick a unique callsign for your operative profile. This will be displayed to other players instead of your Google account name.</p>
+                <p class="username-modal-description">Pick a unique name for your operative profile. This will be displayed to other players instead of your Google account name.</p>
                 <div class="username-input-group">
-                    <input type="text" id="username-input" placeholder="Enter callsign..." maxlength="20" autocomplete="off" spellcheck="false">
+                    <input type="text" id="username-input" placeholder="Enter name..." maxlength="20" autocomplete="off" spellcheck="false">
                     <span id="username-char-count" class="username-char-count">0/20</span>
                 </div>
                 <p id="username-error" class="username-error hidden"></p>
                 <p class="username-rules">3-20 characters. Letters, numbers, underscores, and hyphens only.</p>
                 <div class="username-modal-buttons">
-                    <button id="username-submit-btn" class="btn btn-primary" disabled>&gt; CONFIRM CALLSIGN</button>
+                    <button id="username-submit-btn" class="btn btn-primary" disabled>&gt; CONFIRM NAME</button>
                     <button id="username-skip-btn" class="btn btn-ghost btn-small">Skip for now</button>
                 </div>
             </div>
@@ -1087,12 +1087,12 @@
         <div class="modal-backdrop" data-close="true"></div>
         <div class="modal name-prompt-modal">
             <div class="name-prompt-header">
-                <h2>// ENTER_CALLSIGN</h2>
+                <h2>// ENTER_NAME</h2>
             </div>
             <div class="name-prompt-content">
-                <p class="name-prompt-description">Choose a callsign to identify yourself in the game.</p>
+                <p class="name-prompt-description">Choose a name to identify yourself in the game.</p>
                 <div class="name-prompt-input-group">
-                    <input type="text" id="name-prompt-input" placeholder="Enter callsign..." maxlength="20" autocomplete="off" spellcheck="false">
+                    <input type="text" id="name-prompt-input" placeholder="Enter name..." maxlength="20" autocomplete="off" spellcheck="false">
                 </div>
                 <p id="name-prompt-error" class="name-prompt-error hidden"></p>
                 <div class="name-prompt-buttons">
