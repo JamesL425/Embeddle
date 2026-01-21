@@ -5280,6 +5280,110 @@ body.in-game .site-footer {
 .options-panel { --drawer-width: 420px; }
 .chat-panel { --drawer-width: 340px; }
 .daily-panel { --drawer-width: 380px; }
+.games-panel { --drawer-width: 380px; }
+
+/* ============ GAMES PANEL ============ */
+
+.games-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
+}
+
+.games-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--accent-primary);
+}
+
+.games-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.games-section h3 {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0 0 0.75rem 0;
+    letter-spacing: 0.05em;
+}
+
+.games-section {
+    display: flex;
+    flex-direction: column;
+}
+
+#refresh-lobbies-btn {
+    align-self: flex-start;
+    margin-bottom: 0.75rem;
+    font-size: 0.75rem;
+}
+
+.games-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.games-empty {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.game-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.15s ease;
+}
+
+.game-item:hover {
+    border-color: var(--accent-primary);
+}
+
+.game-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.game-item-theme {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.game-item-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.game-item-players {
+    font-size: 0.8rem;
+    color: var(--accent-secondary);
+    margin-right: 0.75rem;
+}
+
+.game-item .btn {
+    flex-shrink: 0;
+}
 
 /* ============ DAILY OPS PANEL ============ */
 

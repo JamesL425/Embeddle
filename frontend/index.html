@@ -52,8 +52,9 @@
             <button id="view-full-leaderboard-btn" class="btn btn-ghost btn-tiny" title="Leaderboard">[LB]</button>
             <button id="topbar-replay-btn" class="btn btn-ghost btn-tiny" title="Watch Replay">[REC]</button>
             <button id="cosmetics-btn" class="btn btn-ghost btn-tiny" title="Customise">[COS]</button>
-            <button id="chat-btn" class="btn btn-ghost btn-tiny" title="Chat">[MSG]<span id="chat-unread-dot" class="unread-dot hidden"></span></button>
-            <button id="info-btn" class="btn btn-ghost btn-tiny" title="Info">[?]</button>
+            <button id="games-btn" class="btn btn-ghost btn-tiny" title="Games">[GAM]</button>
+            <button id="chat-btn" class="btn btn-ghost btn-tiny" title="Chat">[TXT]<span id="chat-unread-dot" class="unread-dot hidden"></span></button>
+            <button id="info-btn" class="btn btn-ghost btn-tiny" title="Info">[INFO]</button>
             <button id="options-btn" class="btn btn-ghost btn-tiny" title="Options">[CFG]</button>
         </div>
     </div>
@@ -111,6 +112,32 @@
                 <input type="checkbox" id="opt-nerd-mode">
                 <span>Nerd mode (show raw cosine similarity)</span>
             </label>
+        </div>
+    </div>
+
+    <!-- Games Panel -->
+    <div id="games-panel" class="drawer-panel games-panel">
+        <div class="games-header">
+            <h2>// GAMES</h2>
+            <button id="close-games-btn" class="btn btn-ghost btn-tiny">×</button>
+        </div>
+        <div class="games-content">
+            <!-- Recent Games Section -->
+            <div class="games-section">
+                <h3>// RECENT_GAMES</h3>
+                <div id="games-recent-list" class="games-list">
+                    <p class="games-empty">No recent games.</p>
+                </div>
+            </div>
+            
+            <!-- Open Lobbies Section -->
+            <div class="games-section">
+                <h3>// OPEN_LOBBIES</h3>
+                <button id="refresh-lobbies-btn" class="btn btn-ghost btn-tiny">↻ REFRESH</button>
+                <div id="games-lobbies-list" class="games-list">
+                    <p class="games-empty">No open lobbies.</p>
+                </div>
+            </div>
         </div>
     </div>
 

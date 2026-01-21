@@ -18,8 +18,9 @@ const TEXT = {
         leaderboard: '[LB]',
         replay: '[REC]',
         cosmetics: '[COS]',
-        chat: '[MSG]',
-        info: '[?]',
+        games: '[GAM]',
+        chat: '[TXT]',
+        info: '[INFO]',
         options: '[CFG]',
     },
 

@@ -1442,6 +1442,132 @@ function closeInfoPanel() {
 document.getElementById('info-btn')?.addEventListener('click', toggleInfoPanel);
 document.getElementById('close-info-btn')?.addEventListener('click', closeInfoPanel);
 
+// Games panel
+let gamesPanelOpen = false;
+
+function toggleGamesPanel() {
+    gamesPanelOpen = !gamesPanelOpen;
+    const panel = document.getElementById('games-panel');
+    if (panel) {
+        panel.classList.toggle('open', gamesPanelOpen);
+    }
+    if (gamesPanelOpen) {
+        refreshGamesPanel();
+    }
+}
+
+function closeGamesPanel() {
+    gamesPanelOpen = false;
+    const panel = document.getElementById('games-panel');
+    if (panel) panel.classList.remove('open');
+}
+
+function refreshGamesPanel() {
+    renderRecentGames();
+    loadOpenLobbies();
+}
+
+function renderRecentGames() {
+    const container = document.getElementById('games-recent-list');
+    if (!container) return;
+    
+    let recentGames = [];
+    try {
+        const raw = localStorage.getItem('embeddle_recent_games');
+        recentGames = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(recentGames)) recentGames = [];
+    } catch (e) {
+        recentGames = [];
+    }
+    
+    if (recentGames.length === 0) {
+        container.innerHTML = '<p class="games-empty">No recent games.</p>';
+        return;
+    }
+    
+    container.innerHTML = recentGames.slice(0, 5).map(game => {
+        const theme = game.theme || 'Unknown';
+        const mode = game.mode || 'casual';
+        const time = game.timestamp ? new Date(game.timestamp).toLocaleDateString() : '';
+        return `
+            <div class="game-item">
+                <div class="game-item-info">
+                    <span class="game-item-theme">${escapeHtml(theme)}</span>
+                    <span class="game-item-meta">${mode.toUpperCase()} • ${time}</span>
+                </div>
+                <button class="btn btn-ghost btn-tiny" onclick="rejoinGame('${escapeHtml(game.code || '')}')">REJOIN</button>
+            </div>
+        `;
+    }).join('');
+}
+
+async function loadOpenLobbies() {
+    const container = document.getElementById('games-lobbies-list');
+    if (!container) return;
+    
+    container.innerHTML = '<p class="games-empty">Loading...</p>';
+    
+    try {
+        const response = await fetch('/api/lobbies');
+        if (!response.ok) throw new Error('Failed to fetch lobbies');
+        const lobbies = await response.json();
+        
+        if (!lobbies || lobbies.length === 0) {
+            container.innerHTML = '<p class="games-empty">No open lobbies. Create one!</p>';
+            return;
+        }
+        
+        container.innerHTML = lobbies.slice(0, 10).map(lobby => {
+            const theme = lobby.theme || 'Any';
+            const players = lobby.player_count || 1;
+            const maxPlayers = lobby.max_players || 8;
+            const mode = lobby.mode || 'casual';
+            return `
+                <div class="game-item">
+                    <div class="game-item-info">
+                        <span class="game-item-theme">${escapeHtml(theme)}</span>
+                        <span class="game-item-meta">${mode.toUpperCase()}</span>
+                    </div>
+                    <span class="game-item-players">${players}/${maxPlayers}</span>
+                    <button class="btn btn-ghost btn-tiny" onclick="joinLobbyFromPanel('${escapeHtml(lobby.code || '')}')">JOIN</button>
+                </div>
+            `;
+        }).join('');
+    } catch (e) {
+        console.error('Failed to load lobbies:', e);
+        container.innerHTML = '<p class="games-empty">Failed to load lobbies.</p>';
+    }
+}
+
+function rejoinGame(code) {
+    if (!code) return;
+    closeGamesPanel();
+    // Use the existing join flow
+    const joinInput = document.getElementById('join-code-input');
+    if (joinInput) {
+        joinInput.value = code;
+        document.getElementById('join-lobby-btn')?.click();
+    }
+}
+
+function joinLobbyFromPanel(code) {
+    if (!code) return;
+    closeGamesPanel();
+    const joinInput = document.getElementById('join-code-input');
+    if (joinInput) {
+        joinInput.value = code;
+        document.getElementById('join-lobby-btn')?.click();
+    }
+}
+
+// Make functions globally accessible
+window.rejoinGame = rejoinGame;
+window.joinLobbyFromPanel = joinLobbyFromPanel;
+
+document.getElementById('games-btn')?.addEventListener('click', toggleGamesPanel);
+document.getElementById('close-games-btn')?.addEventListener('click', closeGamesPanel);
+document.getElementById('refresh-lobbies-btn')?.addEventListener('click', loadOpenLobbies);
+
 // Replay button in topbar - prompts for replay code
 document.getElementById('topbar-replay-btn')?.addEventListener('click', () => {
     const code = prompt('Enter replay code:');
