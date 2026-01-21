@@ -1315,7 +1315,7 @@ header h1 {
     flex: 1;
     min-height: 0;
     overflow: hidden;
-    grid-template-columns: 280px 1fr 300px;
+    grid-template-columns: 280px 1fr 340px;
     grid-template-rows: minmax(0, 1fr);
     grid-template-areas: "players center log";
     max-width: 1600px;
@@ -1479,9 +1479,8 @@ header h1 {
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.9rem;
-    font-weight: 500;
+    font-weight: 700;
     color: var(--text-secondary);
     cursor: default;
     transition: all 0.15s ease;
@@ -2135,7 +2134,7 @@ header h1 {
 }
 
 .history-log {
-    max-height: 400px;
+    max-height: 600px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
