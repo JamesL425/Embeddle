@@ -2533,8 +2533,19 @@ function showScreen(screenName) {
     }
     
     // Clean up queue state when leaving queue screen
-    if (screenName !== 'queue' && gameState.queuePollingInterval) {
+    // Must actually leave the queue on the backend to prevent duplicate player entries
+    if (screenName !== 'queue' && (gameState.queuePollingInterval || gameState.queuePlayerId)) {
+        // Leave queue on backend (fire and forget)
+        if (gameState.queueMode && gameState.queuePlayerId) {
+            apiCall('/api/queue/leave', 'POST', {
+                mode: gameState.queueMode,
+                player_id: gameState.queuePlayerId,
+            }).catch(e => console.warn('Error leaving queue:', e));
+        }
         stopQueuePolling();
+        gameState.queueMode = null;
+        gameState.queuePlayerId = null;
+        gameState.queueStartTime = null;
     }
     
     // Start/stop lobby refresh based on screen
@@ -2843,6 +2854,22 @@ async function joinMatchmakingQueue(mode) {
     if (!gameState.playerName) {
         showNamePromptModal(() => joinMatchmakingQueue(mode));
         return;
+    }
+
+    // If already in a queue, leave it first to prevent duplicate entries
+    if (gameState.queueMode && gameState.queuePlayerId) {
+        try {
+            await apiCall('/api/queue/leave', 'POST', {
+                mode: gameState.queueMode,
+                player_id: gameState.queuePlayerId,
+            });
+        } catch (e) {
+            console.warn('Error leaving previous queue:', e);
+        }
+        stopQueuePolling();
+        gameState.queueMode = null;
+        gameState.queuePlayerId = null;
+        gameState.queueStartTime = null;
     }
 
     try {
@@ -7627,7 +7654,7 @@ function initMatrixRain() {
     const drops = Array(columns).fill(1);
     
     function draw() {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         // Get matrix color from CSS variable (set by cosmetics)

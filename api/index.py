@@ -5143,6 +5143,19 @@ def join_matchmaking_queue(
     queue_key = _queue_key(mode)
     data_key = _queue_data_key(mode, player_id)
     
+    # Remove any existing queue entries for the same player name to prevent duplicates
+    # This handles the case where a player joins queue, navigates away without leaving,
+    # and then joins again - we don't want two entries with the same name
+    try:
+        existing_players = _get_queue_players(redis, queue_key, mode)
+        for existing in existing_players:
+            if existing.get("player_name") == player_name and existing.get("player_id") != player_id:
+                old_pid = existing.get("player_id")
+                leave_matchmaking_queue(mode, old_pid)
+                print(f"[QUEUE] Removed duplicate entry for {player_name} (old: {old_pid}, new: {player_id})")
+    except Exception as e:
+        print(f"[QUEUE] Error cleaning up duplicate entries: {e}")
+    
     # Store player data
     player_data = {
         "player_id": player_id,
