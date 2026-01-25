@@ -7190,6 +7190,96 @@ class handler(BaseHTTPRequestHandler):
             touch_presence(code, "players", player_id)
             spectator_count = get_spectator_count(code)
             
+            # Auto-process AI turns for multiplayer games with bots (not singleplayer - that has its own flow)
+            # This ensures quick play games with bot fills work smoothly
+            if (game['status'] == 'playing' 
+                and not game.get('is_singleplayer') 
+                and not game.get('waiting_for_word_change')
+                and all(p.get('secret_word') for p in game['players'])):
+                
+                current_player = game['players'][game['current_turn']] if game['players'] else None
+                if current_player and current_player.get('is_ai') and current_player.get('is_alive'):
+                    # Process AI turns until it's a human's turn or game over
+                    max_ai_turns = len(game['players']) * 2  # Safety limit
+                    turns_processed = 0
+                    game_modified = False
+                    
+                    while turns_processed < max_ai_turns:
+                        current_ai = game['players'][game['current_turn']]
+                        
+                        # Stop if not AI turn
+                        if not current_ai.get('is_ai'):
+                            break
+                        
+                        # Skip dead AI
+                        if not current_ai.get('is_alive'):
+                            num_players = len(game['players'])
+                            next_turn = (game['current_turn'] + 1) % num_players
+                            while not game['players'][next_turn].get('is_alive'):
+                                next_turn = (next_turn + 1) % num_players
+                            game['current_turn'] = next_turn
+                            game_modified = True
+                            continue
+                        
+                        # Process AI turn
+                        ai_result = process_ai_turn(game, current_ai)
+                        if not ai_result:
+                            break
+                        
+                        turns_processed += 1
+                        game_modified = True
+                        
+                        # If AI eliminated someone, auto-handle its word change immediately
+                        if ai_result.get('eliminations') and current_ai.get('can_change_word'):
+                            process_ai_word_change(game, current_ai)
+                        
+                        # Check for game over
+                        alive_players = [p for p in game['players'] if p.get('is_alive')]
+                        if len(alive_players) <= 1:
+                            game['status'] = 'finished'
+                            if alive_players:
+                                game['winner'] = alive_players[0]['id']
+                            update_game_stats(game)
+                            break
+                        
+                        # Advance turn
+                        num_players = len(game['players'])
+                        next_turn = (game['current_turn'] + 1) % num_players
+                        while not game['players'][next_turn].get('is_alive'):
+                            next_turn = (next_turn + 1) % num_players
+                        game['current_turn'] = next_turn
+                        game['turn_started_at'] = time.time()
+                    
+                    if game_modified:
+                        save_game(code, game)
+            
+            # Auto-select words for AI players during word_selection phase (multiplayer with bots)
+            if (game['status'] == 'word_selection' 
+                and not game.get('is_singleplayer')):
+                
+                ai_words_picked = False
+                for p in game['players']:
+                    if not p.get('is_ai'):
+                        continue
+                    if p.get('secret_word'):
+                        continue  # Already has a word
+                    
+                    pool = p.get('word_pool', []) or game.get('theme', {}).get('words', [])
+                    if not pool:
+                        continue
+                    
+                    selected_word = ai_select_secret_word(p, pool)
+                    if selected_word:
+                        try:
+                            get_embedding(selected_word)  # Ensure cached
+                            p['secret_word'] = selected_word.lower()
+                            ai_words_picked = True
+                        except Exception as e:
+                            print(f"AI word selection error (multiplayer poll): {e}")
+                
+                if ai_words_picked:
+                    save_game(code, game)
+            
             try:
                 # Reveal all words if game is finished
                 game_finished = game['status'] == 'finished'
